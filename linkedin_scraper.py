@@ -6,15 +6,76 @@ import trafilatura
 import os
 import datetime
 import csv
+import time
 from io import BytesIO
 from requests_html import HTMLSession
 import re
 import openpyxl
 from openpyxl.styles import Alignment
+from linkedin_login import LinkedInSession
+import threading
+import queue
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Variável global para armazenar a sessão do LinkedIn
+linkedin_session = None
+linkedin_session_lock = threading.Lock()
+
+# Fila para armazenar resultados de tipos de candidatura
+application_type_queue = queue.Queue()
+
+def get_linkedin_session():
+    """
+    Retorna uma instância da sessão do LinkedIn, criando-a se necessário.
+    
+    Returns:
+        LinkedInSession: Uma instância da sessão do LinkedIn
+    """
+    global linkedin_session
+    with linkedin_session_lock:
+        if linkedin_session is None:
+            logger.info("Criando nova sessão do LinkedIn")
+            linkedin_session = LinkedInSession(headless=True)
+        return linkedin_session
+
+def get_application_type_logged_in(job_url):
+    """
+    Obtém o tipo de candidatura de uma vaga do LinkedIn usando um navegador com login.
+    Esta função é executada em uma thread separada para não bloquear o processamento principal.
+    
+    Args:
+        job_url (str): URL da vaga no LinkedIn
+        
+    Returns:
+        None (o resultado é colocado na fila application_type_queue)
+    """
+    try:
+        logger.info(f"Iniciando extração do tipo de candidatura com login para: {job_url}")
+        session = get_linkedin_session()
+        
+        # Tentar fazer login (se ainda não estiver logado)
+        if not session.login():
+            logger.error("Falha ao fazer login no LinkedIn")
+            application_type_queue.put((job_url, "Login Error"))
+            return
+        
+        # Obter detalhes da vaga
+        result = session.get_job_details(job_url)
+        application_type = result.get("application_type", "Not found")
+        
+        logger.info(f"Tipo de candidatura obtido com login: {application_type}")
+        application_type_queue.put((job_url, application_type))
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter tipo de candidatura com login: {str(e)}")
+        application_type_queue.put((job_url, f"Error: {str(e)}"))
+        
+    finally:
+        # Não fechar a sessão para reutilizá-la em futuras consultas
+        pass
 
 def extract_company_info(url):
     """
@@ -620,7 +681,10 @@ def process_linkedin_urls(urls):
         pandas.DataFrame: DataFrame containing the results
     """
     results = []
+    threads = []
+    application_type_threads = []
     
+    # Processar URLs para extração de informações básicas (sem autenticação)
     for url in urls:
         url = url.strip()
         if url:  # Skip empty URLs
@@ -641,6 +705,68 @@ def process_linkedin_urls(urls):
             )
             
             results.append(result)
+            
+            # Iniciar thread para obter o tipo de candidatura com login
+            thread = threading.Thread(target=get_application_type_logged_in, args=(normalized_url,))
+            thread.daemon = True  # Thread secundária
+            application_type_threads.append(thread)
+            thread.start()
+    
+    # Aguardar um tempo para que algumas threads possam terminar (mas não bloquear por muito tempo)
+    logger.info("Aguardando resultados de tipo de candidatura das threads com login...")
+    
+    # Esperar até 20 segundos para obter os resultados do login
+    timeout = time.time() + 30  # 30 segundos de timeout
+    
+    # Processar resultados que chegam na fila enquanto esperamos
+    while time.time() < timeout:
+        try:
+            # Verificar se há resultados na fila, sem bloquear
+            url, app_type = application_type_queue.get(block=False)
+            logger.info(f"Resultado de tipo de candidatura recebido para URL: {url}, tipo: {app_type}")
+            
+            # Atualizar os resultados com os tipos de candidatura corretos
+            for result in results:
+                if result['link'] == url and app_type != "Login Error" and app_type != "Not found":
+                    logger.info(f"Atualizando tipo de candidatura da URL {url} de '{result['application_type']}' para '{app_type}'")
+                    result['application_type'] = app_type
+                    break
+            
+            application_type_queue.task_done()
+        except queue.Empty:
+            # Sem resultados na fila ainda, esperar um pouco
+            time.sleep(0.5)
+            
+            # Verificar se todas as threads terminaram
+            if all(not t.is_alive() for t in application_type_threads):
+                logger.info("Todas as threads de tipo de candidatura terminaram")
+                break
+    
+    # Verificar se há mais resultados na fila após o timeout
+    try:
+        while True:
+            url, app_type = application_type_queue.get(block=False)
+            logger.info(f"Resultado adicional de tipo de candidatura recebido: {url}, tipo: {app_type}")
+            
+            # Atualizar resultados
+            for result in results:
+                if result['link'] == url and app_type != "Login Error" and app_type != "Not found":
+                    logger.info(f"Atualizando tipo de candidatura da URL {url} para '{app_type}'")
+                    result['application_type'] = app_type
+                    break
+            
+            application_type_queue.task_done()
+    except queue.Empty:
+        pass
+    
+    # Adicionar indicador para tipos "Apply" em URLs do LinkedIn Brasil
+    for result in results:
+        # Verificar se é um URL brasileiro ou latino que ainda mostra "Apply"
+        # (apenas se não tivermos conseguido determinar o tipo com login)
+        is_brazilian = '.com.br' in result['link'] or 'br.' in result['link'] or 'mx.linkedin' in result['link'] or '.mx' in result['link'] or '.lat' in result['link']
+        if is_brazilian and result['application_type'] == 'Apply':
+            logger.info(f"Marcando URL brasileira/latina como potencial Easy Apply: {result['link']}")
+            result['application_type'] = "Apply (possível Easy Apply*)"
     
     # Create DataFrame from results with columns in the specified order
     df = pd.DataFrame(results, columns=[
