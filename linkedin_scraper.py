@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 
 def extract_company_info(url):
     """
-    Extract company name and link from a LinkedIn job listing URL.
+    Extract company name, job title, and links from a LinkedIn job listing URL.
     
     Args:
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, company name, and company link
+        dict: Dictionary containing original link, job title, company name, and company link
     """
     try:
         # Set headers to mimic a browser request
@@ -35,26 +35,34 @@ def extract_company_info(url):
         # Find company element using the topcard__org-name-link class which is the current structure
         company_element = soup.select_one('a.topcard__org-name-link')
         
+        # Find job title element
+        job_title_element = soup.select_one('h1.top-card-layout__title')
+        
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
-            return {
-                'link': url,
-                'company_name': 'Not found',
-                'company_link': 'Not found'
-            }
+            company_name = 'Not found'
+            company_link = 'Not found'
+        else:
+            # Extract company name and link
+            company_name = company_element.get_text(strip=True)
+            company_link = company_element.get('href', 'Not found')
+            
+            # Format the company link if it's a relative path
+            if company_link != 'Not found' and isinstance(company_link, str) and not company_link.startswith('http'):
+                company_link = f"https://www.linkedin.com{company_link}"
         
-        # Extract company name and link
-        company_name = company_element.get_text(strip=True)
-        company_link = company_element.get('href', 'Not found')
+        # Extract job title
+        job_title = 'Not found'
+        if job_title_element:
+            job_title = job_title_element.get_text(strip=True)
+        else:
+            logger.warning(f"Job title element not found for URL: {url}")
         
-        # Format the company link if it's a relative path
-        if company_link != 'Not found' and not company_link.startswith('http'):
-            company_link = f"https://www.linkedin.com{company_link}"
-        
-        logger.debug(f"Extracted company name: {company_name}, company link: {company_link}")
+        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
         return {
             'link': url,
+            'job_title': job_title,
             'company_name': company_name,
             'company_link': company_link
         }
@@ -63,6 +71,7 @@ def extract_company_info(url):
         logger.error(f"Request error for URL {url}: {str(e)}")
         return {
             'link': url,
+            'job_title': 'Not found',
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found'
         }
@@ -70,6 +79,7 @@ def extract_company_info(url):
         logger.error(f"Error processing URL {url}: {str(e)}")
         return {
             'link': url,
+            'job_title': 'Not found',
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found'
         }
@@ -93,7 +103,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link'])
+    df = pd.DataFrame(results, columns=['link', 'job_title', 'company_name', 'company_link'])
     return df
 
 def get_results_html(urls):
