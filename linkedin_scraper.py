@@ -451,6 +451,13 @@ def extract_company_info(url):
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         logger.debug(f"Additional info - city: {city}, announced_at: {announced_at}, candidates: {candidates}")
         
+        # Verificar se pode ser uma vaga "Easy Apply" mas não conseguimos detectar devido a limitações de acesso
+        # Isso adiciona uma observação para o usuário quando o LinkedIn Brasil retorna "Apply"
+        is_brazilian = '.com.br' in url or 'br.' in url or 'mx.linkedin' in url or '.mx' in url or '.lat' in url
+        if application_type == 'Apply' and is_brazilian:
+            application_type = "Apply (possível Easy Apply*)"
+            logger.debug("Adicionado indicador de possível Easy Apply para URL brasileiro/latino")
+        
         return {
             'link': url,
             'company_name': company_name,
