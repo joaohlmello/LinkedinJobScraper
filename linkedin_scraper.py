@@ -55,22 +55,39 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # MÉTODO 1: HTML renderizado pela sessão
+        # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
         try:
             if hasattr(r, 'html'):
-                logger.debug("Extraindo descrição usando HTMLSession")
-                # Procurar especificamente pelo elemento que contém a descrição do trabalho
-                job_description_elements = r.html.find('div.description__text')
-                if job_description_elements:
-                    logger.debug(f"Encontrados {len(job_description_elements)} elementos de descrição com HTMLSession")
+                logger.debug("Extraindo descrição usando HTMLSession e elemento #job-details")
+                # Primeiro tentar usando o seletor CSS exato fornecido pelo usuário
+                job_details_elements = r.html.find('#job-details')
+                if job_details_elements:
+                    logger.debug(f"Encontrado elemento #job-details")
                     # Extrair o texto completo do elemento
-                    job_description_text = job_description_elements[0].text
-                    logger.debug(f"HTMLSession extraiu texto com {len(job_description_text)} caracteres")
+                    job_description_text = job_details_elements[0].text
+                    logger.debug(f"HTMLSession extraiu texto do #job-details com {len(job_description_text)} caracteres")
+                else:
+                    # Se não encontrar o elemento específico, tentar um seletor alternativo
+                    logger.debug("Elemento #job-details não encontrado, tentando outros seletores")
+                    job_description_elements = r.html.find('div.description__text, div.show-more-less-html')
+                    if job_description_elements:
+                        logger.debug(f"Encontrados {len(job_description_elements)} elementos de descrição alternativos")
+                        # Extrair o texto completo do elemento
+                        job_description_text = job_description_elements[0].text
+                        logger.debug(f"HTMLSession extraiu texto alternativo com {len(job_description_text)} caracteres")
         except Exception as e:
             logger.warning(f"Erro ao extrair com HTMLSession: {str(e)}")
         
-        # MÉTODO 2: Usar Trafilatura para extrair todo o conteúdo da página
+        # MÉTODO 2: Usar BeautifulSoup para extrair o elemento específico com ID job-details
+        if not job_description_text or len(job_description_text) < 100:
+            logger.debug("Usando BeautifulSoup para extrair o elemento #job-details")
+            job_details_element = soup.select_one('#job-details')
+            if job_details_element:
+                job_description_text = job_details_element.get_text(separator=' ', strip=True)
+                logger.debug(f"BeautifulSoup extraiu {len(job_description_text)} caracteres do #job-details")
+
+        # MÉTODO 3: Usar Trafilatura para extrair todo o conteúdo da página
         if not job_description_text or len(job_description_text) < 100:
             logger.debug("Usando Trafilatura para extrair todo o conteúdo")
             downloaded = trafilatura.fetch_url(url)
@@ -100,7 +117,7 @@ def extract_company_info(url):
                     job_description_text = full_text
                     logger.debug(f"Usando texto completo do Trafilatura")
         
-        # MÉTODO 3: Usar XPath para extrações específicas
+        # MÉTODO 4: Usar XPath para extrações específicas
         if not job_description_text or len(job_description_text) < 100:
             try:
                 logger.debug("Tentando extrair a descrição usando XPath")
@@ -113,19 +130,25 @@ def extract_company_info(url):
                     logger.warning("Não foi possível obter o conteúdo HTML para análise XPath")
                     raise Exception("Conteúdo HTML não disponível")
                 
-                # Foco nos elementos específicos div.mt4 e p[dir="ltr"]
+                # Foco no elemento exato que contém a descrição completa do trabalho
                 job_description_elements = []
                 xpath_patterns = [
-                    # Descrição no formato mais recente (div.show-more-less-html)
+                    # XPath exato fornecido pelo usuário - deve ser o mais preciso
+                    '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[4]/article/div/div[1]//text()',
+                    
+                    # Seletor CSS alternativo (convertido para XPath)
+                    '//*[@id="job-details"]//text()',
+                    
+                    # Backup: Descrição no formato mais recente (div.show-more-less-html)
                     '//div[contains(@class, "show-more-less-html")]//text()',
                     
-                    # Descrição do trabalho no formato mais recente do LinkedIn
+                    # Backup: Descrição do trabalho no formato mais recente do LinkedIn
                     '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
                     
-                    # Descrição do trabalho apenas de divs com classe mt4
+                    # Backup: Descrição do trabalho apenas de divs com classe mt4
                     '//div[contains(@class, "mt4")]//text()',
                     
-                    # Descrição do trabalho de parágrafos com direção ltr
+                    # Backup: Descrição do trabalho de parágrafos com direção ltr
                     '//p[@dir="ltr"]//text()'
                 ]
                 
