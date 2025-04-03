@@ -1,0 +1,32 @@
+/* Additional custom styling */
+body {
+    padding-bottom: 2rem;
+}
+
+textarea {
+    font-family: monospace;
+}
+
+.table {
+    overflow-wrap: break-word;
+    table-layout: fixed;
+}
+
+.table th, .table td {
+    vertical-align: middle;
+}
+
+/* Make sure links are visible against dark background */
+a {
+    color: var(--bs-info);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

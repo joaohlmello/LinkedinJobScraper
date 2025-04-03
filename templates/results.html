@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Job Scraper - Results</title>
+    <!-- Bootstrap CSS (Replit Dark Theme) -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="text-center">LinkedIn Job Scraper Results</h1>
+                <p class="text-center">Company information extracted from LinkedIn job listings</p>
+            </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Results Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Extracted Company Information</h5>
+                        <a href="/" class="btn btn-outline-secondary btn-sm">Back to Home</a>
+                    </div>
+                    <div class="card-body">
+                        {% if results_html %}
+                            <div class="table-responsive">
+                                {{ results_html|safe }}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                No results to display. Please return to the home page and submit LinkedIn job URLs.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Export Options</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>You can copy the table data or use browser functionality to save this page.</p>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button class="btn btn-info" onclick="printResults()">
+                                <i class="fa fa-print"></i> Print Results
+                            </button>
+                            <a href="/" class="btn btn-primary">
+                                <i class="fa fa-plus"></i> Process More URLs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        {% if results_html %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>The table above shows company information extracted from the LinkedIn job listings you provided.</p>
+                        <ul>
+                            <li><strong>Link:</strong> The original LinkedIn job listing URL you provided</li>
+                            <li><strong>Company Name:</strong> The name of the company offering the job</li>
+                            <li><strong>Company Link:</strong> URL to the company's LinkedIn profile</li>
+                        </ul>
+                        <p class="text-muted"><small>Note: If any information is marked as "Not found" or contains an error message, it means the scraper was unable to extract that particular piece of information from the provided URL.</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <script>
+        function printResults() {
+            window.print();
+        }
+    </script>
+</body>
+</html>

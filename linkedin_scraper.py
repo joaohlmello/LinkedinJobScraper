@@ -1,0 +1,125 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+def extract_company_info(url):
+    """
+    Extract company name and link from a LinkedIn job listing URL.
+    
+    Args:
+        url (str): LinkedIn job listing URL
+        
+    Returns:
+        dict: Dictionary containing original link, company name, and company link
+    """
+    try:
+        # Set headers to mimic a browser request
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+        
+        # Send GET request to the URL
+        logger.debug(f"Sending request to: {url}")
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise exception for HTTP errors
+        
+        # Parse HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find company element based on provided selector
+        company_element = soup.select_one('a.RFNOFVQEFZPHaKoCyqsqedOluNQlOEMFjaDeg[target="_self"][tabindex="0"]')
+        
+        if not company_element:
+            logger.warning(f"Company element not found for URL: {url}")
+            return {
+                'link': url,
+                'company_name': 'Not found',
+                'company_link': 'Not found'
+            }
+        
+        # Extract company name and link
+        company_name = company_element.get_text(strip=True)
+        company_link = company_element.get('href', 'Not found')
+        
+        # Format the company link if it's a relative path
+        if company_link != 'Not found' and not company_link.startswith('http'):
+            company_link = f"https://www.linkedin.com{company_link}"
+        
+        logger.debug(f"Extracted company name: {company_name}, company link: {company_link}")
+        
+        return {
+            'link': url,
+            'company_name': company_name,
+            'company_link': company_link
+        }
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error for URL {url}: {str(e)}")
+        return {
+            'link': url,
+            'company_name': f'Error: {str(e)}',
+            'company_link': 'Not found'
+        }
+    except Exception as e:
+        logger.error(f"Error processing URL {url}: {str(e)}")
+        return {
+            'link': url,
+            'company_name': f'Error: {str(e)}',
+            'company_link': 'Not found'
+        }
+
+def process_linkedin_urls(urls):
+    """
+    Process a list of LinkedIn job URLs and return the results as a DataFrame.
+    
+    Args:
+        urls (list): List of LinkedIn job URLs
+        
+    Returns:
+        pandas.DataFrame: DataFrame containing the results
+    """
+    results = []
+    
+    for url in urls:
+        url = url.strip()
+        if url:  # Skip empty URLs
+            result = extract_company_info(url)
+            results.append(result)
+    
+    # Create DataFrame from results
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link'])
+    return df
+
+def get_results_html(urls):
+    """
+    Process LinkedIn job URLs and return HTML representation of the results.
+    
+    Args:
+        urls (list): List of LinkedIn job URLs
+        
+    Returns:
+        str: HTML representation of the results table
+    """
+    if not urls:
+        return "<p>No URLs provided.</p>"
+    
+    df = process_linkedin_urls(urls)
+    
+    # Convert DataFrame to HTML table with Bootstrap styling
+    html_table = df.to_html(
+        classes='table table-striped table-hover table-dark',
+        index=False,
+        escape=False,
+        render_links=True
+    )
+    
+    # Make links clickable
+    html_table = html_table.replace('&lt;', '<').replace('&gt;', '>')
+    
+    return html_table
