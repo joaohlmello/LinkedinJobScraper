@@ -1,0 +1,162 @@
+/* Estilos para o componente de análise de vagas */
+
+.job-analysis {
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border: none;
+    border-radius: 8px;
+}
+
+.job-analysis .card-header {
+    border-bottom: 1px solid #2d2d2d;
+    padding: 1rem;
+}
+
+.job-analysis .card-header h4 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.job-analysis .card-header a {
+    color: #5caefc;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.job-analysis .card-header a:hover {
+    text-decoration: underline;
+}
+
+.job-analysis .card-body {
+    padding: 1.5rem;
+    background-color: #252525;
+}
+
+/* Estilo para o círculo de pontuação */
+.analysis-score-container {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.analysis-score-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: conic-gradient(
+        #4e9af1 calc(var(--score) * 1%),
+        #2d2d2d calc(var(--score) * 1%)
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 0 auto;
+}
+
+.analysis-score-circle::before {
+    content: '';
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background-color: #252525;
+}
+
+.analysis-score-text {
+    position: relative;
+    z-index: 1;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.analysis-score-label {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #a0a0a0;
+}
+
+/* Estilo para os cartões de detalhes */
+.analysis-details-card {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 1rem;
+    height: 100%;
+    margin-bottom: 1rem;
+}
+
+.analysis-details-card h5 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: #c0c0c0;
+}
+
+.analysis-details-card .progress {
+    height: 25px;
+    background-color: #1e1e1e;
+}
+
+.analysis-details-card .progress-bar {
+    font-weight: 600;
+    line-height: 25px;
+}
+
+/* Estilo para as forças e fraquezas */
+.strengths-card, .weaknesses-card {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 1rem;
+    height: 100%;
+    margin-bottom: 1rem;
+}
+
+.strengths-card h5, .weaknesses-card h5 {
+    color: #c0c0c0;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.strengths-content, .weaknesses-content {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    text-overflow: clip;
+    overflow: visible;
+    line-height: 1.6;
+}
+
+.strengths-card {
+    border-left: 5px solid #28a745;
+}
+
+.weaknesses-card {
+    border-left: 5px solid #dc3545;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .analysis-score-circle {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .analysis-score-circle::before {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .analysis-score-text {
+        font-size: 2rem;
+    }
+}
+
+/* Estilo para alertas e mensagens de erro */
+.alert-danger {
+    background-color: #4a1e1e;
+    color: #f8d7da;
+    border-color: #5c2a2d;
+}

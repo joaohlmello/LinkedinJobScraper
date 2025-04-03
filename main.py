@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key")
 
+# Check if Gemini API key is available
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     """
@@ -25,6 +28,9 @@ def index():
         linkedin_urls_text = request.form.get('linkedin_urls', '')
         linkedin_urls = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
         
+        # Check if user wants to analyze jobs with Gemini AI
+        analyze_jobs = 'analyze_jobs' in request.form
+        
         if not linkedin_urls:
             flash('Please enter at least one LinkedIn job URL.', 'danger')
         else:
@@ -33,11 +39,20 @@ def index():
             
             # Process the URLs and get results
             try:
-                results_html = get_results_html(linkedin_urls)
+                # Analisar jobs se solicitado e se a API do Gemini estiver disponível
+                if analyze_jobs and not GEMINI_API_KEY:
+                    flash('Análise com Gemini AI solicitada, mas a chave de API não está disponível.', 'warning')
+                    analyze_jobs = False
+                
+                results_html = get_results_html(linkedin_urls, analyze_jobs=analyze_jobs)
+                
                 if "Error" in results_html:
                     flash('There was an error processing one or more URLs. Check the results below.', 'warning')
                 else:
-                    flash('LinkedIn job information extracted successfully!', 'success')
+                    success_msg = 'LinkedIn job information extracted successfully!'
+                    if analyze_jobs:
+                        success_msg += ' Análise de compatibilidade com Gemini AI incluída.'
+                    flash(success_msg, 'success')
             except Exception as e:
                 logger.error(f"Error processing URLs: {str(e)}")
                 flash(f'An error occurred: {str(e)}', 'danger')
@@ -45,7 +60,13 @@ def index():
     # Check if we have previous results to display
     has_results = 'linkedin_urls' in session and session['linkedin_urls']
     
-    return render_template('index.html', results_html=results_html, has_results=has_results)
+    # Verificar se o Gemini API está disponível para o template
+    gemini_available = bool(GEMINI_API_KEY)
+    
+    return render_template('index.html', 
+                          results_html=results_html, 
+                          has_results=has_results,
+                          gemini_available=gemini_available)
 
 @app.route('/export/csv', methods=['GET'])
 def export_csv():

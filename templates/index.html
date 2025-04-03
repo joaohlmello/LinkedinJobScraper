@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/job_analysis.css') }}">
 </head>
 <body>
     <div class="container mt-4">
@@ -45,6 +46,29 @@
                                 <label for="linkedin_urls" class="form-label">Enter LinkedIn job URLs (one per line):</label>
                                 <textarea class="form-control" id="linkedin_urls" name="linkedin_urls" rows="5" placeholder="https://www.linkedin.com/jobs/view/4197948497/..."></textarea>
                             </div>
+                            
+                            {% if gemini_available %}
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="analyze_jobs" name="analyze_jobs">
+                                <label class="form-check-label" for="analyze_jobs">
+                                    <span class="badge bg-info"><i class="bi bi-robot"></i> Gemini AI</span>
+                                    Analisar compatibilidade das vagas com o currículo usando Gemini AI
+                                </label>
+                                <div class="form-text text-light">
+                                    Esta opção analisará as descrições das vagas e calculará a porcentagem 
+                                    de compatibilidade com o currículo pré-configurado. O processo pode levar mais tempo.
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="mb-3">
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    Análise de compatibilidade com Gemini AI não disponível - 
+                                    Chave de API não configurada.
+                                </div>
+                            </div>
+                            {% endif %}
+                            
                             <button type="submit" class="btn btn-primary">Extract Information</button>
                         </form>
                     </div>
@@ -109,9 +133,15 @@
                     <div class="card-body">
                         <ol>
                             <li>Paste one or more LinkedIn job listing URLs into the text area above.</li>
+                            {% if gemini_available %}
+                            <li>Opcionalmente, marque a caixa "Analisar compatibilidade" para avaliar as vagas com Gemini AI.</li>
+                            {% endif %}
                             <li>Click the "Extract Information" button.</li>
                             <li>The script will extract job title and company information from each URL.</li>
                             <li>Results will be displayed in a table with the original link, company name, company link, job title, and job description.</li>
+                            {% if gemini_available %}
+                            <li>Se selecionada a opção de análise, o Gemini AI avaliará a compatibilidade com seu currículo.</li>
+                            {% endif %}
                             <li>You can export the results to CSV or Excel format using the buttons above the results table.</li>
                         </ol>
                         <p>Example URL format:</p>

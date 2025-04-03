@@ -714,12 +714,13 @@ def process_linkedin_urls(urls):
     logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso.")
     return df
 
-def get_results_html(urls):
+def get_results_html(urls, analyze_jobs=False):
     """
     Process LinkedIn job URLs and return HTML representation of the results.
     
     Args:
         urls (list): List of LinkedIn job URLs
+        analyze_jobs (bool): Whether to analyze jobs with Gemini AI
         
     Returns:
         str: HTML representation of the results table
@@ -727,6 +728,7 @@ def get_results_html(urls):
     if not urls:
         return "<p>No URLs provided.</p>"
     
+    # Processar URLs do LinkedIn
     df = process_linkedin_urls(urls)
     
     # Verificar comprimento das descrições para debug
@@ -736,6 +738,52 @@ def get_results_html(urls):
     # Format links as HTML anchor tags before converting to HTML
     df['link'] = df['link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     df['company_link'] = df['company_link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
+    
+    # Analisar vagas com Gemini API se solicitado
+    job_analyses_html = ""
+    if analyze_jobs:
+        try:
+            # Importar o analisador de vagas
+            from gemini_analyzer import JobAnalyzer, format_analysis_html
+            
+            # Preparar os dados para análise
+            jobs_for_analysis = []
+            for _, row in df.iterrows():
+                # Extrair URL sem tags HTML
+                link = row['link']
+                if '<a href=' in link:
+                    import re
+                    url_match = re.search(r'href="([^"]+)"', link)
+                    link = url_match.group(1) if url_match else link
+                
+                job_data = {
+                    'job_title': row['job_title'],
+                    'company_name': row['company_name'],
+                    'job_description': row['job_description'],
+                    'link': link
+                }
+                jobs_for_analysis.append(job_data)
+            
+            # Inicializar o analisador e processar as vagas
+            logger.info(f"Iniciando análise de {len(jobs_for_analysis)} vagas com Gemini API")
+            analyzer = JobAnalyzer()
+            analyses_results = analyzer.analyze_jobs_batch(jobs_for_analysis)
+            
+            # Gerar HTML para cada análise
+            job_analyses_html = "<h2 class='mt-5 mb-4'>Análise de Compatibilidade com Gemini AI</h2>"
+            for analysis in analyses_results:
+                job_analyses_html += format_analysis_html(analysis)
+            
+            logger.info("Análise de vagas concluída com sucesso")
+            
+        except Exception as e:
+            logger.error(f"Erro ao analisar vagas com Gemini API: {str(e)}")
+            job_analyses_html = f"""
+            <div class="alert alert-danger mt-4">
+                <h4>Erro na análise de vagas</h4>
+                <p>Não foi possível realizar a análise de compatibilidade: {str(e)}</p>
+            </div>
+            """
     
     # Criar tabela HTML personalizada para exibir descrição completa na ordem solicitada
     html_table = """
@@ -850,7 +898,10 @@ def get_results_html(urls):
     </div>
     """
     
-    return html_table
+    # Adicionar análises de vagas se disponíveis
+    html_content = html_table + job_analyses_html
+    
+    return html_content
 
 def export_to_csv(urls):
     """
