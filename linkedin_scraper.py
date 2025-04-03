@@ -775,20 +775,20 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
     # Adicionar colunas para análise Gemini (inicialmente vazias)
-    df['compatibilidade_global'] = ""
     df['compatibilidade_palavras_chave'] = ""
     df['compatibilidade_requisitos'] = ""
     df['compatibilidade_experiencia'] = ""
     df['compatibilidade_qualificacoes'] = ""
+    df['compatibilidade_global'] = ""  # Movida para depois das qualificações
     df['forcas'] = ""
     df['fraquezas'] = ""
     
     # Adicionar as mesmas colunas ao DataFrame de exportação
-    df_export['compatibilidade_global'] = ""
     df_export['compatibilidade_palavras_chave'] = ""
     df_export['compatibilidade_requisitos'] = ""
     df_export['compatibilidade_experiencia'] = ""
     df_export['compatibilidade_qualificacoes'] = ""
+    df_export['compatibilidade_global'] = ""  # Movida para depois das qualificações
     df_export['forcas'] = ""
     df_export['fraquezas'] = ""
     
@@ -1047,11 +1047,11 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th>Announced Calc</th>
             <th>City</th>
             <th>Candidates</th>
-            <th class="compatibility-header">Compatibilidade</th>
             <th class="compatibility-header">Palavras-chave</th>
             <th class="compatibility-header">Requisitos</th>
             <th class="compatibility-header">Experiência</th>
             <th class="compatibility-header">Qualificações</th>
+            <th class="compatibility-header">Compatibilidade</th>
           </tr>
         </thead>
         <tbody>
@@ -1074,11 +1074,11 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
-          <td class="compatibility-column">{row['compatibilidade_global']}</td>
           <td class="compatibility-column">{row['compatibilidade_palavras_chave']}</td>
           <td class="compatibility-column">{row['compatibilidade_requisitos']}</td>
           <td class="compatibility-column">{row['compatibilidade_experiencia']}</td>
           <td class="compatibility-column">{row['compatibilidade_qualificacoes']}</td>
+          <td class="compatibility-column">{row['compatibilidade_global']}</td>
         </tr>
         """
     
