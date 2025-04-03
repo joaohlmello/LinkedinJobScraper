@@ -102,8 +102,8 @@ def process_linkedin_urls(urls):
             result = extract_company_info(url)
             results.append(result)
     
-    # Create DataFrame from results
-    df = pd.DataFrame(results, columns=['link', 'job_title', 'company_name', 'company_link'])
+    # Create DataFrame from results with columns in the specified order
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title'])
     return df
 
 def get_results_html(urls):
