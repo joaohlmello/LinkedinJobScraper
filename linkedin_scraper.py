@@ -231,6 +231,13 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
         
+        # Verificar se é Easy Apply primeiro (em toda a página)
+        easy_apply_text = False
+        page_text = soup.get_text().lower()
+        if 'easy apply' in page_text:
+            easy_apply_text = True
+            logger.debug("Found 'Easy Apply' in page text")
+        
         # Extract application type from button aria-label or button text
         application_type = 'Not found'
         if application_type_element:
@@ -245,24 +252,42 @@ def extract_company_info(url):
                 if application_type == 'Not found':
                     button_text = application_type_element.get_text(strip=True)
                     if button_text:
-                        if 'Apply' in button_text or 'apply' in button_text:
-                            application_type = button_text
-                            logger.debug(f"Extracted application type from button text: {application_type}")
+                        if 'easy apply' in button_text.lower():
+                            application_type = 'Easy Apply'
+                            logger.debug(f"Extracted Easy Apply from button text")
+                        elif 'apply' in button_text.lower():
+                            # Se encontramos "Easy Apply" no texto da página mas o botão tem só "Apply"
+                            # vamos priorizar "Easy Apply"
+                            if easy_apply_text:
+                                application_type = 'Easy Apply'
+                                logger.debug(f"Setting Easy Apply based on page content")
+                            else:
+                                application_type = 'Apply'
+                                logger.debug(f"Extracted Apply from button text")
                 
-                # Procurar por textos específicos na página que indiquem o tipo de aplicação
-                if application_type == 'Not found':
-                    easy_apply_elements = soup.select('.jobs-apply-button--top-card')
+                # Verificar elementos específicos da UI do LinkedIn
+                if application_type == 'Not found' or application_type == 'Apply':
+                    # Verificar elementos de Easy Apply
+                    easy_apply_elements = soup.select('.jobs-apply-button--top-card, .jobs-s-apply, .jobs-apply-button, [data-control-name="easy_apply_button"]')
                     if easy_apply_elements:
                         for elem in easy_apply_elements:
-                            elem_text = elem.get_text(strip=True)
-                            if 'Easy Apply' in elem_text:
+                            elem_text = elem.get_text(strip=True).lower()
+                            if 'easy apply' in elem_text:
                                 application_type = 'Easy Apply'
-                                logger.debug("Found Easy Apply text in the page")
+                                logger.debug("Found Easy Apply in button text")
                                 break
-                            elif 'Apply' in elem_text:
-                                application_type = 'Apply'
-                                logger.debug("Found Apply text in the page")
-                                break
+                
+                # Se ainda não encontramos um valor mais específico e a página tem "Easy Apply"
+                if (application_type == 'Not found' or application_type == 'Apply') and easy_apply_text:
+                    application_type = 'Easy Apply'
+                    logger.debug("Setting Easy Apply based on page content (fallback)")
+                
+                # Última chance: se só temos "Apply" mas o botão tem uma classe que indica Easy Apply
+                if application_type == 'Apply' and application_type_element:
+                    element_class = application_type_element.get('class', '')
+                    if isinstance(element_class, str) and ('easy' in element_class.lower()):
+                        application_type = 'Easy Apply'
+                        logger.debug("Found Easy Apply in button class")
             except Exception as e:
                 logger.warning(f"Error extracting application type: {str(e)}")
         
