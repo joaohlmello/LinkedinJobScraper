@@ -165,8 +165,12 @@ def process_async():
     """
     global processing_progress
     
+    # Log da solicitação para depuração
+    logger.debug(f"Solicitação de processamento assíncrono recebida: {request.form}")
+    
     # Verificar se já está em processamento
     if processing_progress['status'] == 'processing':
+        logger.debug("Processamento já em andamento")
         return jsonify({
             'success': False,
             'message': 'Já existe um processamento em andamento'
@@ -178,16 +182,21 @@ def process_async():
     
     # Verificar se há URLs para processar
     if not linkedin_urls:
+        logger.debug("Nenhuma URL fornecida")
         return jsonify({
             'success': False,
             'message': 'Por favor, insira pelo menos uma URL de vaga do LinkedIn'
         })
     
+    logger.debug(f"URLs para processar: {linkedin_urls}")
+    
     # Verificar se o usuário deseja analisar vagas com Gemini AI
     analyze_jobs = 'analyze_jobs' in request.form
+    logger.debug(f"Analisar vagas com Gemini AI: {analyze_jobs}")
     
     # Verificar se a API do Gemini está disponível
     if analyze_jobs and not GEMINI_API_KEY:
+        logger.warning("Análise com Gemini solicitada, mas API key não disponível")
         analyze_jobs = False
     
     # Inicializar o progresso
@@ -208,6 +217,8 @@ def process_async():
     thread.daemon = True
     thread.start()
     
+    logger.debug("Thread de processamento iniciada")
+    
     return jsonify({
         'success': True,
         'message': 'Processamento iniciado'
@@ -220,21 +231,76 @@ def process_urls_background(urls, analyze_jobs=False):
     global processing_progress
     
     try:
+        logger.debug(f"Iniciando processamento de {len(urls)} URLs em segundo plano. Análise de vagas: {analyze_jobs}")
+        logger.debug(f"URLs a serem processadas: {urls}")
+        
+        # Garantir que temos um valor inicial para os resultados
+        processing_progress['results'] = None
+        
         # Processar URLs e obter resultados
-        results_html = get_results_html(
-            urls, 
-            analyze_jobs=analyze_jobs,
-            progress_callback=update_progress
-        )
+        results_html = None
+        try:
+            results_html = get_results_html(
+                urls, 
+                analyze_jobs=analyze_jobs,
+                progress_callback=update_progress
+            )
+            logger.debug(f"Chamada para get_results_html concluída. Resultado vazio? {results_html is None}")
+        except Exception as inner_e:
+            logger.error(f"Exceção capturada ao chamar get_results_html: {str(inner_e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Criar uma mensagem de erro formatada como HTML para exibir na interface
+            results_html = f"""
+            <div class="alert alert-danger">
+                <h4 class="alert-heading">Erro ao processar URLs</h4>
+                <p>Ocorreu um erro durante a extração de dados do LinkedIn.</p>
+                <hr>
+                <p class="mb-0">Detalhes do erro: {str(inner_e)}</p>
+            </div>
+            """
         
-        # Atualizar progresso com resultados
-        processing_progress['results'] = results_html
-        processing_progress['status'] = 'completed'
-        processing_progress['message'] = 'Processamento concluído com sucesso!'
-        
+        # Verificar se os resultados foram obtidos
+        if results_html:
+            logger.debug(f"Resultados HTML obtidos. Tamanho: {len(results_html)}")
+            # Atualizar progresso com resultados
+            processing_progress['results'] = results_html
+            processing_progress['status'] = 'completed'
+            processing_progress['message'] = 'Processamento concluído com sucesso!'
+            
+            # Log adicional para confirmação
+            logger.debug("Status atualizado para 'completed' e resultados armazenados")
+        else:
+            # Se não houver resultados, criar uma mensagem padrão
+            logger.error("Não foi possível obter resultados HTML (resultado vazio)")
+            error_html = """
+            <div class="alert alert-warning">
+                <h4 class="alert-heading">Sem resultados</h4>
+                <p>Não foram encontrados resultados para as URLs fornecidas. Verifique se as URLs são válidas vagas do LinkedIn.</p>
+            </div>
+            """
+            processing_progress['results'] = error_html
+            processing_progress['status'] = 'completed'  # Marcamos como completo mesmo assim
+            processing_progress['message'] = 'Processamento concluído sem resultados'
+            
     except Exception as e:
         logger.error(f"Erro no processamento assíncrono: {str(e)}")
-        processing_progress['status'] = 'error'
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Criar uma mensagem de erro formatada
+        error_html = f"""
+        <div class="alert alert-danger">
+            <h4 class="alert-heading">Erro no processamento</h4>
+            <p>Ocorreu um erro durante o processamento das URLs.</p>
+            <hr>
+            <p class="mb-0">Detalhes do erro: {str(e)}</p>
+        </div>
+        """
+        
+        # Atualizar o progresso com a mensagem de erro
+        processing_progress['results'] = error_html
+        processing_progress['status'] = 'completed'  # Marcamos como completo para exibir o erro
         processing_progress['message'] = f'Ocorreu um erro: {str(e)}'
 
 def update_progress(current, total, message):
@@ -253,14 +319,32 @@ def check_progress():
     """
     global processing_progress
     
-    return jsonify({
+    logger.debug(f"Verificação de progresso. Status atual: {processing_progress['status']}")
+    
+    # Para depuração, vamos verificar se os resultados existem quando estiver completo
+    if processing_progress['status'] == 'completed':
+        has_results = processing_progress['results'] is not None
+        results_length = len(processing_progress['results']) if has_results else 0
+        logger.debug(f"Processamento completo. Resultados disponíveis: {has_results}, Tamanho: {results_length}")
+    
+    # Calcular a porcentagem de conclusão (evitando divisão por zero)
+    percent = 0
+    if processing_progress['total'] > 0:
+        percent = int((processing_progress['current'] / processing_progress['total']) * 100)
+    
+    # Preparar a resposta
+    response = {
         'status': processing_progress['status'],
         'current': processing_progress['current'],
         'total': processing_progress['total'],
-        'percent': int((processing_progress['current'] / max(processing_progress['total'], 1)) * 100),
+        'percent': percent,
         'message': processing_progress['message'],
         'results': processing_progress['results'] if processing_progress['status'] == 'completed' else None
-    })
+    }
+    
+    logger.debug(f"Resposta de verificação de progresso: {response['status']}, {response['percent']}%, {response['message']}")
+    
+    return jsonify(response)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

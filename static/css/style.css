@@ -116,10 +116,15 @@ pre {
 }
 
 #results-container {
+    max-height: 0;
     opacity: 0;
-    transition: opacity 0.5s ease;
+    overflow: hidden;
+    transition: all 0.5s ease;
+    margin-top: 0 !important;
 }
 
 #results-container.show {
+    max-height: 10000px; /* Valor alto o suficiente para qualquer conteúdo */
     opacity: 1;
+    margin-top: 1.5rem !important;
 }

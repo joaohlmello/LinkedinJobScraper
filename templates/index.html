@@ -209,10 +209,45 @@
                                 
                                 // Mostrar os resultados
                                 if (data.results) {
-                                    // Redirecionar após um curto atraso para mostrar o resultado
-                                    setTimeout(() => {
-                                        window.location.reload();
-                                    }, 1000);
+                                    // Atualizar a div de resultados diretamente
+                                    const resultsContainer = document.getElementById('results-container');
+                                    
+                                    // Criar HTML para os resultados
+                                    let resultsHTML = `
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="card">
+                                                <div class="card-header d-flex justify-content-between align-items-center">
+                                                    <h5>Results</h5>
+                                                    <div class="export-buttons">
+                                                        <a href="/export_csv" class="btn btn-success btn-sm">
+                                                            <i class="bi bi-file-earmark-text"></i> Export to CSV
+                                                        </a>
+                                                        <a href="/export_excel" class="btn btn-primary btn-sm">
+                                                            <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="table-responsive">
+                                                        ${data.results}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>`;
+                                    
+                                    // Atualizar o conteúdo
+                                    resultsContainer.innerHTML = resultsHTML;
+                                    
+                                    // Mostrar o contêiner de resultados
+                                    resultsContainer.classList.add('show');
+                                    
+                                    // Reativar o botão submit
+                                    submitButton.disabled = false;
+                                    
+                                    // Rolar para os resultados
+                                    resultsContainer.scrollIntoView({ behavior: 'smooth' });
                                 }
                                 
                                 // Limpar o intervalo
