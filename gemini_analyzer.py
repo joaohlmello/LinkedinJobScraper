@@ -25,8 +25,8 @@ class JobAnalyzer:
         
         # Inicializar cliente Gemini
         genai.configure(api_key=api_key)
-        self.model_name = "gemini-2.5-pro-exp-03-25"  # Modelo atualizado que suporta schemas
-        self.client = genai.Client()
+        self.model_name = "gemini-pro"  # Modelo que suporta schemas
+        self.model = genai.GenerativeModel(model_name=self.model_name)
         
         # Configurar o prompt base
         self.system_prompt = self._get_system_prompt()
@@ -229,8 +229,7 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             ]
             
             # Configuração da geração
-            generate_content_config = genai.types.GenerateContentConfig(
-                safety_settings=safety_settings,
+            generation_config = genai.GenerationConfig(
                 response_mime_type="application/json",
                 response_schema=response_schema,
             )
@@ -239,10 +238,10 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                model = self.client.models.get(name=self.model_name)
-                result = model.generate_content(
+                # Usar diretamente o modelo GenerativeModel
+                result = self.model.generate_content(
                     contents=contents,
-                    generation_config=generate_content_config,
+                    generation_config=generation_config,
                 )
             except Exception as e:
                 logger.error(f"Erro na chamada à API do Gemini: {str(e)}")
