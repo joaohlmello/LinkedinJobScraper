@@ -59,6 +59,7 @@ def extract_company_info(url):
         
         # Find application type using multiple selectors
         application_type_element = None
+        application_type_text = None
         
         # Tentativa 1: botão dentro da div jobs-apply-button--top-card 
         application_type_element = soup.select_one('div.jobs-apply-button--top-card button[aria-label]')
@@ -79,6 +80,15 @@ def extract_company_info(url):
         # Tentativa 4: span com classe que contém a palavra apply
         if not application_type_element:
             application_type_element = soup.select_one('span[class*="apply"]')
+            
+        # Tentativa 5: Procurar no layout específico para páginas em português/espanhol
+        apply_spans = soup.select('div.job-view-layout.jobs-details span.artdeco-button__text')
+        for span in apply_spans:
+            span_text = span.get_text(strip=True)
+            if span_text and ('Candidatura' in span_text or 'Apply' in span_text or 'apply' in span_text.lower()):
+                application_type_text = span_text
+                logger.debug(f"Found application type in layout span: {application_type_text}")
+                break
         
         # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
@@ -266,6 +276,11 @@ def extract_company_info(url):
             except Exception as e:
                 logger.warning(f"Error extracting application type: {str(e)}")
         
+        # Se encontrou texto no span específico e o application_type ainda é Not found
+        if application_type == 'Not found' and application_type_text:
+            application_type = application_type_text
+            logger.debug(f"Using application type from span text: {application_type}")
+            
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}, application type: {application_type}")
         
         return {
