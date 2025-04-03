@@ -231,12 +231,31 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
         
-        # Verificar se é Easy Apply primeiro (em toda a página)
+        # Verificar se é Easy Apply usando o seletor XPath específico sugerido pelo usuário
         easy_apply_text = False
-        page_text = soup.get_text().lower()
-        if 'easy apply' in page_text:
-            easy_apply_text = True
-            logger.debug("Found 'Easy Apply' in page text")
+        
+        # Usando BeautifulSoup para verificar
+        main_container = soup.select_one('body > div.application-outlet > div.authentication-outlet > div.scaffold-layout > div > div > main > div.job-view-layout')
+        if main_container:
+            container_text = main_container.get_text().lower()
+            if 'easy apply' in container_text:
+                easy_apply_text = True
+                logger.debug("Found 'Easy Apply' in main job container")
+        
+        # Tentar também com lxml e XPath
+        try:
+            import lxml.html
+            if hasattr(r, 'content'):
+                tree = lxml.html.fromstring(r.content)
+                # Usando o XPath específico sugerido pelo usuário
+                main_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]')
+                if main_elements:
+                    main_text = main_elements[0].text_content().lower()
+                    if 'easy apply' in main_text:
+                        easy_apply_text = True
+                        logger.debug("Found 'Easy Apply' in main container using XPath")
+        except Exception as e:
+            logger.warning(f"Error checking for Easy Apply using XPath: {str(e)}")
         
         # Extract application type from button aria-label or button text
         application_type = 'Not found'
