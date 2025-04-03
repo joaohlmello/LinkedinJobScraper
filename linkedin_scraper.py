@@ -41,6 +41,110 @@ def get_linkedin_session():
             linkedin_session = LinkedInSession(headless=True)
         return linkedin_session
 
+def get_application_type_without_login(job_url, html_content):
+    """
+    Obtém o tipo de candidatura de uma vaga do LinkedIn sem login, baseado apenas no conteúdo HTML.
+    Este é um método menos preciso, mas serve como fallback quando o Selenium não está disponível.
+    
+    Args:
+        job_url (str): URL da vaga no LinkedIn
+        html_content (str): Conteúdo HTML da página
+        
+    Returns:
+        str: Tipo de candidatura detectado
+    """
+    logger.info(f"Detectando tipo de candidatura sem login para: {job_url}")
+    application_type = "Apply"  # Valor padrão
+    
+    # Verificar se é uma URL brasileira ou internacional
+    is_brazilian = '.com.br' in job_url or 'br.' in job_url or '.mx' in job_url or 'mx.linkedin' in job_url or '.lat' in job_url
+    
+    # Procurar por indicadores de "Easy Apply" no HTML
+    html_lower = html_content.lower()
+    
+    # Lista de possíveis indicadores de "Easy Apply" no HTML
+    easy_apply_indicators = [
+        "easy apply", 
+        "candidatura simplificada",
+        "candidatura facilitada",
+        "candidatar",
+        "aplicar fácilmente",
+        "aplicar fácil",
+        "candidatura fácil",
+        "class=\"jobs-apply-button",
+        "data-control-name=\"jobdetails_topcard_inapply\"",
+        "artdeco-inline-feedback",
+        "jobs-s-apply"
+    ]
+    
+    # Primeiro check: procurar padrões no HTML completo
+    for indicator in easy_apply_indicators:
+        if indicator in html_lower:
+            logger.info(f"Indicador de Easy Apply encontrado: '{indicator}'")
+            application_type = "Easy Apply"
+            break
+    
+    # Segundo check: procurar por botões específicos via BeautifulSoup
+    if application_type == "Apply":
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Buscar botões e elementos específicos que indicam Easy Apply
+            apply_buttons = soup.select('.jobs-apply-button, [data-control-name*="apply"], [data-tracking-control-name*="apply"]')
+            for button in apply_buttons:
+                button_text = button.get_text(strip=True).lower()
+                
+                # Verificar se o texto do botão contém indicadores de Easy Apply
+                if any(indicator in button_text for indicator in easy_apply_indicators):
+                    logger.info(f"Easy Apply detectado em botão para URL: {job_url}")
+                    application_type = "Easy Apply"
+                    break
+                
+                # Verificar classes e atributos do botão
+                for attr_name, attr_value in button.attrs.items():
+                    if isinstance(attr_value, str) and any(indicator in attr_value.lower() for indicator in easy_apply_indicators):
+                        logger.info(f"Easy Apply detectado em atributo {attr_name} para URL: {job_url}")
+                        application_type = "Easy Apply"
+                        break
+                    
+                # Se é URL brasileira e botão contém "Candidatar"
+                if is_brazilian and 'candidatar' in button_text:
+                    logger.info(f"Provável Easy Apply em botão brasileiro para URL: {job_url}")
+                    application_type = "Easy Apply (detectado sem login)"
+                    break
+                    
+            # Verificar links específicos para Apply offsite
+            if application_type == "Apply":
+                apply_offsite_links = soup.select('a[data-tracking-control-name*="public_jobs_apply-link-offsite"]')
+                if apply_offsite_links:
+                    logger.info(f"Link externo (Apply) detectado para URL: {job_url}")
+                    # Aqui mantemos como "Apply" pois é definitivamente externo
+                
+                # Verificar texto indicando que a candidatura será em outro site
+                offsite_indicators = [
+                    'candidature-se no site da empresa',
+                    'apply on company website', 
+                    'aplicar no site da empresa',
+                    'redirect to company website'
+                ]
+                
+                for text in offsite_indicators:
+                    if text in html_lower:
+                        logger.info(f"Indicador de site externo (Apply) detectado para URL: {job_url}")
+                        # Confirmado como "Apply" externo
+                        break
+        
+        except Exception as e:
+            logger.error(f"Erro ao analisar HTML para detecção de tipo de candidatura: {str(e)}")
+    
+    # Para URLs do LinkedIn Brasil ou LATAM, adicionar indicador
+    if application_type == "Apply" and is_brazilian:
+        logger.info("URL do LinkedIn Brasil/LATAM detectada, marcando como potencial Easy Apply")
+        application_type = "Apply (possível Easy Apply*)"
+    
+    return application_type
+
 def get_application_type_logged_in(job_url):
     """
     Obtém o tipo de candidatura de uma vaga do LinkedIn usando um navegador com login.
@@ -54,24 +158,43 @@ def get_application_type_logged_in(job_url):
     """
     try:
         logger.info(f"Iniciando extração do tipo de candidatura com login para: {job_url}")
-        session = get_linkedin_session()
         
-        # Tentar fazer login (se ainda não estiver logado)
-        if not session.login():
-            logger.error("Falha ao fazer login no LinkedIn")
-            application_type_queue.put((job_url, "Login Error"))
+        # Verificar se os pacotes do Selenium estão disponíveis
+        selenium_available = True
+        try:
+            import selenium
+            logger.info("Selenium está disponível")
+        except ImportError:
+            logger.warning("Selenium não está instalado ou não está disponível")
+            selenium_available = False
+        
+        if not selenium_available:
+            logger.warning("Selenium não disponível, usando método fallback sem login")
+            application_type_queue.put((job_url, "Selenium não disponível"))
             return
         
-        # Obter detalhes da vaga
-        result = session.get_job_details(job_url)
-        application_type = result.get("application_type", "Not found")
-        
-        logger.info(f"Tipo de candidatura obtido com login: {application_type}")
-        application_type_queue.put((job_url, application_type))
+        try:
+            session = get_linkedin_session()
+            
+            # Tentar fazer login (se ainda não estiver logado)
+            if not session.login():
+                logger.error("Falha ao fazer login no LinkedIn")
+                application_type_queue.put((job_url, "Login Error"))
+                return
+            
+            # Obter detalhes da vaga
+            result = session.get_job_details(job_url)
+            application_type = result.get("application_type", "Not found")
+            
+            logger.info(f"Tipo de candidatura obtido com login: {application_type}")
+            application_type_queue.put((job_url, application_type))
+        except RuntimeError as re:
+            logger.error(f"Erro de Selenium/Browser: {str(re)}")
+            application_type_queue.put((job_url, "Browser Error"))
         
     except Exception as e:
         logger.error(f"Erro ao obter tipo de candidatura com login: {str(e)}")
-        application_type_queue.put((job_url, f"Error: {str(e)}"))
+        application_type_queue.put((job_url, "Error"))
         
     finally:
         # Não fechar a sessão para reutilizá-la em futuras consultas
@@ -275,7 +398,9 @@ def extract_company_info(url):
         city = 'Not found'
         announced_at = 'Not found'
         candidates = 'Not found'
-        application_type = 'Not found'
+        
+        # Detectar tipo de candidatura usando o método sem login (como fallback)
+        application_type = get_application_type_without_login(url, r.text)
         
         # Encontrar o elemento que contém informações sobre cidade, data de anúncio e candidatos
         try:
@@ -706,17 +831,31 @@ def process_linkedin_urls(urls):
             
             results.append(result)
             
-            # Iniciar thread para obter o tipo de candidatura com login
-            thread = threading.Thread(target=get_application_type_logged_in, args=(normalized_url,))
-            thread.daemon = True  # Thread secundária
-            application_type_threads.append(thread)
-            thread.start()
+            # Verificar se Selenium está disponível antes de iniciar a thread
+            selenium_available = True
+            try:
+                import selenium
+                logger.info("Selenium está disponível para detecção precisa")
+                
+                # Iniciar thread para obter o tipo de candidatura com login
+                thread = threading.Thread(target=get_application_type_logged_in, args=(normalized_url,))
+                thread.daemon = True  # Thread secundária
+                application_type_threads.append(thread)
+                thread.start()
+            except ImportError:
+                logger.warning("Selenium não está disponível, usando apenas o método fallback")
+                selenium_available = False
     
-    # Aguardar um tempo para que algumas threads possam terminar (mas não bloquear por muito tempo)
-    logger.info("Aguardando resultados de tipo de candidatura das threads com login...")
-    
-    # Esperar até 20 segundos para obter os resultados do login
-    timeout = time.time() + 30  # 30 segundos de timeout
+    # Verificar se há threads para aguardar
+    if application_type_threads:
+        # Aguardar um tempo para que algumas threads possam terminar (mas não bloquear por muito tempo)
+        logger.info("Aguardando resultados de tipo de candidatura das threads com login...")
+        
+        # Esperar até 30 segundos para obter os resultados do login
+        timeout = time.time() + 30  # 30 segundos de timeout
+    else:
+        logger.info("Nenhuma thread de Selenium iniciada, usando apenas o método sem login")
+        timeout = 0  # Não esperar
     
     # Processar resultados que chegam na fila enquanto esperamos
     while time.time() < timeout:

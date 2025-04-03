@@ -43,6 +43,10 @@ class LinkedInSession:
             return
         
         try:
+            # Verificar se estamos em ambiente Replit
+            is_replit = "REPL_ID" in os.environ or "REPLIT_DB_URL" in os.environ
+            logger.info(f"Ambiente Replit detectado: {is_replit}")
+            
             chrome_options = Options()
             if self.headless:
                 chrome_options.add_argument("--headless")
@@ -51,6 +55,7 @@ class LinkedInSession:
             # Adicionar opções para evitar detecção de automação
             chrome_options.add_argument("--disable-blink-features=AutomationControlled")
             chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("--window-size=1920,1080")
             chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
             
@@ -58,9 +63,27 @@ class LinkedInSession:
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option("useAutomationExtension", False)
             
-            # Instalar e usar o Chrome via WebDriverManager
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            # Verificar se estamos em ambiente Replit
+            if is_replit:
+                logger.info("Ajustando configurações para o ambiente Replit")
+                try:
+                    # Caminho para o Chrome/Chromium no Replit
+                    chrome_options.binary_location = '/usr/bin/chromium-browser'
+                    # Modo específico para Replit
+                    chrome_options.add_argument("--remote-debugging-port=9222")
+                    service = Service()
+                    self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                except Exception as e:
+                    logger.error(f"Erro ao iniciar Chrome no Replit: {str(e)}")
+                    raise RuntimeError(f"Não foi possível iniciar o Chrome no Replit: {str(e)}")
+            else:
+                # Instalar e usar o Chrome via WebDriverManager para ambientes não-Replit
+                try:
+                    service = Service(ChromeDriverManager().install())
+                    self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                except Exception as e:
+                    logger.error(f"Erro ao iniciar Chrome com WebDriverManager: {str(e)}")
+                    raise
             
             # Alterar a propriedade navigator.webdriver para evitar detecção
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -70,6 +93,9 @@ class LinkedInSession:
         except WebDriverException as e:
             logger.error(f"Erro ao iniciar o navegador: {str(e)}")
             raise
+        except Exception as e:
+            logger.error(f"Erro inesperado ao iniciar o navegador: {str(e)}")
+            raise RuntimeError(f"Não foi possível iniciar o navegador: {str(e)}")
     
     def login(self):
         """
