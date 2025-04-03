@@ -24,7 +24,7 @@ def extract_company_info(url):
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, company link, job description, and searched_at timestamp
+        dict: Dictionary containing original link, job title, company name, company link, job description, city, announced_at, candidates, and searched_at timestamp
     """
     # Obter data e hora atual para a coluna "searched_at" no formato compatível com Excel
     current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -209,8 +209,49 @@ def extract_company_info(url):
             # Método de último recurso - capturar especificamente os títulos e itens da página
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
+            
+        # Extrair informações adicionais: cidade, data de anúncio e candidatos
+        city = 'Not found'
+        announced_at = 'Not found'
+        candidates = 'Not found'
+        
+        # Encontrar o elemento que contém informações sobre cidade, data de anúncio e candidatos
+        try:
+            # Tentar encontrar o container com as informações adicionais
+            tertiary_container = soup.select_one(".job-details-jobs-unified-top-card__primary-description-container") or \
+                                 soup.select_one(".job-details-jobs-unified-top-card__tertiary-description-container")
+            
+            if tertiary_container:
+                logger.debug("Container de informações adicionais encontrado")
+                
+                # Extrair todos os spans com informações de texto
+                spans = tertiary_container.select('.tvm__text')
+                
+                # Processar cada span para identificar o tipo de informação
+                for span in spans:
+                    span_text = span.get_text(strip=True)
+                    
+                    # Verificar se o span tem conteúdo
+                    if not span_text or span_text in ['.', '·', '']:
+                        continue
+                    
+                    # Identificar o tipo de informação com base no conteúdo
+                    if 'candidates' in span_text.lower() or 'applicants' in span_text.lower():
+                        candidates = span_text
+                        logger.debug(f"Candidatos identificados: {candidates}")
+                    elif any(month in span_text.lower() for month in ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']):
+                        announced_at = span_text
+                        logger.debug(f"Data de anúncio identificada: {announced_at}")
+                    elif not any(keyword in span_text.lower() for keyword in ['ago', 'hour', 'day', 'week', 'month']):
+                        city = span_text
+                        logger.debug(f"Cidade identificada: {city}")
+            else:
+                logger.debug("Container de informações adicionais não encontrado")
+        except Exception as e:
+            logger.warning(f"Erro ao extrair informações adicionais: {str(e)}")
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
+        logger.debug(f"Additional info - city: {city}, announced_at: {announced_at}, candidates: {candidates}")
         
         return {
             'link': url,
@@ -218,6 +259,9 @@ def extract_company_info(url):
             'company_link': company_link,
             'job_title': job_title,
             'job_description': job_description,
+            'city': city,
+            'announced_at': announced_at,
+            'candidates': candidates,
             'searched_at': current_datetime
         }
     
@@ -229,6 +273,9 @@ def extract_company_info(url):
             'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
+            'city': 'Not found',
+            'announced_at': 'Not found',
+            'candidates': 'Not found',
             'searched_at': current_datetime
         }
     except Exception as e:
@@ -239,6 +286,9 @@ def extract_company_info(url):
             'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
+            'city': 'Not found',
+            'announced_at': 'Not found',
+            'candidates': 'Not found',
             'searched_at': current_datetime
         }
 
@@ -303,7 +353,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description', 'searched_at'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description', 'city', 'announced_at', 'candidates', 'searched_at'])
     return df
 
 def get_results_html(urls):
@@ -352,31 +402,46 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(1), 
     .linkedin-job-results-table td:nth-child(1) {
-        width: 15%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(2), 
     .linkedin-job-results-table td:nth-child(2) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 15%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
     .linkedin-job-results-table td:nth-child(4) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 40%;
+        width: 30%;
     }
     
     .linkedin-job-results-table th:nth-child(6), 
     .linkedin-job-results-table td:nth-child(6) {
+        width: 8%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(7), 
+    .linkedin-job-results-table td:nth-child(7) {
+        width: 8%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(8), 
+    .linkedin-job-results-table td:nth-child(8) {
+        width: 8%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(9), 
+    .linkedin-job-results-table td:nth-child(9) {
         width: 10%;
     }
     </style>
@@ -389,6 +454,9 @@ def get_results_html(urls):
             <th>Company Link</th>
             <th>Job Title</th>
             <th>Job Description</th>
+            <th>City</th>
+            <th>Announced At</th>
+            <th>Candidates</th>
             <th>Searched At</th>
           </tr>
         </thead>
@@ -404,6 +472,9 @@ def get_results_html(urls):
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
           <td class="full-text">{row['job_description']}</td>
+          <td>{row['city']}</td>
+          <td>{row['announced_at']}</td>
+          <td>{row['candidates']}</td>
           <td>{row['searched_at']}</td>
         </tr>
         """
