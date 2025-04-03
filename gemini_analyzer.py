@@ -2,7 +2,8 @@ import os
 import json
 import logging
 import time
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -24,9 +25,8 @@ class JobAnalyzer:
             raise ValueError("GEMINI_API_KEY não está definida nas variáveis de ambiente")
         
         # Inicializar cliente Gemini
-        genai.configure(api_key=api_key)
-        self.model_name = "gemini-pro"  # Modelo que suporta schemas
-        self.model = genai.GenerativeModel(model_name=self.model_name)
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = "gemini-1.5-pro-latest"  # Modelo mais recente que suporta schemas
         
         # Configurar o prompt base
         self.system_prompt = self._get_system_prompt()
@@ -59,8 +59,7 @@ class JobAnalyzer:
 
 #CURRICULO
 SUMÁRIO
-Gerente de projetos sênior com 10 anos de experiência na gestão de projetos de tecnologia, corporativos e de CAPEX, utilizando metodologias ágeis e preditivas. Histórico comprovado em: Gestão de portfólios complexos (R$100MM+); Liderança de equipes multifuncionais diretas (20+) e indiretas (300+); Gestão estratégica de clientes e stakeholders; Modelagem e implementação de processos lean; Desenvolvimento de sistemas de gestão e; Análise e monitoramento de dados e KPIs ...[Truncated]
-
+Gerente de projetos sênior com 10 anos de experiência na gestão de projetos de tecnologia, corporativos e de CAPEX, utilizando metodologias ágeis e preditivas. Histórico comprovado em: Gestão de portfólios complexos (R$100MM+); Liderança de equipes multifuncionais diretas (20+) e indiretas (300+); Gestão estratégica de clientes e stakeholders; Modelagem e implementação de processos lean; Desenvolvimento de sistemas de gestão e; Análise e monitoramento de dados e KPIs; Gerenciamento proativo de riscos, orçamento e custos; Implantação de PMO.
 
 
 EXPERIÊNCIA
@@ -155,7 +154,7 @@ Essenciais: Excel Avançado, PowerPoint."""
             # Limpar a descrição da vaga para remover tags HTML
             clean_description = job_description.replace('<br><br>', '\n\n').replace('<br>', '\n')
             
-            # Construir o prompt de usuário
+            # Construir o prompt do usuário para análise
             user_prompt = f"""
 # VAGA: {job_title}
 # EMPRESA: {company_name}
@@ -164,94 +163,75 @@ Essenciais: Excel Avançado, PowerPoint."""
 {clean_description}
 
 Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
-"""
+            """
             
-            # Configurar o esquema de resposta usando dicionário JSON padrão
-            response_schema = {
-                "type": "object",
-                "required": ["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
-                          "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
-                "properties": {
-                    "nota_palavras_chave": {
-                        "type": "integer"
-                    },
-                    "nota_requisitos": {
-                        "type": "integer"
-                    },
-                    "nota_experiencia": {
-                        "type": "integer"
-                    },
-                    "nota_qualificacoes": {
-                        "type": "integer"
-                    },
-                    "nota_global": {
-                        "type": "integer"
-                    },
-                    "forcas": {
-                        "type": "string"
-                    },
-                    "fraquezas": {
-                        "type": "string"
-                    }
-                }
-            }
-            
-            # Configurar as configurações de segurança
-            safety_settings = [
-                genai.types.SafetySetting(
-                    category="HARM_CATEGORY_HARASSMENT",
-                    threshold="BLOCK_NONE",
-                ),
-                genai.types.SafetySetting(
-                    category="HARM_CATEGORY_HATE_SPEECH",
-                    threshold="BLOCK_NONE",
-                ),
-                genai.types.SafetySetting(
-                    category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    threshold="BLOCK_NONE",
-                ),
-                genai.types.SafetySetting(
-                    category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                    threshold="BLOCK_NONE",
-                ),
-            ]
-            
-            # Criar o conteúdo da solicitação
+            # Preparar o conteúdo para a API
             contents = [
-                genai.types.Content(
-                    role="system",
-                    parts=[genai.types.Part.from_text(text=self.system_prompt)],
-                ),
-                genai.types.Content(
+                types.Content(
                     role="user",
-                    parts=[genai.types.Part.from_text(text=user_prompt)],
+                    parts=[types.Part.from_text(text=user_prompt)],
                 ),
             ]
             
-            # Configuração da geração
-            generation_config = genai.GenerationConfig(
+            # Criar a configuração com o esquema de resposta esperado
+            generate_content_config = types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=response_schema,
+                response_schema=genai.types.Schema(
+                    type=genai.types.Type.OBJECT,
+                    required=["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
+                              "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
+                    properties={
+                        "nota_palavras_chave": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_requisitos": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_experiencia": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_qualificacoes": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_global": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "forcas": genai.types.Schema(
+                            type=genai.types.Type.STRING,
+                        ),
+                        "fraquezas": genai.types.Schema(
+                            type=genai.types.Type.STRING,
+                        ),
+                    },
+                ),
+                system_instruction=[
+                    types.Part.from_text(text=self.system_prompt),
+                ],
             )
             
-            # Fazer a chamada à API
+            # Fazer a chamada à API do Gemini
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Usar diretamente o modelo GenerativeModel
-                result = self.model.generate_content(
+                # Fazer a chamada ao modelo
+                result = self.client.models.generate_content(
+                    model=self.model_name,
                     contents=contents,
-                    generation_config=generation_config,
+                    config=generate_content_config,
                 )
+                
+                # Obter o texto da resposta
+                response_text = result.text if hasattr(result, 'text') else None
+                
             except Exception as e:
                 logger.error(f"Erro na chamada à API do Gemini: {str(e)}")
                 raise Exception(f"Falha na análise com Gemini API: {str(e)}")
             
             # Analisar e retornar o resultado
-            if result and hasattr(result, 'text'):
+            if response_text:
                 try:
                     # Processar o resultado como JSON
-                    analysis_data = json.loads(result.text)
+                    analysis_data = json.loads(response_text)
                     
                     # Adicionar informações da vaga ao resultado
                     analysis_data['job_title'] = job_title
@@ -265,7 +245,7 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                     logger.error(f"Erro ao decodificar JSON do resultado: {e}")
                     return {
                         "error": f"Formato de resposta inválido: {e}",
-                        "raw_response": result.text
+                        "raw_response": response_text
                     }
             else:
                 logger.error("Resposta vazia ou sem texto do Gemini API")

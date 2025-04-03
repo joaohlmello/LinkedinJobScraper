@@ -1,0 +1,148 @@
+import base64
+import os
+from google import genai
+from google.genai import types
+
+
+def generate():
+    client = genai.Client(
+        api_key=os.environ.get("GEMINI_API_KEY"),
+    )
+
+    model = "gemini-2.5-pro-exp-03-25"
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text="""INSERT_INPUT_HERE"""),
+            ],
+        ),
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=genai.types.Schema(
+            type = genai.types.Type.OBJECT,
+            required = ["nota_palavras_chave", "nota_requisitos", "nota_experiencia", "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
+            properties = {
+                "nota_palavras_chave": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "nota_requisitos": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "nota_experiencia": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "nota_qualificacoes": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "nota_global": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "forcas": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                ),
+                "fraquezas": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                ),
+            },
+        ),
+        system_instruction=[
+            types.Part.from_text(text="""#CONTEXTO
+-Você é um ATS Aplicant Tracking System reverso, que ajudará o candidato avaliar vagas de emprego e analisar o % de aderência.
+
+#METODOLOGIA DE AVALIAÇÃO DE ADERÊNCIA
+-Identificação de palavras-chave: Extraia e liste as principais palavras-chave da descrição da vaga. Considere o Contexto: Título > Descrição > Outros
+-Análise de requisitos: Avalie cada requisito individualmente, atribuindo uma porcentagem de aderência
+-Avaliação de experiência: Compare experiências listadas com as exigidas.
+-Análise de qualificações: Verifique formação acadêmica e certificações
+-Cálculo de aderência global: Média ponderada das análises anteriores (10% palavras-chave, 30% requisitos, 30% experiência, 30% qualificações)
+-Análise detalhada de forças e fraquezas (SWOT só com SW, sem OT)
+
+#OUTPUT ESTRUTURADO NESTA ORDEM
+-nota palavras-chave
+-nota requisitos
+-nota experiência
+-nota qualificações
+-nota global
+-forças (use quebra de pagina entre os topicos)
+-fraquezas (use quebra de pagina entre os topicos)
+
+#CURRICULO
+SUMÁRIO
+Gerente de projetos sênior com 10 anos de experiência na gestão de projetos de tecnologia, corporativos e de CAPEX, utilizando metodologias ágeis e preditivas. Histórico comprovado em: Gestão de portfólios complexos (R$100MM+); Liderança de equipes multifuncionais diretas (20+) e indiretas (300+); Gestão estratégica de clientes e stakeholders; Modelagem e implementação de processos lean; Desenvolvimento de sistemas de gestão e; Análise e monitoramento de dados e KPIs; Gerenciamento proativo de riscos, orçamento e custos; Implantação de PMO.
+
+
+
+EXPERIÊNCIA
+SYNERGIA CONSULTORIA SOCIOAMBIENTAL (Cliente Vale)
+Nov 22 – Dez 24: Diretor de Projetos de Tecnologia e Planejamento
+Ago 22 – Out 22: Consultor Estratégico
+Liderança executiva de projetos estratégicos e de equipe multifuncional de 20 pessoas, responsável por tecnologia, planejamento e qualidade, em uma consultoria de São Paulo com 500 funcionários e clientes como Vale e Brasken. Experiência global, no sentido de reportar trimestralmente ao CEO do fundo de private equity na Bélgica (TPF).
+
+Gestão de Stakeholders e Crises: Liderança do turnaround do maior projeto da empresa (R$100MM, 300 pessoas), com gestão da mudança, incluindo: comunicação proativa com o cliente, alinhando expectativas e realizando entregas menores, e o replanejamento de escopo, prazo, orçamento e estrutura organizacional.
+ 
+Gestão de Projetos Estratégicos: Implementação de OKR como metodologia de planejamento estratégico da empresa, integrando 90 projetos a 15 objetivos estratégicos e 3 diretrizes. Condução de ritos com a alta gestão, assegurando visibilidade e alinhamento. Planejamento e  monitoramento com as equipes executoras.
+
+Análise de Dados e Modelagem de Processos: Desenvolvimento e implementação de sistema de gestão PPM para acompanhamento de milhões de produtos, através do mapeamento e integração de centenas de etapas do processo, incluindo o monitoramento de KPIs e dashboards em tempo real para avaliação de desempenho.
+
+Gestão da Qualidade: Aprovação de políticas e diretrizes corporativas, manutenção da certificação ISO através do desenvolvimento de sistema de gestão da conformidade, estabelecimento de padrões, coordenação de auditorias internas e externas, e implementação de melhoria contínua com foco no cliente e gestão de riscos.
+
+JM GESTÃO & TECNOLOGIA (Cliente Oncoclínicas)
+Fev 21 – Out 22: Gerente de Projetos & Fundador
+Empreendendo em consultoria de gerenciamento de projetos e implantação de PMO, e tendo Oncoclínicas como cliente. Gerenciamento de R$18MM em 4 projetos de CAPEX, e desenvolvimento de sistemas de gestão de PMO.
+
+Gestão de Projetos Complexos: Coordenação de equipes multidisciplinares (internas, cliente e terceiros)) em projetos complexos, que envolvem engenharia, tecnologia, suprimentos, operações e regulatório, aplicando metodologias estruturadas, como: estrutura analítica do projeto (EAP) - work breakdown structure (WBS), caminho crítico - critical path method (CPM) e valor agregado -  earned value management (EVM). 
+
+Implementação de PMO: Padronização da EAP, cronogramas e curvas S para equalização do acompanhamento físico-financeiro, implementação de processos de gestão da mudança e aprovação de pleitos aditivos.
+
+Gerenciamento de Riscos: Implementação do processo, resultando em zero ocorrências não mapeadas. Mapeamento, análise, definição de respostas e monitoramento contínuo. Adoção como procedimento padrão.
+
+Transformação Digital: Desenvolvimento de sistema de ERP de contratos e custos, que se tornou diferencial contra players maiores, gerando economia global de R$700k e otimizando processos significativamente.
+
+Planos de Treinamento: Desenvolvimento e execução de planos de treinamento de sistemas e de transição para operação. Documentação de data book completo, assegurando histórico e capacitação da equipe.
+
+EQSEED
+Out 20 – Jul 21: Head de Projetos e Operações & Sócio
+Fev 20 – Set 20: Especialista em Gestão de Projetos
+Respondendo ao CEO inglês, e responsável por projetos de transformação digital e operações em uma startup fintech com 20 funcionários. Marketplace de investimentos em  venture capital para o mercado financeiro.
+Liderança Multifuncional: Promoção de especialista para head em oito meses. Gestão do time de Operações após a saída do COO (4 pessoas), responsável pelas áreas funcionais de  finanças, contabilidade, TI e RH.
+
+Gestão de Projetos Ágeis: Implementação de metodologias ágeis (OKRs e Kanban) para toda a empresa, principalmente tecnologia, marketing e comercial, dando visibilidade de todas as atividades e iniciativas, e viabilizando uma priorização integrada dos roadmaps de projetos com a necessidade do negócio
+
+Transformação Digital: Automação do batimento financeiro, reduzindo o lead time em 80%. Sistematização da análise de investimentos, aumentando a produtividade em 6x. Monitoramento da interação dos usuários com a plataforma, viabilizando a gestão do funil de vendas e aumentando a conversão de leads em 15%.
+
+Gestão Financeira: Gerenciamento do Runway (tempo até a falência por falta de caixa) durante o COVID-19, incluindo a renegociação de todos os contratos e fluxo de caixa descontado por cenários.
+
+CARGOS ANTERIORES
+Abr 18 – Ago 19: N&A CONSULTORES (brMalls) – Coordenador de Planejamento e Controle de Projetos
+Ago 17 – Mar 18: N&A CONSULTORES (brMalls) – Analista de Planejamento e Controle de Projetos
+Nov 16 – Ago 17: ONCOCLÍNICAS – Estagiário de PMO
+Jul 15 – Jun 16: N&A CONSULTORES (brMalls) – Estagiário de Planejamento e Controle de Projetos
+Jan 14 – Jan 15: MÉTODO ENGENHARIA – Estagiário de Planejamento e Controle de Projetos
+
+EDUCAÇÃO E CERTIFICAÇÕES
+MBA em Gerenciamento de Projetos  – Fundação Getúlio Vargas (FGV) – Concluído
+Graduação em Engenharia – Estácio – Concluído
+Certificação Project Management Professional (PMP) – Project Management Institute (PMI) – 2020
+Certificação Scrum Foundations Professional Certificate (SFPC) – Certiprof – 2020
+
+CONHECIMENTOS
+Idiomas: Inglês fluente;
+Metodologias e Frameworks: PMBOK, Waterfall, Scrum, Kanban;
+Sistemas de Gestão: Ms Project, JIRA, Confluence, Azure Devops;
+ERP: Totvs, Oracle;
+Dados: Power BI, Google Data Studio, Metabase, SQL, Python;
+Essenciais: Excel Avançado, PowerPoint."""),
+        ],
+    )
+
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    ):
+        print(chunk.text, end="")
+
+if __name__ == "__main__":
+    generate()
