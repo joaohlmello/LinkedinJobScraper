@@ -57,29 +57,6 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # Find application type using multiple selectors
-        application_type_element = None
-        
-        # Tentativa 1: botão dentro da div jobs-apply-button--top-card 
-        application_type_element = soup.select_one('div.jobs-apply-button--top-card button[aria-label]')
-        
-        # Tentativa 2: qualquer botão de aplicação com aria-label
-        if not application_type_element:
-            application_type_element = soup.select_one('button.jobs-apply-button[aria-label]')
-            
-        # Tentativa 3: botão genérico com palavra "apply" no texto
-        if not application_type_element:
-            apply_buttons = soup.select('button')
-            for button in apply_buttons:
-                button_text = button.get_text(strip=True).lower()
-                if 'apply' in button_text:
-                    application_type_element = button
-                    break
-        
-        # Tentativa 4: span com classe que contém a palavra apply
-        if not application_type_element:
-            application_type_element = soup.select_one('span[class*="apply"]')
-        
         # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
         try:
@@ -231,93 +208,13 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
         
-        # Verificar se é Easy Apply usando o seletor XPath específico sugerido pelo usuário
-        easy_apply_text = False
-        
-        # Usando BeautifulSoup para verificar
-        main_container = soup.select_one('body > div.application-outlet > div.authentication-outlet > div.scaffold-layout > div > div > main > div.job-view-layout')
-        if main_container:
-            container_text = main_container.get_text().lower()
-            if 'easy apply' in container_text:
-                easy_apply_text = True
-                logger.debug("Found 'Easy Apply' in main job container")
-        
-        # Tentar também com lxml e XPath
-        try:
-            import lxml.html
-            if hasattr(r, 'content'):
-                tree = lxml.html.fromstring(r.content)
-                # Usando o XPath específico sugerido pelo usuário
-                main_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]')
-                if main_elements:
-                    main_text = main_elements[0].text_content().lower()
-                    if 'easy apply' in main_text:
-                        easy_apply_text = True
-                        logger.debug("Found 'Easy Apply' in main container using XPath")
-        except Exception as e:
-            logger.warning(f"Error checking for Easy Apply using XPath: {str(e)}")
-        
-        # Extract application type from button aria-label or button text
-        application_type = 'Not found'
-        if application_type_element:
-            try:
-                # Tentar extrair o texto do atributo aria-label
-                aria_label = application_type_element.get('aria-label')
-                if aria_label and isinstance(aria_label, str):
-                    application_type = aria_label.strip()
-                    logger.debug(f"Extracted application type from aria-label: {application_type}")
-                
-                # Se não encontrou aria-label, tentar usar o texto do próprio botão
-                if application_type == 'Not found':
-                    button_text = application_type_element.get_text(strip=True)
-                    if button_text:
-                        if 'easy apply' in button_text.lower():
-                            application_type = 'Easy Apply'
-                            logger.debug(f"Extracted Easy Apply from button text")
-                        elif 'apply' in button_text.lower():
-                            # Se encontramos "Easy Apply" no texto da página mas o botão tem só "Apply"
-                            # vamos priorizar "Easy Apply"
-                            if easy_apply_text:
-                                application_type = 'Easy Apply'
-                                logger.debug(f"Setting Easy Apply based on page content")
-                            else:
-                                application_type = 'Apply'
-                                logger.debug(f"Extracted Apply from button text")
-                
-                # Verificar elementos específicos da UI do LinkedIn
-                if application_type == 'Not found' or application_type == 'Apply':
-                    # Verificar elementos de Easy Apply
-                    easy_apply_elements = soup.select('.jobs-apply-button--top-card, .jobs-s-apply, .jobs-apply-button, [data-control-name="easy_apply_button"]')
-                    if easy_apply_elements:
-                        for elem in easy_apply_elements:
-                            elem_text = elem.get_text(strip=True).lower()
-                            if 'easy apply' in elem_text:
-                                application_type = 'Easy Apply'
-                                logger.debug("Found Easy Apply in button text")
-                                break
-                
-                # Se ainda não encontramos um valor mais específico e a página tem "Easy Apply"
-                if (application_type == 'Not found' or application_type == 'Apply') and easy_apply_text:
-                    application_type = 'Easy Apply'
-                    logger.debug("Setting Easy Apply based on page content (fallback)")
-                
-                # Última chance: se só temos "Apply" mas o botão tem uma classe que indica Easy Apply
-                if application_type == 'Apply' and application_type_element:
-                    element_class = application_type_element.get('class', '')
-                    if isinstance(element_class, str) and ('easy' in element_class.lower()):
-                        application_type = 'Easy Apply'
-                        logger.debug("Found Easy Apply in button class")
-            except Exception as e:
-                logger.warning(f"Error extracting application type: {str(e)}")
-        
-        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}, application type: {application_type}")
+        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
         return {
             'link': url,
             'company_name': company_name,
             'company_link': company_link,
             'job_title': job_title,
-            'application_type': application_type,
             'job_description': job_description
         }
     
@@ -328,7 +225,6 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
-            'application_type': 'Not found',
             'job_description': 'Not found'
         }
     except Exception as e:
@@ -338,7 +234,6 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
-            'application_type': 'Not found',
             'job_description': 'Not found'
         }
 
@@ -361,7 +256,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'application_type', 'job_description'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
     return df
 
 def get_results_html(urls):
@@ -410,7 +305,7 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(1), 
     .linkedin-job-results-table td:nth-child(1) {
-        width: 13%;
+        width: 15%;
     }
     
     .linkedin-job-results-table th:nth-child(2), 
@@ -420,7 +315,7 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 13%;
+        width: 15%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
@@ -430,12 +325,7 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 12%;
-    }
-    
-    .linkedin-job-results-table th:nth-child(6), 
-    .linkedin-job-results-table td:nth-child(6) {
-        width: 42%;
+        width: 50%;
     }
     </style>
     <div class="table-responsive">
@@ -446,7 +336,6 @@ def get_results_html(urls):
             <th>Company Name</th>
             <th>Company Link</th>
             <th>Job Title</th>
-            <th>Application Type</th>
             <th>Job Description</th>
           </tr>
         </thead>
@@ -461,7 +350,6 @@ def get_results_html(urls):
           <td>{row['company_name']}</td>
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
-          <td>{row['application_type']}</td>
           <td class="full-text">{row['job_description']}</td>
         </tr>
         """
@@ -537,8 +425,8 @@ def export_to_excel(urls):
             # Definir a largura da coluna
             worksheet.column_dimensions[column_letter].width = max_length
             
-            # Configurações especiais para a coluna de descrição (coluna F, índice 5)
-            if i == 5:  # Job Description column
+            # Configurações especiais para a coluna de descrição (coluna E, índice 4)
+            if i == 4:  # Job Description column
                 # Ajustar altura das linhas automaticamente
                 worksheet.column_dimensions[column_letter].width = 100  # Largura máxima
                 
