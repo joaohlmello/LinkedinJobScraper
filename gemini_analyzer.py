@@ -166,35 +166,35 @@ Essenciais: Excel Avançado, PowerPoint."""
 Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
 """
             
-            # Configurar o esquema de resposta
-            response_schema = genai.types.Schema(
-                type=genai.types.Type.OBJECT,
-                required=["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
+            # Configurar o esquema de resposta usando dicionário JSON padrão
+            response_schema = {
+                "type": "object",
+                "required": ["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
                           "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
-                properties={
-                    "nota_palavras_chave": genai.types.Schema(
-                        type=genai.types.Type.INTEGER,
-                    ),
-                    "nota_requisitos": genai.types.Schema(
-                        type=genai.types.Type.INTEGER,
-                    ),
-                    "nota_experiencia": genai.types.Schema(
-                        type=genai.types.Type.INTEGER,
-                    ),
-                    "nota_qualificacoes": genai.types.Schema(
-                        type=genai.types.Type.INTEGER,
-                    ),
-                    "nota_global": genai.types.Schema(
-                        type=genai.types.Type.INTEGER,
-                    ),
-                    "forcas": genai.types.Schema(
-                        type=genai.types.Type.STRING,
-                    ),
-                    "fraquezas": genai.types.Schema(
-                        type=genai.types.Type.STRING,
-                    ),
-                },
-            )
+                "properties": {
+                    "nota_palavras_chave": {
+                        "type": "integer"
+                    },
+                    "nota_requisitos": {
+                        "type": "integer"
+                    },
+                    "nota_experiencia": {
+                        "type": "integer"
+                    },
+                    "nota_qualificacoes": {
+                        "type": "integer"
+                    },
+                    "nota_global": {
+                        "type": "integer"
+                    },
+                    "forcas": {
+                        "type": "string"
+                    },
+                    "fraquezas": {
+                        "type": "string"
+                    }
+                }
+            }
             
             # Configurar as configurações de segurança
             safety_settings = [
