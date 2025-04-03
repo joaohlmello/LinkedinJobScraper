@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 def extract_company_info(url):
     """
-    Extract company name, job title, application type, and links from a LinkedIn job listing URL.
+    Extract company name, job title, and links from a LinkedIn job listing URL.
     
     Args:
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, company link, application type and job description
+        dict: Dictionary containing original link, job title, company name, and company link
     """
     try:
         # Set headers to mimic a browser request
@@ -56,9 +56,6 @@ def extract_company_info(url):
         
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
-        
-        # Inicializar variável para application_type
-        application_type = 'Not found'
         
         # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
@@ -172,193 +169,6 @@ def extract_company_info(url):
                     if len(extracted_text) > len(job_description_text):
                         job_description_text = extracted_text
                         logger.debug(f"XPath extraiu texto maior: {len(job_description_text)} caracteres")
-                
-                # Extrair o tipo de candidatura usando vários métodos, tanto XPath quanto BeautifulSoup
-                logger.debug("Tentando extrair o tipo de candidatura com múltiplos métodos")
-                
-                # Abordagem 1: BeautifulSoup direto para encontrar botões de aplicação
-                try:
-                    # Buscar todos os botões da página
-                    bs_apply_buttons = soup.find_all('button', class_=lambda c: c and 'jobs-apply-button' in c)
-                    logger.debug(f"BeautifulSoup encontrou {len(bs_apply_buttons)} botões de aplicação")
-                    
-                    # Se encontrou algum botão de aplicação
-                    if bs_apply_buttons:
-                        button = bs_apply_buttons[0]
-                        # Verificar atributo aria-label
-                        if button.has_attr('aria-label') and button['aria-label'].strip():
-                            application_type = button['aria-label'].strip()
-                            logger.debug(f"BeautifulSoup: Tipo de candidatura via aria-label: {application_type}")
-                        # Se não tem aria-label, usar o texto do botão
-                        elif button.text.strip():
-                            application_type = button.text.strip()
-                            logger.debug(f"BeautifulSoup: Tipo de candidatura via texto do botão: {application_type}")
-                    
-                    # Se não encontrou botões específicos, tentar com divs relacionadas
-                    if application_type == 'Not found':
-                        # Procurar divs que costumam conter os botões de aplicação
-                        apply_containers = soup.select('.jobs-apply-button-container, .jobs-s-apply, .jobs-apply-button__container')
-                        logger.debug(f"BeautifulSoup encontrou {len(apply_containers)} contêineres de aplicação")
-                        
-                        if apply_containers:
-                            container = apply_containers[0]
-                            # Buscar botões dentro do contêiner
-                            container_buttons = container.find_all('button')
-                            
-                            if container_buttons:
-                                button = container_buttons[0]
-                                if button.has_attr('aria-label') and button['aria-label'].strip():
-                                    application_type = button['aria-label'].strip()
-                                    logger.debug(f"BeautifulSoup: Tipo de candidatura via contêiner: {application_type}")
-                                elif button.text.strip():
-                                    application_type = button.text.strip()
-                                    logger.debug(f"BeautifulSoup: Tipo de candidatura via texto do contêiner: {application_type}")
-                    
-                    # Procurar por spans específicos que contêm o texto do botão
-                    if application_type == 'Not found':
-                        apply_spans = soup.select('.jobs-apply-button__text, .artdeco-button__text')
-                        logger.debug(f"BeautifulSoup encontrou {len(apply_spans)} spans de aplicação")
-                        
-                        if apply_spans and apply_spans[0].text.strip():
-                            application_type = apply_spans[0].text.strip()
-                            logger.debug(f"BeautifulSoup: Tipo de candidatura via spans: {application_type}")
-                    
-                    # Procurar por qualquer elemento com texto que sugira aplicação
-                    if application_type == 'Not found':
-                        apply_terms = ["Easy Apply", "Apply", "Apply Now", "Candidatar", "Candidatura"]
-                        for term in apply_terms:
-                            elements = soup.find_all(string=lambda text: text and term in text)
-                            if elements:
-                                application_type = term
-                                logger.debug(f"BeautifulSoup: Tipo de candidatura via termo '{term}': {application_type}")
-                                break
-                except Exception as e:
-                    logger.warning(f"Erro ao extrair tipo de candidatura com BeautifulSoup: {str(e)}")
-                
-                # Abordagem 2: XPath (se BeautifulSoup não funcionou)
-                if application_type == 'Not found':
-                    try:
-                        # Estratégia específica: procurar botões com id="ember" e classe "jobs-apply-button"
-                        ember_buttons = tree.xpath('//button[contains(@id, "ember") and contains(@class, "jobs-apply-button")]')
-                        logger.debug(f"XPath encontrou {len(ember_buttons)} botões ember")
-                        
-                        if ember_buttons and len(ember_buttons) > 0:
-                            # 1. Tentar primeiro os botões com id ember (mais específico)
-                            for button in ember_buttons:
-                                aria_label = button.get('aria-label')
-                                if aria_label:
-                                    application_type = aria_label.strip()
-                                    logger.debug(f"XPath: Tipo de candidatura via ember button aria-label: {application_type}")
-                                    break
-                                    
-                            # Se não encontrou pelo aria-label, tentar o texto do botão ember
-                            if application_type == 'Not found':
-                                button_text = ember_buttons[0].text_content().strip()
-                                if button_text:
-                                    application_type = button_text
-                                    logger.debug(f"XPath: Tipo de candidatura via ember button texto: {application_type}")
-                        
-                        # Se não encontrou com ember_buttons, tentar com qualquer botão com a classe jobs-apply-button
-                        if application_type == 'Not found':
-                            # Estratégia genérica: procurar qualquer botão com a classe jobs-apply-button
-                            application_buttons = tree.xpath('//button[contains(@class, "jobs-apply-button")]')
-                            logger.debug(f"XPath encontrou {len(application_buttons)} botões de aplicação genéricos")
-                            
-                            if application_buttons and len(application_buttons) > 0:
-                                # Tentar obter o atributo aria-label
-                                for button in application_buttons:
-                                    aria_label = button.get('aria-label')
-                                    if aria_label:
-                                        application_type = aria_label.strip()
-                                        logger.debug(f"XPath: Tipo de candidatura via aria-label: {application_type}")
-                                        break
-                            
-                                # 2. Se não encontrou pelo aria-label, tentar o texto do botão
-                                if application_type == 'Not found':
-                                    button_text = application_buttons[0].text_content().strip()
-                                    if button_text:
-                                        application_type = button_text
-                                        logger.debug(f"XPath: Tipo de candidatura via texto do botão: {application_type}")
-                        
-                        # 3. Tentar encontrar pelo XPath específico como backup
-                        if application_type == 'Not found':
-                            logger.debug("Tentando XPath específico para o elemento pai")
-                            application_type_xpath = '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div'
-                            application_type_elements = tree.xpath(application_type_xpath)
-                            logger.debug(f"XPath encontrou {len(application_type_elements)} elementos pelo caminho específico")
-                            
-                            if application_type_elements and len(application_type_elements) > 0:
-                                # Extrair o texto completo de todos os filhos do elemento pai
-                                parent_text = application_type_elements[0].text_content().strip()
-                                if parent_text:
-                                    application_type = parent_text
-                                    logger.debug(f"XPath: Tipo de candidatura via elemento pai: {application_type}")
-                        
-                        # 4. Tentar métodos alternativos se ainda não encontrou
-                        if application_type == 'Not found':
-                            # Lista abrangente de XPaths alternativos para o tipo de candidatura
-                            alternative_app_type_xpaths = [
-                                # XPaths para spans dentro de botões (comum no LinkedIn)
-                                '//button[contains(@class, "jobs-apply-button")]//span/text()',
-                                '//button[contains(@class, "artdeco-button")][contains(@aria-label, "Apply") or contains(@aria-label, "Candidatar")]//span/text()',
-                                
-                                # XPaths diretos para botões
-                                '//button[contains(@class, "jobs-apply-button")]/text()',
-                                '//button[contains(@id, "ember") and contains(@class, "jobs-apply-button")]',
-                                
-                                # XPaths para contêineres com botões
-                                '//div[contains(@class, "jobs-apply-button-container")]//button//span/text()',
-                                '//div[contains(@class, "apply-button-container")]//button//span/text()',
-                                '//div[contains(@class, "jobs-s-apply")]//button//span/text()',
-                                
-                                # XPaths baseados em classes comuns
-                                '//span[contains(@class, "jobs-apply-button__text")]/text()',
-                                '//span[contains(@class, "artdeco-button__text")]/text()',
-                            ]
-                            
-                            for xpath in alternative_app_type_xpaths:
-                                app_elements = tree.xpath(xpath)
-                                logger.debug(f"XPath '{xpath}' encontrou {len(app_elements)} elementos")
-                                
-                                if app_elements and len(app_elements) > 0:
-                                    # Para elementos de texto, pegar o primeiro valor não vazio
-                                    for elem in app_elements:
-                                        if isinstance(elem, str):
-                                            text = elem.strip()
-                                        else:
-                                            text = elem.text_content().strip() if hasattr(elem, 'text_content') else ""
-                                        
-                                        if text:
-                                            application_type = text
-                                            logger.debug(f"XPath: Tipo de candidatura via caminho alternativo: {application_type}")
-                                            break
-                                    
-                                    if application_type != 'Not found':
-                                        break
-                        
-                        # 5. Como último recurso, procurar por termos comuns na página
-                        if application_type == 'Not found':
-                            common_terms = ["Easy Apply", "Apply", "Apply Now", "Candidatar", "Candidatura Simplificada", 
-                                            "Candidatura Externa", "Candidatar Agora", "Candidatar-se", "Apply on company site"]
-                            
-                            page_text = ' '.join(tree.xpath('//text()'))
-                            for term in common_terms:
-                                if term in page_text:
-                                    application_type = term
-                                    logger.debug(f"XPath: Tipo de candidatura via texto da página: {application_type}")
-                                    break
-                    except Exception as e:
-                        logger.warning(f"Erro ao extrair tipo de candidatura com XPath: {str(e)}")
-                
-                # Se nenhum método funcionou, definir um valor padrão com base no URL
-                if application_type == 'Not found':
-                    logger.debug("Todos os métodos de extração falharam, usando valor padrão")
-                    if 'linkedin.com' in url:
-                        application_type = "LinkedIn Application"
-                        logger.debug("Usando valor padrão 'LinkedIn Application'")
-                    else:
-                        application_type = "External Application"
-                        logger.debug("Usando valor padrão 'External Application'")
             except Exception as e:
                 logger.warning(f"Erro ao extrair com XPath: {str(e)}")
                 
@@ -400,15 +210,11 @@ def extract_company_info(url):
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
-        # Log do tipo de candidatura extraído
-        logger.debug(f"Tipo de candidatura final: {application_type}")
-            
         return {
             'link': url,
             'company_name': company_name,
             'company_link': company_link,
             'job_title': job_title,
-            'application_type': application_type,
             'job_description': job_description
         }
     
@@ -419,7 +225,6 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
-            'application_type': 'Not found',
             'job_description': 'Not found'
         }
     except Exception as e:
@@ -429,7 +234,6 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
-            'application_type': 'Not found', 
             'job_description': 'Not found'
         }
 
@@ -452,7 +256,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'application_type', 'job_description'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
     return df
 
 def get_results_html(urls):
@@ -511,22 +315,17 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 12%;
+        width: 15%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
     .linkedin-job-results-table td:nth-child(4) {
-        width: 8%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 10%;
-    }
-    
-    .linkedin-job-results-table th:nth-child(6), 
-    .linkedin-job-results-table td:nth-child(6) {
-        width: 45%;
+        width: 50%;
     }
     </style>
     <div class="table-responsive">
@@ -537,7 +336,6 @@ def get_results_html(urls):
             <th>Company Name</th>
             <th>Company Link</th>
             <th>Job Title</th>
-            <th>Application Type</th>
             <th>Job Description</th>
           </tr>
         </thead>
@@ -552,7 +350,6 @@ def get_results_html(urls):
           <td>{row['company_name']}</td>
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
-          <td>{row['application_type']}</td>
           <td class="full-text">{row['job_description']}</td>
         </tr>
         """
@@ -628,8 +425,8 @@ def export_to_excel(urls):
             # Definir a largura da coluna
             worksheet.column_dimensions[column_letter].width = max_length
             
-            # Configurações especiais para a coluna de descrição (coluna F, índice 5)
-            if i == 5:  # Job Description column
+            # Configurações especiais para a coluna de descrição (coluna E, índice 4)
+            if i == 4:  # Job Description column
                 # Ajustar altura das linhas automaticamente
                 worksheet.column_dimensions[column_letter].width = 100  # Largura máxima
                 
