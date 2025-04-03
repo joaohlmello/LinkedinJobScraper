@@ -210,10 +210,11 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
             
-        # Extrair informações adicionais: cidade, data de anúncio e candidatos
+        # Extrair informações adicionais: cidade, data de anúncio, candidatos e tipo de candidatura
         city = 'Not found'
         announced_at = 'Not found'
         candidates = 'Not found'
+        application_type = 'Not found'
         
         # Encontrar o elemento que contém informações sobre cidade, data de anúncio e candidatos
         try:
@@ -246,8 +247,18 @@ def extract_company_info(url):
                         city = span_text
                         logger.debug(f"Cidade identificada: {city}")
             
+            # MÉTODO 1 para tipo de candidatura: Busca pelo botão específico ou elemento fornecido
+            apply_button_spans = soup.select('.jobs-apply-button--top-card .artdeco-button__text, #ember40 > span')
+            if apply_button_spans:
+                for span in apply_button_spans:
+                    button_text = span.get_text(strip=True)
+                    if button_text:
+                        application_type = button_text
+                        logger.debug(f"Tipo de candidatura identificado (método 1): {application_type}")
+                        break
+            
             # MÉTODO 2: Busca por classes específicas ou padrões comuns
-            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found':
+            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found' or application_type == 'Not found':
                 logger.debug("Tentando método 2 para encontrar informações adicionais")
                 
                 # Tentar encontrar a localização
@@ -276,14 +287,24 @@ def extract_company_info(url):
                         candidates = text
                         logger.debug(f"Candidatos identificados (método 2): {candidates}")
                         break
+                        
+                # Tentar encontrar o tipo de candidatura usando seletores mais genéricos
+                if application_type == 'Not found':
+                    apply_elements = soup.select('button.jobs-apply-button, button.apply-button, a.apply-button, .jobs-apply-button--top-card button')
+                    for element in apply_elements:
+                        text = element.get_text(strip=True)
+                        if text:
+                            application_type = text
+                            logger.debug(f"Tipo de candidatura identificado (método 2): {application_type}")
+                            break
             
-            # MÉTODO 3: Análise de texto para encontrar padrões em todo o documento
-            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found':
+            # MÉTODO 3: Análise de texto para encontrar padrões em todo o documento e XPath
+            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found' or application_type == 'Not found':
                 logger.debug("Tentando método 3 para encontrar informações adicionais")
                 
                 # Obter todos os textos pequenos da página que poderiam conter informações relevantes
                 small_texts = []
-                for element in soup.select('span, div.small, p.small, .job-details-jobs-unified-top-card__subtitle-secondary-grouping'):
+                for element in soup.select('span, div.small, p.small, .job-details-jobs-unified-top-card__subtitle-secondary-grouping, button span'):
                     text = element.get_text(strip=True)
                     if len(text) < 100 and len(text) > 2:  # filtrar textos muito curtos ou muito longos
                         small_texts.append(text)
@@ -315,6 +336,48 @@ def extract_company_info(url):
                             logger.debug(f"Candidatos identificados (método 3): {candidates}")
                             break
                 
+                # Procurar padrões para tipo de candidatura
+                if application_type == 'Not found':
+                    application_keywords = ['apply', 'easy apply', 'candidatar', 'candidatura', 'aplicar', 'inscrever']
+                    for text in small_texts:
+                        if any(keyword in text.lower() for keyword in application_keywords):
+                            application_type = text
+                            logger.debug(f"Tipo de candidatura identificado (método 3): {application_type}")
+                            break
+                
+                # MÉTODO 4: Tentar usar XPath específico para o tipo de candidatura
+                if application_type == 'Not found':
+                    try:
+                        from lxml import html
+                        if hasattr(r, 'content'):
+                            tree = html.fromstring(r.content)
+                        elif hasattr(r, 'html') and hasattr(r.html, 'html'):
+                            tree = html.fromstring(r.html.html)
+                        else:
+                            logger.warning("Não foi possível obter o conteúdo HTML para análise XPath")
+                            raise Exception("Conteúdo HTML não disponível")
+                            
+                        xpath_patterns = [
+                            # XPath fornecido pelo usuário
+                            '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span/text()',
+                            # XPaths alternativos
+                            '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(@class, "artdeco-button__text")]/text()',
+                            '//button[contains(@class, "jobs-apply-button")]//span/text()',
+                            '//button[contains(@class, "apply-button")]//span/text()',
+                            '//a[contains(@class, "apply-button")]//span/text()',
+                            '//button[contains(@aria-label, "Apply") or contains(@aria-label, "Candidatar")]/span/text()'
+                        ]
+                        
+                        for xpath in xpath_patterns:
+                            elements = tree.xpath(xpath)
+                            if elements and len(elements) > 0:
+                                logger.debug(f"Encontrado tipo de candidatura via XPath: {xpath}")
+                                application_type = elements[0].strip()
+                                logger.debug(f"Tipo de candidatura identificado (método 4): {application_type}")
+                                break
+                    except Exception as e:
+                        logger.warning(f"Erro ao extrair tipo de candidatura com XPath: {str(e)}")
+                
         except Exception as e:
             logger.warning(f"Erro ao extrair informações adicionais: {str(e)}")
         
@@ -330,7 +393,8 @@ def extract_company_info(url):
             'city': city,
             'announced_at': announced_at,
             'candidates': candidates,
-            'searched_at': current_datetime
+            'searched_at': current_datetime,
+            'application_type': application_type
         }
     
     except requests.exceptions.RequestException as e:
@@ -344,7 +408,8 @@ def extract_company_info(url):
             'city': 'Not found',
             'announced_at': 'Not found',
             'candidates': 'Not found',
-            'searched_at': current_datetime
+            'searched_at': current_datetime,
+            'application_type': 'Not found'
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
@@ -357,7 +422,8 @@ def extract_company_info(url):
             'city': 'Not found',
             'announced_at': 'Not found',
             'candidates': 'Not found',
-            'searched_at': current_datetime
+            'searched_at': current_datetime,
+            'application_type': 'Not found'
         }
 
 def normalize_linkedin_url(url):
@@ -505,7 +571,7 @@ def process_linkedin_urls(urls):
     # Create DataFrame from results with columns in the specified order
     df = pd.DataFrame(results, columns=[
         'link', 'company_name', 'company_link', 'job_title', 'job_description', 
-        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
+        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates', 'application_type'
     ])
     return df
 
@@ -600,7 +666,12 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(10), 
     .linkedin-job-results-table td:nth-child(10) {
-        width: 10%;
+        width: 8%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(11), 
+    .linkedin-job-results-table td:nth-child(11) {
+        width: 8%;
     }
     </style>
     <div class="table-responsive">
@@ -617,6 +688,7 @@ def get_results_html(urls):
             <th>Announced Calc</th>
             <th>City</th>
             <th>Candidates</th>
+            <th>Tipo de Candidatura</th>
           </tr>
         </thead>
         <tbody>
@@ -636,6 +708,7 @@ def get_results_html(urls):
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
+          <td>{row['application_type']}</td>
         </tr>
         """
     
