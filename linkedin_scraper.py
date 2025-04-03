@@ -358,9 +358,44 @@ def extract_company_info(url):
         # Extract job description
         job_description = 'Not found'
         if job_description_text:
-            # Limpar a descrição de espaços extras (sem limite de caracteres)
-            job_description = ' '.join(job_description_text.split())
-            logger.debug(f"Job description extracted successfully. Comprimento total: {len(job_description)} chars. Primeiros 50 chars: {job_description[:50]}...")
+            # Preservar quebras de linha originais e formatar para melhor leitura
+            # Processar o texto para identificar parágrafos, listas e seções
+            
+            # 1. Normalizar quebras de linha
+            normalized_text = job_description_text.replace('\r\n', '\n').replace('\r', '\n')
+            
+            # 2. Dividir em parágrafos e itens de lista 
+            paragraphs = normalized_text.split('\n\n')
+            
+            # 3. Processar cada parágrafo/item com formatação apropriada
+            formatted_paragraphs = []
+            for p in paragraphs:
+                # Remover espaços extras dentro de cada parágrafo
+                p = ' '.join(p.split())
+                
+                # Checar se parece um título (primeira letra maiúscula, sem ponto final)
+                if p.strip() and p.strip()[0].isupper() and not p.strip().endswith('.') and len(p.strip()) < 100:
+                    # Adicionar duas quebras antes de títulos (exceto para o primeiro)
+                    if formatted_paragraphs:
+                        formatted_paragraphs.append("\n\n" + p.strip())
+                    else:
+                        formatted_paragraphs.append(p.strip())
+                    
+                # Checar se é item de lista (começa com * - • ○)
+                elif p.strip() and p.strip()[0] in ['•', '*', '-', '○', '◦', '▪', '▫', '→', '»', '►']:
+                    formatted_paragraphs.append(p.strip())
+                    
+                # Parágrafo normal
+                else:
+                    formatted_paragraphs.append(p.strip())
+            
+            # 4. Juntar tudo com quebras de linha apropriadas
+            job_description = '\n\n'.join(formatted_paragraphs)
+            
+            # 5. Adicionar quebras no HTML (para exibição na tabela)
+            job_description = job_description.replace('\n\n', '<br><br>').replace('\n', '<br>')
+            
+            logger.debug(f"Job description extracted and formatted successfully. Comprimento total: {len(job_description)} chars. Primeiros 50 chars: {job_description[:50]}...")
         else:
             # Método de último recurso - capturar especificamente os títulos e itens da página
             logger.warning(f"Job description not found for URL: {url}")
@@ -889,19 +924,41 @@ def export_to_excel(urls):
                 for row_idx, value in enumerate(df['job_description'], start=2):  # Start from 2 as 1 is header
                     cell = worksheet.cell(row=row_idx, column=i+1)
                     
+                    # Converter os <br> e <br><br> de volta para quebras de linha reais do Excel
+                    # para que sejam exibidos corretamente
+                    if isinstance(value, str):
+                        # Primeiro remover tags HTML
+                        clean_value = value.replace('<br><br>', '\n\n').replace('<br>', '\n')
+                        # Atribuir valor limpo com quebras de linha reais
+                        cell.value = clean_value
+                    else:
+                        cell.value = value
+                    
                     # Definir configurações de célula para textos longos
                     cell.alignment = Alignment(
                         wrap_text=True,
                         vertical='top'
                     )
                     
-                    # Configurar altura de linha proporcional ao conteúdo
-                    # (Excel ajustará automaticamente com wrap_text=True)
-                    
-                    # Ajustar a célula para exibir todo o texto
-                    # Cada caractere aproximadamente ocupa 0.9 pixel
-                    row_height = min(400, max(24, len(str(value)) // 100 * 15))
-                    worksheet.row_dimensions[row_idx].height = row_height
+                    # Contar o número de quebras de linha para ajustar a altura da célula
+                    if isinstance(value, str):
+                        line_breaks = value.count('<br>') + (value.count('<br><br>') * 2)
+                        # Ajustar a altura da linha baseado no conteúdo e número de quebras
+                        # Cada linha ocupa aproximadamente 15 unidades de altura
+                        base_height = 24  # Altura mínima
+                        line_height = 15  # Altura por linha
+                        char_per_line = 100  # Caracteres aproximados por linha
+                        
+                        # Calcular altura com base no comprimento do texto e quebras de linha
+                        text_height = (len(clean_value) // char_per_line) * line_height
+                        break_height = line_breaks * line_height
+                        row_height = min(600, max(base_height, text_height + break_height))
+                        
+                        # Aplicar altura calculada
+                        worksheet.row_dimensions[row_idx].height = row_height
+                    else:
+                        # Se não for texto, usar altura padrão
+                        worksheet.row_dimensions[row_idx].height = 24
     
     # Reset buffer position to the beginning
     excel_buffer.seek(0)
