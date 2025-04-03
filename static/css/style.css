@@ -79,3 +79,47 @@ pre {
 .export-buttons .btn i {
     font-size: 1.1rem;
 }
+
+/* Estilo para o spinner de carregamento */
+.spin {
+    animation: spinner 1.5s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Estilos para a barra de progresso */
+#progress-container {
+    background-color: rgba(33, 37, 41, 0.8);
+    border-radius: 0.25rem;
+    padding: 1rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+#progress-bar {
+    transition: width 0.5s ease;
+    height: 100%;
+    font-weight: bold;
+}
+
+#progress-message {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+#results-container {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#results-container.show {
+    opacity: 1;
+}

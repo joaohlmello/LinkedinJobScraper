@@ -1,8 +1,18 @@
-from flask import Flask, render_template, request, flash, send_file, session, redirect
+from flask import Flask, render_template, request, flash, send_file, session, redirect, jsonify
 import os
 import logging
+import threading
 from datetime import datetime
 from linkedin_scraper import get_results_html, export_to_csv, export_to_excel
+
+# Variável global para armazenar o progresso do processamento
+processing_progress = {
+    'total': 0,
+    'current': 0,
+    'status': 'idle',
+    'message': '',
+    'results': None
+}
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -147,6 +157,110 @@ def page_not_found(e):
 def server_error(e):
     """Handle 500 errors"""
     return render_template('index.html', error="Server error occurred"), 500
+
+@app.route('/process_async', methods=['POST'])
+def process_async():
+    """
+    Processa URLs do LinkedIn de forma assíncrona e atualiza o progresso
+    """
+    global processing_progress
+    
+    # Verificar se já está em processamento
+    if processing_progress['status'] == 'processing':
+        return jsonify({
+            'success': False,
+            'message': 'Já existe um processamento em andamento'
+        })
+    
+    # Obter URLs do formulário
+    linkedin_urls_text = request.form.get('linkedin_urls', '')
+    linkedin_urls = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
+    
+    # Verificar se há URLs para processar
+    if not linkedin_urls:
+        return jsonify({
+            'success': False,
+            'message': 'Por favor, insira pelo menos uma URL de vaga do LinkedIn'
+        })
+    
+    # Verificar se o usuário deseja analisar vagas com Gemini AI
+    analyze_jobs = 'analyze_jobs' in request.form
+    
+    # Verificar se a API do Gemini está disponível
+    if analyze_jobs and not GEMINI_API_KEY:
+        analyze_jobs = False
+    
+    # Inicializar o progresso
+    processing_progress['status'] = 'processing'
+    processing_progress['total'] = len(linkedin_urls)
+    processing_progress['current'] = 0
+    processing_progress['message'] = 'Iniciando processamento...'
+    processing_progress['results'] = None
+    
+    # Armazenar URLs na sessão para exportação
+    session['linkedin_urls'] = linkedin_urls
+    
+    # Iniciar processamento em segundo plano
+    thread = threading.Thread(
+        target=process_urls_background, 
+        args=(linkedin_urls, analyze_jobs)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Processamento iniciado'
+    })
+
+def process_urls_background(urls, analyze_jobs=False):
+    """
+    Função para processar URLs em segundo plano e atualizar o progresso
+    """
+    global processing_progress
+    
+    try:
+        # Processar URLs e obter resultados
+        results_html = get_results_html(
+            urls, 
+            analyze_jobs=analyze_jobs,
+            progress_callback=update_progress
+        )
+        
+        # Atualizar progresso com resultados
+        processing_progress['results'] = results_html
+        processing_progress['status'] = 'completed'
+        processing_progress['message'] = 'Processamento concluído com sucesso!'
+        
+    except Exception as e:
+        logger.error(f"Erro no processamento assíncrono: {str(e)}")
+        processing_progress['status'] = 'error'
+        processing_progress['message'] = f'Ocorreu um erro: {str(e)}'
+
+def update_progress(current, total, message):
+    """
+    Callback para atualizar o progresso do processamento
+    """
+    global processing_progress
+    processing_progress['current'] = current
+    processing_progress['total'] = total
+    processing_progress['message'] = message
+
+@app.route('/check_progress', methods=['GET'])
+def check_progress():
+    """
+    Retorna o status atual do processamento
+    """
+    global processing_progress
+    
+    return jsonify({
+        'status': processing_progress['status'],
+        'current': processing_progress['current'],
+        'total': processing_progress['total'],
+        'percent': int((processing_progress['current'] / max(processing_progress['total'], 1)) * 100),
+        'message': processing_progress['message'],
+        'results': processing_progress['results'] if processing_progress['status'] == 'completed' else None
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

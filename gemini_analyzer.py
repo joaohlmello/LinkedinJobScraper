@@ -239,11 +239,15 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             # Fazer a chamada à API
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
-            response = self.client.models.get(name=self.model_name)
-            result = response.generate_content(
-                contents=contents,
-                generation_config=generate_content_config,
-            )
+            try:
+                model = self.client.models.get(name=self.model_name)
+                result = model.generate_content(
+                    contents=contents,
+                    generation_config=generate_content_config,
+                )
+            except Exception as e:
+                logger.error(f"Erro na chamada à API do Gemini: {str(e)}")
+                raise Exception(f"Falha na análise com Gemini API: {str(e)}")
             
             # Analisar e retornar o resultado
             if result and hasattr(result, 'text'):
@@ -278,7 +282,7 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                 "error": f"Erro na análise: {str(e)}"
             }
     
-    def analyze_jobs_batch(self, jobs_data, max_retries=3, delay_between_calls=2):
+    def analyze_jobs_batch(self, jobs_data, max_retries=3, delay_between_calls=2, progress_callback=None):
         """
         Analisa um lote de vagas de emprego.
         
@@ -286,18 +290,31 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             jobs_data (list): Lista de dicionários contendo os dados das vagas
             max_retries (int): Número máximo de tentativas em caso de erro
             delay_between_calls (int): Tempo de espera entre chamadas para evitar limites de API
+            progress_callback (function, optional): Função de callback para atualizar o progresso
+                com assinatura (current, total, message)
             
         Returns:
             list: Lista de resultados de análise para cada vaga
         """
         results = []
+        total_jobs = len(jobs_data)
+        
+        # Inicializar progresso
+        if progress_callback:
+            progress_callback(0, total_jobs, "Iniciando análise de compatibilidade...")
         
         for i, job in enumerate(jobs_data):
-            logger.info(f"Analisando vaga {i+1}/{len(jobs_data)}: {job.get('job_title', 'Desconhecido')}")
+            job_title = job.get('job_title', 'Desconhecido')
+            logger.info(f"Analisando vaga {i+1}/{total_jobs}: {job_title}")
+            
+            # Atualizar progresso
+            if progress_callback:
+                progress_callback(i, total_jobs, f"Analisando vaga {i+1}/{total_jobs}: {job_title}")
             
             # Implementar retry com backoff exponencial
             retry_count = 0
             success = False
+            result = {"error": "Não foi possível analisar a vaga após tentativas"}
             
             while not success and retry_count < max_retries:
                 try:
@@ -305,6 +322,15 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                         # Espera exponencial em caso de retry
                         wait_time = delay_between_calls * (2 ** (retry_count - 1))
                         logger.info(f"Tentativa {retry_count+1}/{max_retries} - Aguardando {wait_time}s")
+                        
+                        # Atualizar progresso se houver retry
+                        if progress_callback:
+                            progress_callback(
+                                i, 
+                                total_jobs, 
+                                f"Vaga {i+1}/{total_jobs}: Tentativa {retry_count+1}/{max_retries}..."
+                            )
+                            
                         time.sleep(wait_time)
                     
                     # Analisar a vaga
@@ -324,10 +350,22 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             # Adicionar resultado à lista
             results.append(result)
             
+            # Atualizar progresso após completar a vaga
+            if progress_callback:
+                progress_callback(
+                    i + 1, 
+                    total_jobs, 
+                    f"Vaga {i+1}/{total_jobs} concluída: {job_title}"
+                )
+            
             # Aguardar entre chamadas para evitar limites de API
             if i < len(jobs_data) - 1:
                 time.sleep(delay_between_calls)
         
+        # Finalizar progresso
+        if progress_callback:
+            progress_callback(total_jobs, total_jobs, "Análise de todas as vagas concluída!")
+            
         return results
 
 

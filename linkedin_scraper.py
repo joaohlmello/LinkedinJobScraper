@@ -660,13 +660,15 @@ def calculate_announced_date(searched_at, announced_at):
         logger.error(f"Erro ao calcular data anunciada: {str(e)}")
         return 'Error calculating date'
 
-def process_linkedin_urls(urls):
+def process_linkedin_urls(urls, progress_callback=None):
     """
     Process a list of LinkedIn job URLs and return the results as a DataFrame.
     Uses IP rotation to avoid blocking and adds random delays between requests.
     
     Args:
         urls (list): List of LinkedIn job URLs
+        progress_callback (function, optional): Callback function to update progress
+            with signature (current, total, message)
         
     Returns:
         pandas.DataFrame: DataFrame containing the results
@@ -677,9 +679,19 @@ def process_linkedin_urls(urls):
     random_urls = urls.copy()
     random.shuffle(random_urls)
     
+    total_urls = len(random_urls)
+    
+    # Inicializar progresso
+    if progress_callback:
+        progress_callback(0, total_urls, "Iniciando extração de dados do LinkedIn...")
+    
     for i, url in enumerate(random_urls):
         url = url.strip()
         if url:  # Skip empty URLs
+            # Atualizar progresso
+            if progress_callback:
+                progress_callback(i, total_urls, f"Processando vaga {i+1} de {total_urls}...")
+            
             # Adicionar um atraso aleatório entre as requisições para evitar detecção de automação
             if i > 0:
                 delay = random.uniform(2.0, 5.0)
@@ -704,6 +716,10 @@ def process_linkedin_urls(urls):
             
             results.append(result)
             logger.debug(f"URL {i+1}/{len(random_urls)} processada com sucesso")
+            
+            # Atualizar progresso após concluir o processamento
+            if progress_callback:
+                progress_callback(i+1, total_urls, f"Vaga {i+1} de {total_urls} processada")
     
     # Create DataFrame from results with columns in the specified order
     df = pd.DataFrame(results, columns=[
@@ -714,13 +730,15 @@ def process_linkedin_urls(urls):
     logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso.")
     return df
 
-def get_results_html(urls, analyze_jobs=False):
+def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     """
     Process LinkedIn job URLs and return HTML representation of the results.
     
     Args:
         urls (list): List of LinkedIn job URLs
         analyze_jobs (bool): Whether to analyze jobs with Gemini AI
+        progress_callback (function, optional): Callback function to update progress
+            with signature (current, total, message)
         
     Returns:
         str: HTML representation of the results table
@@ -729,7 +747,10 @@ def get_results_html(urls, analyze_jobs=False):
         return "<p>No URLs provided.</p>"
     
     # Processar URLs do LinkedIn
-    df = process_linkedin_urls(urls)
+    if progress_callback:
+        progress_callback(0, 100, "Iniciando extração de dados do LinkedIn...")
+    
+    df = process_linkedin_urls(urls, progress_callback=progress_callback)
     
     # Verificar comprimento das descrições para debug
     for idx, row in df.iterrows():
@@ -739,6 +760,10 @@ def get_results_html(urls, analyze_jobs=False):
     df['link'] = df['link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     df['company_link'] = df['company_link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     
+    # Atualizar progresso após extração do LinkedIn
+    if progress_callback:
+        progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
+    
     # Analisar vagas com Gemini API se solicitado
     job_analyses_html = ""
     if analyze_jobs:
@@ -746,9 +771,13 @@ def get_results_html(urls, analyze_jobs=False):
             # Importar o analisador de vagas
             from gemini_analyzer import JobAnalyzer, format_analysis_html
             
+            # Atualizar progresso - iniciando análise de vagas
+            if progress_callback:
+                progress_callback(len(urls), 100 + len(df), "Iniciando análise de compatibilidade com Gemini AI...")
+            
             # Preparar os dados para análise
             jobs_for_analysis = []
-            for _, row in df.iterrows():
+            for i, (_, row) in enumerate(df.iterrows()):
                 # Extrair URL sem tags HTML
                 link = row['link']
                 if '<a href=' in link:
@@ -763,18 +792,57 @@ def get_results_html(urls, analyze_jobs=False):
                     'link': link
                 }
                 jobs_for_analysis.append(job_data)
+                
+                # Atualizar progresso de preparo para análise
+                if progress_callback and i % 2 == 0:  # Atualizar a cada 2 itens para não sobrecarregar
+                    progress_callback(
+                        len(urls) + i + 1, 
+                        100 + len(df) * 2, 
+                        f"Preparando análise para vaga {i+1} de {len(df)}..."
+                    )
             
             # Inicializar o analisador e processar as vagas
             logger.info(f"Iniciando análise de {len(jobs_for_analysis)} vagas com Gemini API")
+            
+            # Definir um callback para a análise do Gemini
+            gemini_progress_base = len(urls) + len(df)
+            gemini_progress_total = len(jobs_for_analysis)
+            
+            def gemini_progress_callback(current, total, message):
+                if progress_callback:
+                    progress_callback(
+                        gemini_progress_base + current,
+                        100 + len(df) * 2 + gemini_progress_total,
+                        f"Análise Gemini AI: {message}"
+                    )
+            
             analyzer = JobAnalyzer()
-            analyses_results = analyzer.analyze_jobs_batch(jobs_for_analysis)
+            analyses_results = analyzer.analyze_jobs_batch(
+                jobs_for_analysis,
+                progress_callback=gemini_progress_callback
+            )
             
             # Gerar HTML para cada análise
+            if progress_callback:
+                progress_callback(
+                    100 + len(df) * 2 + gemini_progress_total, 
+                    100 + len(df) * 2 + gemini_progress_total + 10,
+                    "Gerando visualização dos resultados da análise..."
+                )
+                
             job_analyses_html = "<h2 class='mt-5 mb-4'>Análise de Compatibilidade com Gemini AI</h2>"
             for analysis in analyses_results:
                 job_analyses_html += format_analysis_html(analysis)
             
             logger.info("Análise de vagas concluída com sucesso")
+            
+            # Finalizar progresso
+            if progress_callback:
+                progress_callback(
+                    100 + len(df) * 2 + gemini_progress_total + 10,
+                    100 + len(df) * 2 + gemini_progress_total + 10,
+                    "Análise de compatibilidade concluída com sucesso!"
+                )
             
         except Exception as e:
             logger.error(f"Erro ao analisar vagas com Gemini API: {str(e)}")
