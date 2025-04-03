@@ -1,22 +1,12 @@
-from flask import Flask, render_template, request, flash, send_file, session, redirect, url_for
+from flask import Flask, render_template, request, flash, send_file, session, redirect
 import os
 import logging
 from datetime import datetime
 from linkedin_scraper import get_results_html, export_to_csv, export_to_excel
-from linkedin_login import LinkedInSession
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Configuração das variáveis de ambiente para o LinkedIn
-LINKEDIN_USERNAME = os.environ.get("LINKEDIN_USERNAME")
-LINKEDIN_PASSWORD = os.environ.get("LINKEDIN_PASSWORD")
-
-if LINKEDIN_USERNAME and LINKEDIN_PASSWORD:
-    logger.info("Credenciais do LinkedIn encontradas nas variáveis de ambiente")
-else:
-    logger.warning("Credenciais do LinkedIn não configuradas. A detecção do tipo de candidatura pode ser imprecisa.")
 
 # Create Flask app
 app = Flask(__name__)
@@ -55,13 +45,7 @@ def index():
     # Check if we have previous results to display
     has_results = 'linkedin_urls' in session and session['linkedin_urls']
     
-    # Verificar se as credenciais do LinkedIn estão configuradas
-    has_linkedin_credentials = bool(LINKEDIN_USERNAME and LINKEDIN_PASSWORD)
-    
-    return render_template('index.html', 
-                          results_html=results_html, 
-                          has_results=has_results,
-                          has_linkedin_credentials=has_linkedin_credentials)
+    return render_template('index.html', results_html=results_html, has_results=has_results)
 
 @app.route('/export/csv', methods=['GET'])
 def export_csv():

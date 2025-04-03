@@ -31,15 +31,6 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        
-        <!-- LinkedIn Credentials Warning -->
-        {% if not has_linkedin_credentials %}
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>Nota sobre a autenticação:</strong> As credenciais do LinkedIn não estão configuradas. A detecção do tipo de candidatura (Easy Apply vs. Apply) pode ser menos precisa para algumas regiões. Para melhorar a precisão, configure as variáveis de ambiente <code>LINKEDIN_USERNAME</code> e <code>LINKEDIN_PASSWORD</code>.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endif %}
 
         <!-- Input Form -->
         <div class="row">
@@ -125,17 +116,6 @@
                         </ol>
                         <p>Example URL format:</p>
                         <pre class="bg-dark text-light p-2">https://www.linkedin.com/jobs/view/4197948497/?eBP=NON_CHARGEABLE_CHANNEL&refId=bkHAVjq057sZNx6xA%2BnKig%3D%3D&trackingId=hSdg4bhpEUyduU4ScMhsgg%3D%3D&trk=flagship3_search_srp_jobs</pre>
-                        
-                        <div class="alert alert-info mt-3" role="alert">
-                            <h5 class="alert-heading"><i class="bi bi-info-circle"></i> Nota importante sobre "Tipo de Candidatura"</h5>
-                            <p>O LinkedIn exibe diferentes informações dependendo se o usuário está logado ou não:</p>
-                            <ul>
-                                <li>Quando <strong>logado</strong> no LinkedIn, você pode ver opções como "Easy Apply" ou "Candidatura Simplificada".</li>
-                                <li>{% if has_linkedin_credentials %}Este scraper agora tenta acessar o LinkedIn <strong>com login</strong> para determinar o tipo de candidatura com maior precisão.{% else %}Este scraper está configurado para acessar o LinkedIn <strong>sem login</strong>, então ele pode mostrar apenas "Apply" mesmo quando a vaga é "Easy Apply".{% endif %}</li>
-                                <li>Para vagas do LinkedIn Brasil (.com.br) ou outras regiões da América Latina que mostram "Apply", indicamos como <strong>"Apply (possível Easy Apply*)"</strong> porque podem ser vagas de "Easy Apply" quando visualizadas com login.</li>
-                            </ul>
-                            <p class="mb-0">{% if has_linkedin_credentials %}Com as credenciais configuradas, o sistema pode obter resultados mais precisos, mas ainda pode haver algumas imprecisões em certos casos.{% else %}Esta limitação existe porque o LinkedIn altera a apresentação do botão de candidatura dependendo do estado de login do usuário. Configure as variáveis de ambiente LINKEDIN_USERNAME e LINKEDIN_PASSWORD para melhorar a precisão.{% endif %}</p>
-                        </div>
                     </div>
                 </div>
             </div>

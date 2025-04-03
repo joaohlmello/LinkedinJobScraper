@@ -6,199 +6,15 @@ import trafilatura
 import os
 import datetime
 import csv
-import time
 from io import BytesIO
 from requests_html import HTMLSession
 import re
 import openpyxl
 from openpyxl.styles import Alignment
-from linkedin_login import LinkedInSession
-import threading
-import queue
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Variável global para armazenar a sessão do LinkedIn
-linkedin_session = None
-linkedin_session_lock = threading.Lock()
-
-# Fila para armazenar resultados de tipos de candidatura
-application_type_queue = queue.Queue()
-
-def get_linkedin_session():
-    """
-    Retorna uma instância da sessão do LinkedIn, criando-a se necessário.
-    
-    Returns:
-        LinkedInSession: Uma instância da sessão do LinkedIn
-    """
-    global linkedin_session
-    with linkedin_session_lock:
-        if linkedin_session is None:
-            logger.info("Criando nova sessão do LinkedIn")
-            linkedin_session = LinkedInSession(headless=True)
-        return linkedin_session
-
-def get_application_type_without_login(job_url, html_content):
-    """
-    Obtém o tipo de candidatura de uma vaga do LinkedIn sem login, baseado apenas no conteúdo HTML.
-    Este é um método menos preciso, mas serve como fallback quando o Selenium não está disponível.
-    
-    Args:
-        job_url (str): URL da vaga no LinkedIn
-        html_content (str): Conteúdo HTML da página
-        
-    Returns:
-        str: Tipo de candidatura detectado
-    """
-    logger.info(f"Detectando tipo de candidatura sem login para: {job_url}")
-    application_type = "Apply"  # Valor padrão
-    
-    # Verificar se é uma URL brasileira ou internacional
-    is_brazilian = '.com.br' in job_url or 'br.' in job_url or '.mx' in job_url or 'mx.linkedin' in job_url or '.lat' in job_url
-    
-    # Procurar por indicadores de "Easy Apply" no HTML
-    html_lower = html_content.lower()
-    
-    # Lista de possíveis indicadores de "Easy Apply" no HTML
-    easy_apply_indicators = [
-        "easy apply", 
-        "candidatura simplificada",
-        "candidatura facilitada",
-        "candidatar",
-        "aplicar fácilmente",
-        "aplicar fácil",
-        "candidatura fácil",
-        "class=\"jobs-apply-button",
-        "data-control-name=\"jobdetails_topcard_inapply\"",
-        "artdeco-inline-feedback",
-        "jobs-s-apply"
-    ]
-    
-    # Primeiro check: procurar padrões no HTML completo
-    for indicator in easy_apply_indicators:
-        if indicator in html_lower:
-            logger.info(f"Indicador de Easy Apply encontrado: '{indicator}'")
-            application_type = "Easy Apply"
-            break
-    
-    # Segundo check: procurar por botões específicos via BeautifulSoup
-    if application_type == "Apply":
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Buscar botões e elementos específicos que indicam Easy Apply
-            apply_buttons = soup.select('.jobs-apply-button, [data-control-name*="apply"], [data-tracking-control-name*="apply"]')
-            for button in apply_buttons:
-                button_text = button.get_text(strip=True).lower()
-                
-                # Verificar se o texto do botão contém indicadores de Easy Apply
-                if any(indicator in button_text for indicator in easy_apply_indicators):
-                    logger.info(f"Easy Apply detectado em botão para URL: {job_url}")
-                    application_type = "Easy Apply"
-                    break
-                
-                # Verificar classes e atributos do botão
-                for attr_name, attr_value in button.attrs.items():
-                    if isinstance(attr_value, str) and any(indicator in attr_value.lower() for indicator in easy_apply_indicators):
-                        logger.info(f"Easy Apply detectado em atributo {attr_name} para URL: {job_url}")
-                        application_type = "Easy Apply"
-                        break
-                    
-                # Se é URL brasileira e botão contém "Candidatar"
-                if is_brazilian and 'candidatar' in button_text:
-                    logger.info(f"Provável Easy Apply em botão brasileiro para URL: {job_url}")
-                    application_type = "Easy Apply (detectado sem login)"
-                    break
-                    
-            # Verificar links específicos para Apply offsite
-            if application_type == "Apply":
-                apply_offsite_links = soup.select('a[data-tracking-control-name*="public_jobs_apply-link-offsite"]')
-                if apply_offsite_links:
-                    logger.info(f"Link externo (Apply) detectado para URL: {job_url}")
-                    # Aqui mantemos como "Apply" pois é definitivamente externo
-                
-                # Verificar texto indicando que a candidatura será em outro site
-                offsite_indicators = [
-                    'candidature-se no site da empresa',
-                    'apply on company website', 
-                    'aplicar no site da empresa',
-                    'redirect to company website'
-                ]
-                
-                for text in offsite_indicators:
-                    if text in html_lower:
-                        logger.info(f"Indicador de site externo (Apply) detectado para URL: {job_url}")
-                        # Confirmado como "Apply" externo
-                        break
-        
-        except Exception as e:
-            logger.error(f"Erro ao analisar HTML para detecção de tipo de candidatura: {str(e)}")
-    
-    # Para URLs do LinkedIn Brasil ou LATAM, adicionar indicador
-    if application_type == "Apply" and is_brazilian:
-        logger.info("URL do LinkedIn Brasil/LATAM detectada, marcando como potencial Easy Apply")
-        application_type = "Apply (possível Easy Apply*)"
-    
-    return application_type
-
-def get_application_type_logged_in(job_url):
-    """
-    Obtém o tipo de candidatura de uma vaga do LinkedIn usando um navegador com login.
-    Esta função é executada em uma thread separada para não bloquear o processamento principal.
-    
-    Args:
-        job_url (str): URL da vaga no LinkedIn
-        
-    Returns:
-        None (o resultado é colocado na fila application_type_queue)
-    """
-    try:
-        logger.info(f"Iniciando extração do tipo de candidatura com login para: {job_url}")
-        
-        # Verificar se os pacotes do Selenium estão disponíveis
-        selenium_available = True
-        try:
-            import selenium
-            logger.info("Selenium está disponível")
-        except ImportError:
-            logger.warning("Selenium não está instalado ou não está disponível")
-            selenium_available = False
-        
-        if not selenium_available:
-            logger.warning("Selenium não disponível, usando método fallback sem login")
-            application_type_queue.put((job_url, "Selenium não disponível"))
-            return
-        
-        try:
-            session = get_linkedin_session()
-            
-            # Tentar fazer login (se ainda não estiver logado)
-            if not session.login():
-                logger.error("Falha ao fazer login no LinkedIn")
-                application_type_queue.put((job_url, "Login Error"))
-                return
-            
-            # Obter detalhes da vaga
-            result = session.get_job_details(job_url)
-            application_type = result.get("application_type", "Not found")
-            
-            logger.info(f"Tipo de candidatura obtido com login: {application_type}")
-            application_type_queue.put((job_url, application_type))
-        except RuntimeError as re:
-            logger.error(f"Erro de Selenium/Browser: {str(re)}")
-            application_type_queue.put((job_url, "Browser Error"))
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter tipo de candidatura com login: {str(e)}")
-        application_type_queue.put((job_url, "Error"))
-        
-    finally:
-        # Não fechar a sessão para reutilizá-la em futuras consultas
-        pass
 
 def extract_company_info(url):
     """
@@ -394,13 +210,10 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
             
-        # Extrair informações adicionais: cidade, data de anúncio, candidatos e tipo de candidatura
+        # Extrair informações adicionais: cidade, data de anúncio e candidatos
         city = 'Not found'
         announced_at = 'Not found'
         candidates = 'Not found'
-        
-        # Detectar tipo de candidatura usando o método sem login (como fallback)
-        application_type = get_application_type_without_login(url, r.text)
         
         # Encontrar o elemento que contém informações sobre cidade, data de anúncio e candidatos
         try:
@@ -433,62 +246,8 @@ def extract_company_info(url):
                         city = span_text
                         logger.debug(f"Cidade identificada: {city}")
             
-            # MÉTODO 1 para tipo de candidatura: Busca pelo botão específico ou elemento fornecido - MAIS ABRANGENTE
-            # Verificar especificamente por "Easy Apply" e outras variações
-            easy_apply_indicators = [
-                # Buscar por classes específicas que geralmente indicam Easy Apply
-                '.jobs-apply-button--top-card',
-                '.jobs-s-apply--fadein',
-                '.jobs-s-apply',
-                '.artdeco-inline-feedback',
-                '.jobs-apply-button',
-                '#ember40', # ID específico que pode variar
-                'button[data-tracking-control-name="public_jobs_apply-link-offsite_sign-up-now"]',
-                'button[data-control-name="jobdetails_topcard_inapply"]',
-                '.jobs-s-apply--fadein button',
-                '.jobs-apply-button--top-card button'
-            ]
-            
-            # Primeiro, verificar especificamente por "Easy Apply" no texto/classes dos elementos
-            for selector in easy_apply_indicators:
-                elements = soup.select(selector)
-                for element in elements:
-                    # Verificar se o elemento ou seus descendentes contêm "Easy Apply"
-                    button_text = element.get_text(strip=True)
-                    if "easy apply" in button_text.lower() or "candidatura simplificada" in button_text.lower():
-                        application_type = "Easy Apply"
-                        logger.debug(f"Easy Apply identificado através do seletor {selector}")
-                        break
-                    
-                    # Verificar se o elemento tem a classe ou atributos que indicam Easy Apply
-                    class_list = element.get('class', [])
-                    if class_list and any("easy" in cls.lower() for cls in class_list):
-                        application_type = "Easy Apply"
-                        logger.debug(f"Easy Apply identificado através da classe no seletor {selector}")
-                        break
-                        
-                    # Verificar atributos de data ou aria que possam indicar Easy Apply
-                    for attr_name, attr_value in element.attrs.items():
-                        if isinstance(attr_value, str) and "easy apply" in attr_value.lower():
-                            application_type = "Easy Apply"
-                            logger.debug(f"Easy Apply identificado através do atributo {attr_name} no seletor {selector}")
-                            break
-                            
-                if application_type != 'Not found':
-                    break
-                    
-            # Se ainda não encontrou, tentar extrair qualquer texto de botão de candidatura
-            if application_type == 'Not found':
-                apply_button_spans = soup.select('.jobs-apply-button--top-card .artdeco-button__text, .jobs-apply-button span, .jobs-apply-button button span, button.jobs-apply-button span')
-                for span in apply_button_spans:
-                    button_text = span.get_text(strip=True)
-                    if button_text:
-                        application_type = button_text
-                        logger.debug(f"Tipo de candidatura identificado (método 1): {application_type}")
-                        break
-            
             # MÉTODO 2: Busca por classes específicas ou padrões comuns
-            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found' or application_type == 'Not found':
+            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found':
                 logger.debug("Tentando método 2 para encontrar informações adicionais")
                 
                 # Tentar encontrar a localização
@@ -517,24 +276,14 @@ def extract_company_info(url):
                         candidates = text
                         logger.debug(f"Candidatos identificados (método 2): {candidates}")
                         break
-                        
-                # Tentar encontrar o tipo de candidatura usando seletores mais genéricos
-                if application_type == 'Not found':
-                    apply_elements = soup.select('button.jobs-apply-button, button.apply-button, a.apply-button, .jobs-apply-button--top-card button')
-                    for element in apply_elements:
-                        text = element.get_text(strip=True)
-                        if text:
-                            application_type = text
-                            logger.debug(f"Tipo de candidatura identificado (método 2): {application_type}")
-                            break
             
-            # MÉTODO 3: Análise de texto para encontrar padrões em todo o documento e XPath
-            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found' or application_type == 'Not found':
+            # MÉTODO 3: Análise de texto para encontrar padrões em todo o documento
+            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found':
                 logger.debug("Tentando método 3 para encontrar informações adicionais")
                 
                 # Obter todos os textos pequenos da página que poderiam conter informações relevantes
                 small_texts = []
-                for element in soup.select('span, div.small, p.small, .job-details-jobs-unified-top-card__subtitle-secondary-grouping, button span'):
+                for element in soup.select('span, div.small, p.small, .job-details-jobs-unified-top-card__subtitle-secondary-grouping'):
                     text = element.get_text(strip=True)
                     if len(text) < 100 and len(text) > 2:  # filtrar textos muito curtos ou muito longos
                         small_texts.append(text)
@@ -566,83 +315,11 @@ def extract_company_info(url):
                             logger.debug(f"Candidatos identificados (método 3): {candidates}")
                             break
                 
-                # Procurar padrões para tipo de candidatura
-                if application_type == 'Not found':
-                    application_keywords = ['apply', 'easy apply', 'candidatar', 'candidatura', 'aplicar', 'inscrever']
-                    for text in small_texts:
-                        if any(keyword in text.lower() for keyword in application_keywords):
-                            application_type = text
-                            logger.debug(f"Tipo de candidatura identificado (método 3): {application_type}")
-                            break
-                
-                # MÉTODO 4: Tentar usar XPath específico para o tipo de candidatura
-                if application_type == 'Not found':
-                    try:
-                        from lxml import html
-                        if hasattr(r, 'content'):
-                            tree = html.fromstring(r.content)
-                        elif hasattr(r, 'html') and hasattr(r.html, 'html'):
-                            tree = html.fromstring(r.html.html)
-                        else:
-                            logger.warning("Não foi possível obter o conteúdo HTML para análise XPath")
-                            raise Exception("Conteúdo HTML não disponível")
-                        
-                        # Verificar se a URL é .com.br (brasileira) ou internacional
-                        is_brazilian = '.com.br' in url or 'br.' in url
-                        
-                        # Se for versão brasileira, verificar primeiro por "Candidatura simplificada"
-                        if is_brazilian:
-                            # Procurar por "Candidatura simplificada" em qualquer botão ou elemento
-                            simplified_button = tree.xpath('//*[contains(text(), "Candidatura simplificada")]')
-                            if simplified_button:
-                                application_type = "Easy Apply"
-                                logger.debug("Tipo de candidatura identificado como 'Easy Apply' pela versão brasileira (Candidatura simplificada)")
-                        
-                        # Se ainda não encontrou, verificar na página HTML completa por "Easy Apply"
-                        if application_type == 'Not found' and hasattr(r, 'text'):
-                            if "candidatura simplificada" in r.text.lower() or "easy apply" in r.text.lower():
-                                application_type = "Easy Apply"
-                                logger.debug("Tipo de candidatura identificado como 'Easy Apply' pelo texto completo da página")
-                        
-                        # Se ainda não encontrou, continuar com os padrões XPath
-                        xpath_patterns = [
-                            # XPath fornecido pelo usuário para versão BR
-                            '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span/text()',
-                            
-                            # XPaths específicos para versão brasileira
-                            '//div[contains(@class, "jobs-apply-button")]//button[contains(@aria-label, "Candidatar")]//span/text()',
-                            '//button[contains(@data-control-name, "jobdetails_topcard")]//span/text()',
-                            
-                            # XPaths genéricos
-                            '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(@class, "artdeco-button__text")]/text()',
-                            '//button[contains(@class, "jobs-apply-button")]//span/text()',
-                            '//button[contains(@class, "apply-button")]//span/text()',
-                            '//a[contains(@class, "apply-button")]//span/text()',
-                            '//button[contains(@aria-label, "Apply") or contains(@aria-label, "Candidatar")]/span/text()'
-                        ]
-                        
-                        for xpath in xpath_patterns:
-                            elements = tree.xpath(xpath)
-                            if elements and len(elements) > 0:
-                                logger.debug(f"Encontrado tipo de candidatura via XPath: {xpath}")
-                                application_type = elements[0].strip()
-                                logger.debug(f"Tipo de candidatura identificado (método 4): {application_type}")
-                                break
-                    except Exception as e:
-                        logger.warning(f"Erro ao extrair tipo de candidatura com XPath: {str(e)}")
-                
         except Exception as e:
             logger.warning(f"Erro ao extrair informações adicionais: {str(e)}")
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         logger.debug(f"Additional info - city: {city}, announced_at: {announced_at}, candidates: {candidates}")
-        
-        # Verificar se pode ser uma vaga "Easy Apply" mas não conseguimos detectar devido a limitações de acesso
-        # Isso adiciona uma observação para o usuário quando o LinkedIn Brasil retorna "Apply"
-        is_brazilian = '.com.br' in url or 'br.' in url or 'mx.linkedin' in url or '.mx' in url or '.lat' in url
-        if application_type == 'Apply' and is_brazilian:
-            application_type = "Apply (possível Easy Apply*)"
-            logger.debug("Adicionado indicador de possível Easy Apply para URL brasileiro/latino")
         
         return {
             'link': url,
@@ -653,8 +330,7 @@ def extract_company_info(url):
             'city': city,
             'announced_at': announced_at,
             'candidates': candidates,
-            'searched_at': current_datetime,
-            'application_type': application_type
+            'searched_at': current_datetime
         }
     
     except requests.exceptions.RequestException as e:
@@ -668,8 +344,7 @@ def extract_company_info(url):
             'city': 'Not found',
             'announced_at': 'Not found',
             'candidates': 'Not found',
-            'searched_at': current_datetime,
-            'application_type': 'Not found'
+            'searched_at': current_datetime
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
@@ -682,8 +357,7 @@ def extract_company_info(url):
             'city': 'Not found',
             'announced_at': 'Not found',
             'candidates': 'Not found',
-            'searched_at': current_datetime,
-            'application_type': 'Not found'
+            'searched_at': current_datetime
         }
 
 def normalize_linkedin_url(url):
@@ -806,10 +480,7 @@ def process_linkedin_urls(urls):
         pandas.DataFrame: DataFrame containing the results
     """
     results = []
-    threads = []
-    application_type_threads = []
     
-    # Processar URLs para extração de informações básicas (sem autenticação)
     for url in urls:
         url = url.strip()
         if url:  # Skip empty URLs
@@ -830,118 +501,11 @@ def process_linkedin_urls(urls):
             )
             
             results.append(result)
-            
-            # Verificar se conseguimos executar o Selenium neste ambiente
-            # Apenas iniciar a thread do Selenium se tivermos certeza que ela funcionará
-            chrome_installed = False
-            selenium_available = False
-            
-            try:
-                # Verificar importações
-                import selenium
-                from selenium import webdriver
-                
-                # Verificar se ChromeDriver ou Chrome está instalado
-                try:
-                    import shutil
-                    chrome_path = shutil.which('chromedriver') or shutil.which('google-chrome') or shutil.which('chromium-browser')
-                    chrome_installed = chrome_path is not None
-                    if chrome_installed:
-                        logger.info(f"Chrome/ChromeDriver encontrado em: {chrome_path}")
-                    else:
-                        logger.warning("Chrome ou ChromeDriver não encontrado no sistema")
-                except Exception as e:
-                    logger.warning(f"Erro ao verificar Chrome/ChromeDriver: {str(e)}")
-                
-                # Se tudo der certo, consideramos o Selenium disponível
-                selenium_available = chrome_installed
-                
-                if selenium_available:
-                    logger.info("Selenium e Chrome/ChromeDriver estão disponíveis para detecção precisa")
-                    
-                    # Iniciar thread para obter o tipo de candidatura com login
-                    thread = threading.Thread(target=get_application_type_logged_in, args=(normalized_url,))
-                    thread.daemon = True  # Thread secundária
-                    application_type_threads.append(thread)
-                    thread.start()
-                else:
-                    logger.warning("Chrome/ChromeDriver não encontrado, usando apenas o método fallback")
-            except ImportError as e:
-                logger.warning(f"Selenium não está disponível ({str(e)}), usando apenas o método fallback")
-                selenium_available = False
-    
-    # Verificar se há threads para aguardar
-    if application_type_threads:
-        # Aguardar um tempo para que algumas threads possam terminar (mas não bloquear por muito tempo)
-        logger.info("Aguardando resultados de tipo de candidatura das threads com login...")
-        
-        # Esperar até 30 segundos para obter os resultados do login
-        timeout = time.time() + 30  # 30 segundos de timeout
-    else:
-        logger.info("Nenhuma thread de Selenium iniciada, usando apenas o método sem login")
-        timeout = 0  # Não esperar
-    
-    # Processar resultados que chegam na fila enquanto esperamos
-    while time.time() < timeout:
-        try:
-            # Verificar se há resultados na fila, sem bloquear
-            url, app_type = application_type_queue.get(block=False)
-            logger.info(f"Resultado de tipo de candidatura recebido para URL: {url}, tipo: {app_type}")
-            
-            # Atualizar os resultados com os tipos de candidatura corretos
-            # Mas ignorar erros de Browser/Login, pois nesses casos usamos o fallback
-            if app_type != "Browser Error" and app_type != "Login Error" and app_type != "Error":
-                for result in results:
-                    if result['link'] == url:
-                        logger.info(f"Atualizando tipo de candidatura da URL {url} de '{result['application_type']}' para '{app_type}'")
-                        result['application_type'] = app_type
-                        break
-            else:
-                logger.info(f"Ignorando erro '{app_type}' para URL {url}, mantendo o tipo de candidatura detectado sem login")
-            
-            application_type_queue.task_done()
-        except queue.Empty:
-            # Sem resultados na fila ainda, esperar um pouco
-            time.sleep(0.5)
-            
-            # Verificar se todas as threads terminaram
-            if all(not t.is_alive() for t in application_type_threads):
-                logger.info("Todas as threads de tipo de candidatura terminaram")
-                break
-    
-    # Verificar se há mais resultados na fila após o timeout
-    try:
-        while True:
-            url, app_type = application_type_queue.get(block=False)
-            logger.info(f"Resultado adicional de tipo de candidatura recebido: {url}, tipo: {app_type}")
-            
-            # Atualizar resultados - mesmo tratamento que acima para erros
-            if app_type != "Browser Error" and app_type != "Login Error" and app_type != "Error":
-                for result in results:
-                    if result['link'] == url:
-                        logger.info(f"Atualizando tipo de candidatura da URL {url} para '{app_type}'")
-                        result['application_type'] = app_type
-                        break
-            else:
-                logger.info(f"Ignorando erro '{app_type}' para URL {url}, mantendo o tipo de candidatura detectado sem login")
-            
-            application_type_queue.task_done()
-    except queue.Empty:
-        pass
-    
-    # Adicionar indicador para tipos "Apply" em URLs do LinkedIn Brasil
-    for result in results:
-        # Verificar se é um URL brasileiro ou latino que ainda mostra "Apply"
-        # (apenas se não tivermos conseguido determinar o tipo com login)
-        is_brazilian = '.com.br' in result['link'] or 'br.' in result['link'] or 'mx.linkedin' in result['link'] or '.mx' in result['link'] or '.lat' in result['link']
-        if is_brazilian and result['application_type'] == 'Apply':
-            logger.info(f"Marcando URL brasileira/latina como potencial Easy Apply: {result['link']}")
-            result['application_type'] = "Apply (possível Easy Apply*)"
     
     # Create DataFrame from results with columns in the specified order
     df = pd.DataFrame(results, columns=[
         'link', 'company_name', 'company_link', 'job_title', 'job_description', 
-        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates', 'application_type'
+        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
     ])
     return df
 
@@ -1036,12 +600,7 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(10), 
     .linkedin-job-results-table td:nth-child(10) {
-        width: 8%;
-    }
-    
-    .linkedin-job-results-table th:nth-child(11), 
-    .linkedin-job-results-table td:nth-child(11) {
-        width: 8%;
+        width: 10%;
     }
     </style>
     <div class="table-responsive">
@@ -1058,7 +617,6 @@ def get_results_html(urls):
             <th>Announced Calc</th>
             <th>City</th>
             <th>Candidates</th>
-            <th>Tipo de Candidatura</th>
           </tr>
         </thead>
         <tbody>
@@ -1078,7 +636,6 @@ def get_results_html(urls):
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
-          <td>{row['application_type']}</td>
         </tr>
         """
     
