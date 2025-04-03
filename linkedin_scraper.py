@@ -831,19 +831,43 @@ def process_linkedin_urls(urls):
             
             results.append(result)
             
-            # Verificar se Selenium está disponível antes de iniciar a thread
-            selenium_available = True
+            # Verificar se conseguimos executar o Selenium neste ambiente
+            # Apenas iniciar a thread do Selenium se tivermos certeza que ela funcionará
+            chrome_installed = False
+            selenium_available = False
+            
             try:
+                # Verificar importações
                 import selenium
-                logger.info("Selenium está disponível para detecção precisa")
+                from selenium import webdriver
                 
-                # Iniciar thread para obter o tipo de candidatura com login
-                thread = threading.Thread(target=get_application_type_logged_in, args=(normalized_url,))
-                thread.daemon = True  # Thread secundária
-                application_type_threads.append(thread)
-                thread.start()
-            except ImportError:
-                logger.warning("Selenium não está disponível, usando apenas o método fallback")
+                # Verificar se ChromeDriver ou Chrome está instalado
+                try:
+                    import shutil
+                    chrome_path = shutil.which('chromedriver') or shutil.which('google-chrome') or shutil.which('chromium-browser')
+                    chrome_installed = chrome_path is not None
+                    if chrome_installed:
+                        logger.info(f"Chrome/ChromeDriver encontrado em: {chrome_path}")
+                    else:
+                        logger.warning("Chrome ou ChromeDriver não encontrado no sistema")
+                except Exception as e:
+                    logger.warning(f"Erro ao verificar Chrome/ChromeDriver: {str(e)}")
+                
+                # Se tudo der certo, consideramos o Selenium disponível
+                selenium_available = chrome_installed
+                
+                if selenium_available:
+                    logger.info("Selenium e Chrome/ChromeDriver estão disponíveis para detecção precisa")
+                    
+                    # Iniciar thread para obter o tipo de candidatura com login
+                    thread = threading.Thread(target=get_application_type_logged_in, args=(normalized_url,))
+                    thread.daemon = True  # Thread secundária
+                    application_type_threads.append(thread)
+                    thread.start()
+                else:
+                    logger.warning("Chrome/ChromeDriver não encontrado, usando apenas o método fallback")
+            except ImportError as e:
+                logger.warning(f"Selenium não está disponível ({str(e)}), usando apenas o método fallback")
                 selenium_available = False
     
     # Verificar se há threads para aguardar
@@ -865,11 +889,15 @@ def process_linkedin_urls(urls):
             logger.info(f"Resultado de tipo de candidatura recebido para URL: {url}, tipo: {app_type}")
             
             # Atualizar os resultados com os tipos de candidatura corretos
-            for result in results:
-                if result['link'] == url and app_type != "Login Error" and app_type != "Not found":
-                    logger.info(f"Atualizando tipo de candidatura da URL {url} de '{result['application_type']}' para '{app_type}'")
-                    result['application_type'] = app_type
-                    break
+            # Mas ignorar erros de Browser/Login, pois nesses casos usamos o fallback
+            if app_type != "Browser Error" and app_type != "Login Error" and app_type != "Error":
+                for result in results:
+                    if result['link'] == url:
+                        logger.info(f"Atualizando tipo de candidatura da URL {url} de '{result['application_type']}' para '{app_type}'")
+                        result['application_type'] = app_type
+                        break
+            else:
+                logger.info(f"Ignorando erro '{app_type}' para URL {url}, mantendo o tipo de candidatura detectado sem login")
             
             application_type_queue.task_done()
         except queue.Empty:
@@ -887,12 +915,15 @@ def process_linkedin_urls(urls):
             url, app_type = application_type_queue.get(block=False)
             logger.info(f"Resultado adicional de tipo de candidatura recebido: {url}, tipo: {app_type}")
             
-            # Atualizar resultados
-            for result in results:
-                if result['link'] == url and app_type != "Login Error" and app_type != "Not found":
-                    logger.info(f"Atualizando tipo de candidatura da URL {url} para '{app_type}'")
-                    result['application_type'] = app_type
-                    break
+            # Atualizar resultados - mesmo tratamento que acima para erros
+            if app_type != "Browser Error" and app_type != "Login Error" and app_type != "Error":
+                for result in results:
+                    if result['link'] == url:
+                        logger.info(f"Atualizando tipo de candidatura da URL {url} para '{app_type}'")
+                        result['application_type'] = app_type
+                        break
+            else:
+                logger.info(f"Ignorando erro '{app_type}' para URL {url}, mantendo o tipo de candidatura detectado sem login")
             
             application_type_queue.task_done()
     except queue.Empty:
