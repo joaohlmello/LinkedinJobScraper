@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import logging
+import trafilatura
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -38,36 +39,54 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # Find job description elements using multiple possible XPath patterns
-        from lxml import html
-        tree = html.fromstring(response.content)
+        # Usar Trafilatura para extrair o conteúdo textual completo da página
+        logger.debug("Usando Trafilatura para extrair a descrição do trabalho")
+        downloaded = trafilatura.fetch_url(url)
+        full_text = trafilatura.extract(downloaded)
         
-        # Tentativa com múltiplos XPaths para capturar a descrição do trabalho
-        job_description_elements = []
-        
-        # Tenta o padrão básico primeiro
-        basic_elements = tree.xpath('//*[@id="job-details"]//p/text()')
-        if basic_elements:
-            job_description_elements.extend(basic_elements)
+        # Tenta extrair a parte relevante da descrição do trabalho do texto completo
+        job_description_text = ""
+        if full_text:
+            # Dividir o texto em linhas para procurar a descrição do trabalho
+            lines = full_text.split('\n')
             
-        # Tenta padrão alternativo se o primeiro falhar
-        if not job_description_elements:
-            alt_elements = tree.xpath('//article//div/p/text()')
-            if alt_elements:
-                job_description_elements.extend(alt_elements)
+            # Encontrar índices de possíveis seções de descrição
+            for i, line in enumerate(lines):
+                if any(keyword in line.lower() for keyword in ['sobre o cargo', 'descrição', 'job description', 'about the job']):
+                    # Pegar as próximas 10 linhas como parte da descrição (ou até o fim do texto)
+                    end_idx = min(i + 10, len(lines))
+                    job_description_text = '\n'.join(lines[i:end_idx])
+                    break
+            
+            # Se não encontrou nenhuma seção específica, use o texto completo
+            if not job_description_text and full_text:
+                job_description_text = full_text
                 
-        # Tenta um padrão mais genérico se os anteriores falharem
-        if not job_description_elements:
-            generic_elements = tree.xpath('//div[contains(@class, "description")]/*/text() | //div[contains(@class, "description")]/text()')
-            if generic_elements:
-                job_description_elements.extend(generic_elements)
-        
-        # Se tudo falhar, tenta pegar todo o conteúdo do elemento job-details
-        if not job_description_elements:
-            logger.debug("Tentando obter descrição completa do trabalho")
-            full_description = tree.xpath('//*[@id="job-details"]//text()')
-            if full_description:
-                job_description_elements.extend(full_description)
+        # Usar lxml como backup se o Trafilatura não funcionar bem
+        if not job_description_text:
+            logger.debug("Trafilatura não encontrou descrição, usando lxml como backup")
+            from lxml import html
+            tree = html.fromstring(response.content)
+            
+            # Tenta vários XPaths para encontrar a descrição
+            job_description_elements = []
+            
+            # XPath para seção de job-details, que geralmente contém a descrição
+            job_details = tree.xpath('//*[@id="job-details"]//text()')
+            if job_details:
+                job_description_elements.extend(job_details)
+                
+            # Se não encontrou nada, tenta outros seletores comuns
+            if not job_description_elements:
+                job_description_elements = tree.xpath('//div[contains(@class, "description")]//text() | //section[contains(@class, "description")]//text()')
+                
+            # Se ainda não encontrou, tenta uma abordagem mais genérica
+            if not job_description_elements:
+                job_description_elements = tree.xpath('//div[contains(@class, "show-more-less-html")]//text()')
+                
+            # Se encontrou elementos com lxml, junta-os
+            if job_description_elements:
+                job_description_text = ' '.join([text.strip() for text in job_description_elements if text.strip()])
         
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
@@ -91,13 +110,29 @@ def extract_company_info(url):
             
         # Extract job description
         job_description = 'Not found'
-        if job_description_elements:
-            # Join all text elements and limit to the first 500 characters to keep the table readable
-            job_description = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+        if job_description_text:
+            # Limpar a descrição de espaços extras e limitar a 500 caracteres
+            job_description = ' '.join(job_description_text.split())
             if len(job_description) > 500:
                 job_description = job_description[:497] + '...'
+            logger.debug(f"Job description extracted successfully (first 50 chars): {job_description[:50]}...")
         else:
-            logger.warning(f"Job description element not found for URL: {url}")
+            # Tentar usar elementos capturados pelo método de backup (lxml)
+            job_description_elements = []
+            try:
+                # Tentar extrair novamente a descrição usando lxml se necessário
+                from lxml import html
+                tree = html.fromstring(response.content)
+                job_description_elements = tree.xpath('//*[@id="job-details"]//text()')
+                
+                if job_description_elements:
+                    job_description = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+                    if len(job_description) > 500:
+                        job_description = job_description[:497] + '...'
+                else:
+                    logger.warning(f"Job description not found for URL: {url}")
+            except Exception as e:
+                logger.warning(f"Failed to extract job description using backup method: {str(e)}")
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
