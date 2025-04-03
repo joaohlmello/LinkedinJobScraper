@@ -237,6 +237,39 @@ def extract_company_info(url):
             'job_description': 'Not found'
         }
 
+def normalize_linkedin_url(url):
+    """
+    Normaliza um URL do LinkedIn para formato reduzido padrão.
+    
+    Args:
+        url (str): URL completo do LinkedIn
+        
+    Returns:
+        str: URL normalizado no formato https://www.linkedin.com/jobs/view/XXXXXXXXXX
+    """
+    # Verificar se o URL é válido
+    if not url or not isinstance(url, str):
+        return url
+    
+    # Usar regex para extrair o ID de 10 dígitos
+    import re
+    match = re.search(r'linkedin\.com/jobs/view/(\d{10})', url)
+    if match:
+        job_id = match.group(1)
+        return f"https://www.linkedin.com/jobs/view/{job_id}"
+    
+    # Tentar outro padrão se o primeiro não funcionar
+    match = re.search(r'/jobs/view/([^/?]+)', url)
+    if match:
+        job_id = match.group(1)
+        # Se for numérico e tiver 10 dígitos, usar esse ID
+        if job_id.isdigit() and len(job_id) == 10:
+            return f"https://www.linkedin.com/jobs/view/{job_id}"
+    
+    # Se não conseguir extrair o ID, retornar o URL original
+    logger.debug(f"Não foi possível normalizar o URL: {url}")
+    return url
+
 def process_linkedin_urls(urls):
     """
     Process a list of LinkedIn job URLs and return the results as a DataFrame.
@@ -252,7 +285,16 @@ def process_linkedin_urls(urls):
     for url in urls:
         url = url.strip()
         if url:  # Skip empty URLs
-            result = extract_company_info(url)
+            # Normalizar o URL para o formato reduzido
+            normalized_url = normalize_linkedin_url(url)
+            logger.debug(f"URL normalizado: {normalized_url}")
+            
+            # Usar o URL normalizado para extração
+            result = extract_company_info(normalized_url)
+            
+            # Substituir o link original pelo normalizado
+            result['link'] = normalized_url
+            
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
