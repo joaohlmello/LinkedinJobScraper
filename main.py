@@ -3,7 +3,7 @@ import os
 import logging
 import threading
 from datetime import datetime
-from linkedin_scraper import get_results_html, export_to_csv, export_to_excel
+from linkedin_scraper import get_results_html, export_to_csv, export_to_excel, process_linkedin_urls
 
 # Variável global para armazenar o progresso do processamento
 processing_progress = {
@@ -55,7 +55,18 @@ def index():
                     flash('Análise com Gemini AI solicitada, mas a chave de API não está disponível.', 'warning')
                     analyze_jobs = False
                 
-                results_html = get_results_html(linkedin_urls, analyze_jobs=analyze_jobs)
+                # Agora get_results_html retorna tanto o HTML quanto o DataFrame para exportação
+                results_html, df_export = get_results_html(linkedin_urls, analyze_jobs=analyze_jobs)
+                
+                # Armazenar o DataFrame para exportação na sessão
+                if df_export is not None:
+                    try:
+                        df_json = df_export.to_json(orient='records')
+                        session['processed_data'] = df_json
+                        logger.debug(f"DataFrame armazenado na sessão para exportação. Tamanho: {len(df_json)}")
+                        session['analyze_jobs'] = analyze_jobs
+                    except Exception as e:
+                        logger.error(f"Erro ao armazenar DataFrame para exportação: {str(e)}")
                 
                 if "Error" in results_html:
                     flash('There was an error processing one or more URLs. Check the results below.', 'warning')
@@ -84,25 +95,38 @@ def export_csv():
     """
     Export LinkedIn job data to CSV.
     """
+    logger.debug(f"Session keys: {session.keys()}")
+    
     if 'linkedin_urls' not in session or not session['linkedin_urls']:
-        flash('No data to export. Please submit some LinkedIn job URLs first.', 'warning')
+        flash('Não há dados para exportar. Por favor, envie alguns URLs do LinkedIn primeiro.', 'warning')
         return redirect('/')
     
-    # Get URLs from session
+    # Obter URLs da sessão
     linkedin_urls = session['linkedin_urls']
     
+    # Verificar se foi solicitada análise com Gemini
+    analyze_jobs = 'analyze_jobs' in session and session['analyze_jobs']
+    logger.debug(f"Exportando com análise Gemini: {analyze_jobs}")
+    
+    # Verificar se já temos dados processados na sessão
+    df_json = session.get('processed_data')
+    if df_json:
+        logger.debug("Usando dados processados da sessão para exportação CSV")
+    else:
+        logger.debug("Não há dados processados na sessão, será necessário reprocessar")
+    
     try:
-        # Generate CSV file
-        csv_buffer = export_to_csv(linkedin_urls)
+        # Gerar arquivo CSV
+        csv_buffer = export_to_csv(linkedin_urls, df_json, analyze_jobs)
         if not csv_buffer:
-            flash('Failed to generate CSV file.', 'danger')
+            flash('Falha ao gerar arquivo CSV.', 'danger')
             return redirect('/')
         
-        # Generate filename with timestamp
+        # Gerar nome do arquivo com timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'linkedin_jobs_{timestamp}.csv'
         
-        # Send the file to the user
+        # Enviar o arquivo para o usuário
         return send_file(
             csv_buffer,
             as_attachment=True,
@@ -110,8 +134,8 @@ def export_csv():
             mimetype='text/csv'
         )
     except Exception as e:
-        logger.error(f"Error exporting to CSV: {str(e)}")
-        flash(f'Failed to export to CSV: {str(e)}', 'danger')
+        logger.error(f"Erro ao exportar para CSV: {str(e)}")
+        flash(f'Falha ao exportar para CSV: {str(e)}', 'danger')
         return redirect('/')
 
 @app.route('/export/excel', methods=['GET'])
@@ -120,25 +144,34 @@ def export_excel():
     Export LinkedIn job data to Excel.
     """
     logger.debug(f"Session keys: {session.keys()}")
-    if 'linkedin_urls' in session:
-        logger.debug(f"URLs in session: {len(session['linkedin_urls'])}")
     
     if 'linkedin_urls' not in session or not session['linkedin_urls']:
-        flash('No data to export. Please submit some LinkedIn job URLs first.', 'warning')
+        flash('Não há dados para exportar. Por favor, envie alguns URLs do LinkedIn primeiro.', 'warning')
         return redirect('/')
     
-    # Get URLs from session
+    # Obter URLs da sessão
     linkedin_urls = session['linkedin_urls']
-    logger.debug(f"Exporting {len(linkedin_urls)} URLs to Excel")
+    logger.debug(f"Exportando {len(linkedin_urls)} URLs para Excel")
+    
+    # Verificar se foi solicitada análise com Gemini
+    analyze_jobs = 'analyze_jobs' in session and session['analyze_jobs']
+    logger.debug(f"Exportando com análise Gemini: {analyze_jobs}")
+    
+    # Verificar se já temos dados processados na sessão
+    df_json = session.get('processed_data')
+    if df_json:
+        logger.debug("Usando dados processados da sessão para exportação Excel")
+    else:
+        logger.debug("Não há dados processados na sessão, será necessário reprocessar")
     
     try:
-        # Generate Excel file
-        excel_buffer = export_to_excel(linkedin_urls)
+        # Gerar arquivo Excel
+        excel_buffer = export_to_excel(linkedin_urls, df_json, analyze_jobs)
         if not excel_buffer:
-            flash('Failed to generate Excel file.', 'danger')
+            flash('Falha ao gerar arquivo Excel.', 'danger')
             return redirect('/')
         
-        # Generate filename with timestamp
+        # Gerar nome do arquivo com timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'linkedin_jobs_{timestamp}.xlsx'
         
@@ -154,8 +187,8 @@ def export_excel():
             mimetype=mimetype
         )
     except Exception as e:
-        logger.error(f"Error exporting to Excel: {str(e)}")
-        flash(f'Failed to export to Excel: {str(e)}', 'danger')
+        logger.error(f"Erro ao exportar para Excel: {str(e)}")
+        flash(f'Falha ao exportar para Excel: {str(e)}', 'danger')
         return redirect('/')
 
 @app.errorhandler(404)
@@ -250,12 +283,40 @@ def process_urls_background(urls, analyze_jobs=False):
         # Processar URLs e obter resultados
         results_html = None
         try:
-            results_html = get_results_html(
+            # Extrair dados e armazenar o DataFrame para exportação
+            from linkedin_scraper import process_linkedin_urls, get_results_html
+            import pandas as pd
+            
+            # Processar e obter resultados HTML formatados e DataFrame para exportação
+            results_html, df_export = get_results_html(
                 urls, 
                 analyze_jobs=analyze_jobs,
                 progress_callback=update_progress
             )
             logger.debug(f"Chamada para get_results_html concluída. Resultado vazio? {results_html is None}")
+            
+            # Armazenar a flag de análise na sessão para exportação
+            with app.app_context():
+                session['analyze_jobs'] = analyze_jobs
+            
+            # Armazenar o DataFrame pré-processado na sessão para exportação
+            try:
+                logger.debug("Preparando DataFrame para armazenamento na sessão")
+                
+                # O DataFrame de exportação já contém todos os dados e é retornado por get_results_html
+                # Convertemos diretamente para JSON, sem precisar reprocessar nada
+                if df_export is not None:
+                    df_json = df_export.to_json(orient='records')
+                    
+                    with app.app_context():
+                        session['processed_data'] = df_json
+                        logger.debug(f"DataFrame convertido para JSON e armazenado na sessão. Tamanho: {len(df_json)}")
+                else:
+                    logger.error("DataFrame de exportação não retornado pela função get_results_html")
+            except Exception as df_e:
+                logger.error(f"Erro ao processar DataFrame para sessão: {str(df_e)}")
+                # Não impede o fluxo principal se falhar
+        
         except Exception as inner_e:
             logger.error(f"Exceção capturada ao chamar get_results_html: {str(inner_e)}")
             import traceback

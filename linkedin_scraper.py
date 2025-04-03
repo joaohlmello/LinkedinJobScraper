@@ -747,6 +747,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         
     Returns:
         str: HTML representation of the results table
+        dict: Dictionary containing the processed data for export (if requested)
     """
     if not urls:
         return "<p>No URLs provided.</p>"
@@ -755,7 +756,11 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     if progress_callback:
         progress_callback(0, 100, "Iniciando extração de dados do LinkedIn...")
     
+    # Obter um DataFrame com os dados brutos
     df = process_linkedin_urls(urls, progress_callback=progress_callback)
+    
+    # Criar uma cópia para exportação antes de modificar com HTML
+    df_export = df.copy()
     
     # Verificar comprimento das descrições para debug
     for idx, row in df.iterrows():
@@ -769,8 +774,28 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     if progress_callback:
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
+    # Adicionar colunas para análise Gemini (inicialmente vazias)
+    df['compatibilidade_global'] = ""
+    df['compatibilidade_palavras_chave'] = ""
+    df['compatibilidade_requisitos'] = ""
+    df['compatibilidade_experiencia'] = ""
+    df['compatibilidade_qualificacoes'] = ""
+    df['forcas'] = ""
+    df['fraquezas'] = ""
+    
+    # Adicionar as mesmas colunas ao DataFrame de exportação
+    df_export['compatibilidade_global'] = ""
+    df_export['compatibilidade_palavras_chave'] = ""
+    df_export['compatibilidade_requisitos'] = ""
+    df_export['compatibilidade_experiencia'] = ""
+    df_export['compatibilidade_qualificacoes'] = ""
+    df_export['forcas'] = ""
+    df_export['fraquezas'] = ""
+    
     # Analisar vagas com Gemini API se solicitado
+    gemini_analyses = []
     job_analyses_html = ""
+    
     if analyze_jobs:
         try:
             # Importar o analisador de vagas
@@ -783,7 +808,9 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             
             # Preparar os dados para análise
             jobs_for_analysis = []
-            for i, (_, row) in enumerate(df.iterrows()):
+            url_to_index = {}  # Mapear URLs para seus índices no DataFrame
+            
+            for i, (idx, row) in enumerate(df.iterrows()):
                 # Extrair URL sem tags HTML
                 link = row['link']
                 if '<a href=' in link:
@@ -795,12 +822,14 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     'job_title': row['job_title'],
                     'company_name': row['company_name'],
                     'job_description': row['job_description'],
-                    'link': link
+                    'link': link,
+                    'original_index': idx  # Guardar o índice original
                 }
                 jobs_for_analysis.append(job_data)
+                url_to_index[link] = idx
                 
                 # Atualizar progresso de preparo para análise
-                if progress_callback and i % 2 == 0:  # Atualizar a cada 2 itens para não sobrecarregar
+                if progress_callback and i % 2 == 0:
                     progress_callback(
                         len(urls) + i + 1, 
                         100 + len(df) * 2, 
@@ -828,7 +857,43 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                 progress_callback=gemini_progress_callback
             )
             
-            # Gerar HTML para cada análise
+            # Armazenar resultados no DataFrame
+            for analysis in analyses_results:
+                job_link = analysis.get('job_link', '')
+                if job_link in url_to_index:
+                    idx = url_to_index[job_link]
+                    
+                    # Obter valores da análise ou usar valores padrão
+                    nota_global = analysis.get('nota_global', 0)
+                    nota_palavras = analysis.get('nota_palavras_chave', 0)
+                    nota_requisitos = analysis.get('nota_requisitos', 0)
+                    nota_experiencia = analysis.get('nota_experiencia', 0)
+                    nota_qualificacoes = analysis.get('nota_qualificacoes', 0)
+                    forcas = analysis.get('forcas', '')
+                    fraquezas = analysis.get('fraquezas', '')
+                    
+                    # Atualizar o DataFrame de visualização com os resultados da análise
+                    df.at[idx, 'compatibilidade_global'] = f"{nota_global}%"
+                    df.at[idx, 'compatibilidade_palavras_chave'] = f"{nota_palavras}%"
+                    df.at[idx, 'compatibilidade_requisitos'] = f"{nota_requisitos}%"
+                    df.at[idx, 'compatibilidade_experiencia'] = f"{nota_experiencia}%"
+                    df.at[idx, 'compatibilidade_qualificacoes'] = f"{nota_qualificacoes}%"
+                    df.at[idx, 'forcas'] = forcas
+                    df.at[idx, 'fraquezas'] = fraquezas
+                    
+                    # Atualizar o DataFrame de exportação
+                    df_export.at[idx, 'compatibilidade_global'] = f"{nota_global}%"
+                    df_export.at[idx, 'compatibilidade_palavras_chave'] = f"{nota_palavras}%"
+                    df_export.at[idx, 'compatibilidade_requisitos'] = f"{nota_requisitos}%"
+                    df_export.at[idx, 'compatibilidade_experiencia'] = f"{nota_experiencia}%"
+                    df_export.at[idx, 'compatibilidade_qualificacoes'] = f"{nota_qualificacoes}%"
+                    df_export.at[idx, 'forcas'] = forcas
+                    df_export.at[idx, 'fraquezas'] = fraquezas
+                
+                # Salvar para HTML detalhado abaixo da tabela
+                gemini_analyses.append(analysis)
+            
+            # Gerar HTML para cada análise (será exibido abaixo da tabela)
             if progress_callback:
                 progress_callback(
                     100 + len(df) * 2 + gemini_progress_total, 
@@ -836,8 +901,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     "Gerando visualização dos resultados da análise..."
                 )
                 
-            job_analyses_html = "<h2 class='mt-5 mb-4'>Análise de Compatibilidade com Gemini AI</h2>"
-            for analysis in analyses_results:
+            job_analyses_html = "<h2 class='mt-5 mb-4'>Análise Detalhada de Compatibilidade com Gemini AI</h2>"
+            for analysis in gemini_analyses:
                 job_analyses_html += format_analysis_html(analysis)
             
             logger.info("Análise de vagas concluída com sucesso")
@@ -880,54 +945,92 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         vertical-align: top;
     }
     
+    /* Estilo para colunas de compatibilidade */
+    .compatibility-column {
+        background-color: rgba(13, 110, 253, 0.1); /* Azul claro semi-transparente */
+        font-weight: bold;
+    }
+    
+    /* Estilo para cabeçalhos de compatibilidade */
+    .compatibility-header {
+        background-color: rgba(13, 110, 253, 0.3); /* Azul mais visível para cabeçalho */
+    }
+    
+    /* Larguras ajustadas para acomodar novas colunas */
     .linkedin-job-results-table th:nth-child(1), 
     .linkedin-job-results-table td:nth-child(1) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(2), 
     .linkedin-job-results-table td:nth-child(2) {
-        width: 8%;
+        width: 6%;
     }
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
     .linkedin-job-results-table td:nth-child(4) {
-        width: 8%;
+        width: 7%;
     }
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 30%;
+        width: 25%;
     }
     
     .linkedin-job-results-table th:nth-child(6), 
     .linkedin-job-results-table td:nth-child(6) {
-        width: 8%;
+        width: 5%;
     }
     
     .linkedin-job-results-table th:nth-child(7), 
     .linkedin-job-results-table td:nth-child(7) {
-        width: 8%;
+        width: 5%;
     }
     
     .linkedin-job-results-table th:nth-child(8), 
     .linkedin-job-results-table td:nth-child(8) {
-        width: 8%;
+        width: 5%;
     }
     
     .linkedin-job-results-table th:nth-child(9), 
     .linkedin-job-results-table td:nth-child(9) {
-        width: 8%;
+        width: 4%;
     }
     
     .linkedin-job-results-table th:nth-child(10), 
     .linkedin-job-results-table td:nth-child(10) {
-        width: 10%;
+        width: 4%;
+    }
+    
+    /* Novas colunas de compatibilidade */
+    .linkedin-job-results-table th:nth-child(11), 
+    .linkedin-job-results-table td:nth-child(11) {
+        width: 5%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(12), 
+    .linkedin-job-results-table td:nth-child(12) {
+        width: 4%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(13), 
+    .linkedin-job-results-table td:nth-child(13) {
+        width: 4%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(14), 
+    .linkedin-job-results-table td:nth-child(14) {
+        width: 4%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(15), 
+    .linkedin-job-results-table td:nth-child(15) {
+        width: 4%;
     }
     </style>
     <div class="table-responsive">
@@ -944,6 +1047,11 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th>Announced Calc</th>
             <th>City</th>
             <th>Candidates</th>
+            <th class="compatibility-header">Compatibilidade</th>
+            <th class="compatibility-header">Palavras-chave</th>
+            <th class="compatibility-header">Requisitos</th>
+            <th class="compatibility-header">Experiência</th>
+            <th class="compatibility-header">Qualificações</th>
           </tr>
         </thead>
         <tbody>
@@ -951,6 +1059,9 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     
     # Adicionar cada linha de forma manual para ter controle total sobre o conteúdo
     for _, row in df.iterrows():
+        # Verificar se temos resultados do Gemini para mostrar
+        has_compatibility = row['compatibilidade_global'] != ""
+        
         html_table += f"""
         <tr>
           <td>{row['link']}</td>
@@ -963,6 +1074,11 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
+          <td class="compatibility-column">{row['compatibilidade_global']}</td>
+          <td class="compatibility-column">{row['compatibilidade_palavras_chave']}</td>
+          <td class="compatibility-column">{row['compatibilidade_requisitos']}</td>
+          <td class="compatibility-column">{row['compatibilidade_experiencia']}</td>
+          <td class="compatibility-column">{row['compatibilidade_qualificacoes']}</td>
         </tr>
         """
     
@@ -975,23 +1091,57 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     # Adicionar análises de vagas se disponíveis
     html_content = html_table + job_analyses_html
     
-    return html_content
+    # Retornar o DataFrame de exportação com o conteúdo HTML
+    return html_content, df_export
 
-def export_to_csv(urls):
+def export_to_csv(urls, df_json=None, analyze_jobs=False):
     """
     Export LinkedIn job data to CSV format.
     
     Args:
         urls (list): List of LinkedIn job URLs
+        df_json (str, optional): JSON representation of a previously processed DataFrame
+        analyze_jobs (bool): Whether to analyze jobs with Gemini AI if no df_json is provided
         
     Returns:
         BytesIO: CSV file as BytesIO object
     """
-    if not urls:
+    if not urls and not df_json:
         return None
     
-    # Get the DataFrame with results
-    df = process_linkedin_urls(urls)
+    # Se temos um DataFrame em JSON, usar para evitar reprocessamento
+    if df_json:
+        logger.debug("Usando DataFrame pré-processado do JSON para exportação CSV")
+        try:
+            import json
+            df = pd.read_json(df_json)
+        except Exception as e:
+            logger.error(f"Erro ao converter JSON para DataFrame: {str(e)}")
+            df = None
+    
+    # Se não temos um DataFrame do JSON, processar novamente
+    if df_json is None or df is None:
+        logger.debug("Processando URLs novamente para exportação CSV")
+        # Verificar se precisamos analisar os jobs
+        if analyze_jobs:
+            # Processamento com análise - obter resultados HTML e converter para DataFrame
+            # (Não ideal, mas mantém a compatibilidade)
+            df = process_linkedin_urls(urls)
+        else:
+            # Processamento simples
+            df = process_linkedin_urls(urls)
+    
+    # Remover colunas com formatação HTML
+    if 'link' in df.columns and '<a href=' in str(df['link'].iloc[0]):
+        import re
+        df['link'] = df['link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
+    
+    if 'company_link' in df.columns and '<a href=' in str(df['company_link'].iloc[0]):
+        import re
+        df['company_link'] = df['company_link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
+    
+    # Remover formatação HTML da descrição
+    df['job_description'] = df['job_description'].apply(lambda x: x.replace('<br><br>', '\n\n').replace('<br>', '\n') if isinstance(x, str) else x)
     
     # Create a BytesIO object to store the CSV
     csv_buffer = BytesIO()
@@ -1004,21 +1154,51 @@ def export_to_csv(urls):
     
     return csv_buffer
 
-def export_to_excel(urls):
+def export_to_excel(urls, df_json=None, analyze_jobs=False):
     """
     Export LinkedIn job data to Excel format.
     
     Args:
         urls (list): List of LinkedIn job URLs
+        df_json (str, optional): JSON representation of a previously processed DataFrame
+        analyze_jobs (bool): Whether to analyze jobs with Gemini AI if no df_json is provided
         
     Returns:
         BytesIO: Excel file as BytesIO object
     """
-    if not urls:
+    if not urls and not df_json:
         return None
     
-    # Get the DataFrame with results
-    df = process_linkedin_urls(urls)
+    # Se temos um DataFrame em JSON, usar para evitar reprocessamento
+    if df_json:
+        logger.debug("Usando DataFrame pré-processado do JSON para exportação Excel")
+        try:
+            import json
+            df = pd.read_json(df_json)
+        except Exception as e:
+            logger.error(f"Erro ao converter JSON para DataFrame: {str(e)}")
+            df = None
+    
+    # Se não temos um DataFrame do JSON, processar novamente
+    if df_json is None or df is None:
+        logger.debug("Processando URLs novamente para exportação Excel")
+        # Verificar se precisamos analisar os jobs
+        if analyze_jobs:
+            # Processamento com análise - obter resultados HTML e converter para DataFrame
+            # (Não ideal, mas mantém a compatibilidade)
+            df = process_linkedin_urls(urls)
+        else:
+            # Processamento simples
+            df = process_linkedin_urls(urls)
+    
+    # Remover colunas com formatação HTML
+    if 'link' in df.columns and '<a href=' in str(df['link'].iloc[0]):
+        import re
+        df['link'] = df['link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
+    
+    if 'company_link' in df.columns and '<a href=' in str(df['company_link'].iloc[0]):
+        import re
+        df['company_link'] = df['company_link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
     
     # Create a BytesIO object to store the Excel file
     excel_buffer = BytesIO()
