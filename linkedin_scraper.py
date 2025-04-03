@@ -247,9 +247,53 @@ def extract_company_info(url):
                         city = span_text
                         logger.debug(f"Cidade identificada: {city}")
             
-            # MÉTODO 1 para tipo de candidatura: Busca pelo botão específico ou elemento fornecido
-            apply_button_spans = soup.select('.jobs-apply-button--top-card .artdeco-button__text, #ember40 > span')
-            if apply_button_spans:
+            # MÉTODO 1 para tipo de candidatura: Busca pelo botão específico ou elemento fornecido - MAIS ABRANGENTE
+            # Verificar especificamente por "Easy Apply" e outras variações
+            easy_apply_indicators = [
+                # Buscar por classes específicas que geralmente indicam Easy Apply
+                '.jobs-apply-button--top-card',
+                '.jobs-s-apply--fadein',
+                '.jobs-s-apply',
+                '.artdeco-inline-feedback',
+                '.jobs-apply-button',
+                '#ember40', # ID específico que pode variar
+                'button[data-tracking-control-name="public_jobs_apply-link-offsite_sign-up-now"]',
+                'button[data-control-name="jobdetails_topcard_inapply"]',
+                '.jobs-s-apply--fadein button',
+                '.jobs-apply-button--top-card button'
+            ]
+            
+            # Primeiro, verificar especificamente por "Easy Apply" no texto/classes dos elementos
+            for selector in easy_apply_indicators:
+                elements = soup.select(selector)
+                for element in elements:
+                    # Verificar se o elemento ou seus descendentes contêm "Easy Apply"
+                    button_text = element.get_text(strip=True)
+                    if "easy apply" in button_text.lower() or "candidatura simplificada" in button_text.lower():
+                        application_type = "Easy Apply"
+                        logger.debug(f"Easy Apply identificado através do seletor {selector}")
+                        break
+                    
+                    # Verificar se o elemento tem a classe ou atributos que indicam Easy Apply
+                    class_list = element.get('class', [])
+                    if class_list and any("easy" in cls.lower() for cls in class_list):
+                        application_type = "Easy Apply"
+                        logger.debug(f"Easy Apply identificado através da classe no seletor {selector}")
+                        break
+                        
+                    # Verificar atributos de data ou aria que possam indicar Easy Apply
+                    for attr_name, attr_value in element.attrs.items():
+                        if isinstance(attr_value, str) and "easy apply" in attr_value.lower():
+                            application_type = "Easy Apply"
+                            logger.debug(f"Easy Apply identificado através do atributo {attr_name} no seletor {selector}")
+                            break
+                            
+                if application_type != 'Not found':
+                    break
+                    
+            # Se ainda não encontrou, tentar extrair qualquer texto de botão de candidatura
+            if application_type == 'Not found':
+                apply_button_spans = soup.select('.jobs-apply-button--top-card .artdeco-button__text, .jobs-apply-button span, .jobs-apply-button button span, button.jobs-apply-button span')
                 for span in apply_button_spans:
                     button_text = span.get_text(strip=True)
                     if button_text:
@@ -356,11 +400,34 @@ def extract_company_info(url):
                         else:
                             logger.warning("Não foi possível obter o conteúdo HTML para análise XPath")
                             raise Exception("Conteúdo HTML não disponível")
-                            
+                        
+                        # Verificar se a URL é .com.br (brasileira) ou internacional
+                        is_brazilian = '.com.br' in url or 'br.' in url
+                        
+                        # Se for versão brasileira, verificar primeiro por "Candidatura simplificada"
+                        if is_brazilian:
+                            # Procurar por "Candidatura simplificada" em qualquer botão ou elemento
+                            simplified_button = tree.xpath('//*[contains(text(), "Candidatura simplificada")]')
+                            if simplified_button:
+                                application_type = "Easy Apply"
+                                logger.debug("Tipo de candidatura identificado como 'Easy Apply' pela versão brasileira (Candidatura simplificada)")
+                        
+                        # Se ainda não encontrou, verificar na página HTML completa por "Easy Apply"
+                        if application_type == 'Not found' and hasattr(r, 'text'):
+                            if "candidatura simplificada" in r.text.lower() or "easy apply" in r.text.lower():
+                                application_type = "Easy Apply"
+                                logger.debug("Tipo de candidatura identificado como 'Easy Apply' pelo texto completo da página")
+                        
+                        # Se ainda não encontrou, continuar com os padrões XPath
                         xpath_patterns = [
-                            # XPath fornecido pelo usuário
+                            # XPath fornecido pelo usuário para versão BR
                             '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span/text()',
-                            # XPaths alternativos
+                            
+                            # XPaths específicos para versão brasileira
+                            '//div[contains(@class, "jobs-apply-button")]//button[contains(@aria-label, "Candidatar")]//span/text()',
+                            '//button[contains(@data-control-name, "jobdetails_topcard")]//span/text()',
+                            
+                            # XPaths genéricos
                             '//div[contains(@class, "jobs-apply-button--top-card")]//span[contains(@class, "artdeco-button__text")]/text()',
                             '//button[contains(@class, "jobs-apply-button")]//span/text()',
                             '//button[contains(@class, "apply-button")]//span/text()',
