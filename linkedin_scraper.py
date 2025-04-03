@@ -393,6 +393,82 @@ def normalize_linkedin_url(url):
     logger.debug(f"Não foi possível normalizar o URL: {url}")
     return url
 
+def calculate_announced_date(searched_at, announced_at):
+    """
+    Calcula uma data compatível com Excel com base nas informações de Searched At e Announced At.
+    
+    Args:
+        searched_at (str): Data e hora da pesquisa no formato 'YYYY-MM-DD HH:MM:SS'
+        announced_at (str): Texto descritivo sobre quando o job foi anunciado, ex. '3 days ago'
+        
+    Returns:
+        str: Data calculada no formato 'YYYY-MM-DD'
+    """
+    try:
+        # Converter searched_at para objeto datetime
+        search_date = datetime.datetime.strptime(searched_at, '%Y-%m-%d %H:%M:%S')
+        
+        if announced_at == 'Not found':
+            return 'Not found'
+        
+        # Padrões para diferentes formatos de announced_at
+        patterns = [
+            # X days/months/years ago
+            (r'(\d+)\s+day', lambda x: datetime.timedelta(days=int(x.group(1)))),
+            (r'(\d+)\s+week', lambda x: datetime.timedelta(days=int(x.group(1))*7)),
+            (r'(\d+)\s+month', lambda x: datetime.timedelta(days=int(x.group(1))*30)),
+            (r'(\d+)\s+year', lambda x: datetime.timedelta(days=int(x.group(1))*365)),
+            
+            # yesterday, hoje, etc
+            (r'yesterday', lambda x: datetime.timedelta(days=1)),
+            (r'ontem', lambda x: datetime.timedelta(days=1)),
+            (r'today', lambda x: datetime.timedelta(days=0)),
+            (r'hoje', lambda x: datetime.timedelta(days=0)),
+            
+            # horas atrás
+            (r'(\d+)\s+hour', lambda x: datetime.timedelta(hours=int(x.group(1)))),
+            (r'(\d+)\s+hora', lambda x: datetime.timedelta(hours=int(x.group(1)))),
+            
+            # minutos atrás
+            (r'(\d+)\s+minute', lambda x: datetime.timedelta(minutes=int(x.group(1)))),
+            (r'(\d+)\s+minuto', lambda x: datetime.timedelta(minutes=int(x.group(1)))),
+        ]
+        
+        # Verificar se o texto contém algum dos padrões acima
+        for pattern, time_delta_func in patterns:
+            match = re.search(pattern, announced_at.lower())
+            if match:
+                delta = time_delta_func(match)
+                calculated_date = search_date - delta
+                # Retornar no formato YYYY-MM-DD
+                return calculated_date.strftime('%Y-%m-%d')
+        
+        # Verificar se já é uma data específica
+        date_patterns = [
+            '%b %d, %Y',     # 'Jan 15, 2023'
+            '%B %d, %Y',     # 'January 15, 2023'
+            '%d %b %Y',      # '15 Jan 2023'
+            '%d %B %Y',      # '15 January 2023'
+            '%Y-%m-%d',      # '2023-01-15'
+            '%d/%m/%Y',      # '15/01/2023'
+            '%m/%d/%Y',      # '01/15/2023'
+        ]
+        
+        for pattern in date_patterns:
+            try:
+                date_object = datetime.datetime.strptime(announced_at, pattern)
+                return date_object.strftime('%Y-%m-%d')
+            except ValueError:
+                pass
+        
+        # Se nenhum padrão for reconhecido, usar searched_at
+        logger.warning(f"Formato de data não reconhecido: {announced_at}. Usando data da pesquisa.")
+        return search_date.strftime('%Y-%m-%d')
+    
+    except Exception as e:
+        logger.error(f"Erro ao calcular data anunciada: {str(e)}")
+        return 'Error calculating date'
+
 def process_linkedin_urls(urls):
     """
     Process a list of LinkedIn job URLs and return the results as a DataFrame.
@@ -418,10 +494,19 @@ def process_linkedin_urls(urls):
             # Substituir o link original pelo normalizado
             result['link'] = normalized_url
             
+            # Calcular a data de anúncio com base nas informações disponíveis
+            result['announced_calc'] = calculate_announced_date(
+                result['searched_at'], 
+                result['announced_at']
+            )
+            
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description', 'city', 'announced_at', 'candidates', 'searched_at'])
+    df = pd.DataFrame(results, columns=[
+        'link', 'company_name', 'company_link', 'job_title', 'job_description', 
+        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
+    ])
     return df
 
 def get_results_html(urls):
@@ -447,7 +532,7 @@ def get_results_html(urls):
     df['link'] = df['link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     df['company_link'] = df['company_link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     
-    # Criar tabela HTML personalizada para exibir descrição completa
+    # Criar tabela HTML personalizada para exibir descrição completa na ordem solicitada
     html_table = """
     <style>
     /* Estilos adicionais aplicados diretamente na tabela */
@@ -510,6 +595,11 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(9), 
     .linkedin-job-results-table td:nth-child(9) {
+        width: 8%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(10), 
+    .linkedin-job-results-table td:nth-child(10) {
         width: 10%;
     }
     </style>
@@ -522,10 +612,11 @@ def get_results_html(urls):
             <th>Company Link</th>
             <th>Job Title</th>
             <th>Job Description</th>
-            <th>City</th>
-            <th>Announced At</th>
-            <th>Candidates</th>
             <th>Searched At</th>
+            <th>Announced At</th>
+            <th>Announced Calc</th>
+            <th>City</th>
+            <th>Candidates</th>
           </tr>
         </thead>
         <tbody>
@@ -540,10 +631,11 @@ def get_results_html(urls):
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
           <td class="full-text">{row['job_description']}</td>
-          <td>{row['city']}</td>
-          <td>{row['announced_at']}</td>
-          <td>{row['candidates']}</td>
           <td>{row['searched_at']}</td>
+          <td>{row['announced_at']}</td>
+          <td>{row['announced_calc']}</td>
+          <td>{row['city']}</td>
+          <td>{row['candidates']}</td>
         </tr>
         """
     
