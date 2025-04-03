@@ -200,7 +200,7 @@ def extract_company_info(url):
         if job_description_text:
             # Limpar a descrição de espaços extras (sem limite de caracteres)
             job_description = ' '.join(job_description_text.split())
-            logger.debug(f"Job description extracted successfully (first 50 chars): {job_description[:50]}...")
+            logger.debug(f"Job description extracted successfully. Comprimento total: {len(job_description)} chars. Primeiros 50 chars: {job_description[:50]}...")
         else:
             # Método de último recurso - capturar especificamente os títulos e itens da página
             logger.warning(f"Job description not found for URL: {url}")
@@ -272,16 +272,91 @@ def get_results_html(urls):
     
     df = process_linkedin_urls(urls)
     
+    # Verificar comprimento das descrições para debug
+    for idx, row in df.iterrows():
+        logger.debug(f"Linha {idx}: Descrição com {len(row['job_description'])} caracteres")
+    
     # Format links as HTML anchor tags before converting to HTML
     df['link'] = df['link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     df['company_link'] = df['company_link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     
-    # Convert DataFrame to HTML table with Bootstrap styling
-    html_table = df.to_html(
-        classes='table table-striped table-hover table-dark',
-        index=False,
-        escape=False
-    )
+    # Criar tabela HTML personalizada para exibir descrição completa
+    html_table = """
+    <style>
+    /* Estilos adicionais aplicados diretamente na tabela */
+    .linkedin-job-results-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+    
+    .linkedin-job-results-table th, 
+    .linkedin-job-results-table td {
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        text-overflow: clip;
+        overflow: visible;
+        padding: 10px;
+        vertical-align: top;
+    }
+    
+    .linkedin-job-results-table th:nth-child(1), 
+    .linkedin-job-results-table td:nth-child(1) {
+        width: 15%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(2), 
+    .linkedin-job-results-table td:nth-child(2) {
+        width: 10%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(3), 
+    .linkedin-job-results-table td:nth-child(3) {
+        width: 15%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(4), 
+    .linkedin-job-results-table td:nth-child(4) {
+        width: 10%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(5), 
+    .linkedin-job-results-table td:nth-child(5) {
+        width: 50%;
+    }
+    </style>
+    <div class="table-responsive">
+      <table class="table table-striped table-hover table-dark linkedin-job-results-table">
+        <thead>
+          <tr>
+            <th>Link</th>
+            <th>Company Name</th>
+            <th>Company Link</th>
+            <th>Job Title</th>
+            <th>Job Description</th>
+          </tr>
+        </thead>
+        <tbody>
+    """
+    
+    # Adicionar cada linha de forma manual para ter controle total sobre o conteúdo
+    for _, row in df.iterrows():
+        html_table += f"""
+        <tr>
+          <td>{row['link']}</td>
+          <td>{row['company_name']}</td>
+          <td>{row['company_link']}</td>
+          <td>{row['job_title']}</td>
+          <td class="full-text">{row['job_description']}</td>
+        </tr>
+        """
+    
+    html_table += """
+        </tbody>
+      </table>
+    </div>
+    """
     
     return html_table
 

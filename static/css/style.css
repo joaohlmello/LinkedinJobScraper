@@ -9,11 +9,45 @@ textarea {
 
 .table {
     overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
     table-layout: fixed;
 }
 
 .table th, .table td {
     vertical-align: middle;
+    max-width: none;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+}
+
+/* Ajustar largura das colunas */
+.table th:nth-child(1), .table td:nth-child(1) {
+    width: 15%;  /* Link */
+}
+.table th:nth-child(2), .table td:nth-child(2) {
+    width: 10%;  /* Company Name */
+}
+.table th:nth-child(3), .table td:nth-child(3) {
+    width: 15%;  /* Company Link */
+}
+.table th:nth-child(4), .table td:nth-child(4) {
+    width: 10%;  /* Job Title */
+}
+.table th:nth-child(5), .table td:nth-child(5) {
+    width: 50%;  /* Job Description - mais espaço */
+}
+
+/* Classe especial para exibir texto completo */
+.full-text {
+    white-space: normal;
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    overflow: visible;
 }
 
 /* Make sure links are visible against dark background */
