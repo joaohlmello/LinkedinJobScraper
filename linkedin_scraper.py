@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 def extract_company_info(url):
     """
-    Extract company name, job title, and links from a LinkedIn job listing URL.
+    Extract company name, job title, application type, and links from a LinkedIn job listing URL.
     
     Args:
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, and company link
+        dict: Dictionary containing original link, job title, company name, company link, application type and job description
     """
     try:
         # Set headers to mimic a browser request
@@ -56,6 +56,9 @@ def extract_company_info(url):
         
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
+        
+        # Inicializar variável para application_type
+        application_type = 'Not found'
         
         # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
@@ -169,6 +172,28 @@ def extract_company_info(url):
                     if len(extracted_text) > len(job_description_text):
                         job_description_text = extracted_text
                         logger.debug(f"XPath extraiu texto maior: {len(job_description_text)} caracteres")
+                
+                # Extrair o tipo de candidatura usando o XPath fornecido
+                logger.debug("Tentando extrair o tipo de candidatura usando XPath")
+                application_type_xpath = '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span'
+                application_type_elements = tree.xpath(application_type_xpath)
+                if application_type_elements and len(application_type_elements) > 0:
+                    application_type = application_type_elements[0].text_content().strip()
+                    logger.debug(f"Tipo de candidatura extraído: {application_type}")
+                else:
+                    # Tentar XPaths alternativos para o tipo de candidatura
+                    alternative_app_type_xpaths = [
+                        '//button[contains(@class, "jobs-apply-button")]//span/text()',
+                        '//div[contains(@class, "jobs-apply-button-container")]//button//span/text()',
+                        '//div[contains(@class, "apply-button-container")]//button//span/text()'
+                    ]
+                    
+                    for xpath in alternative_app_type_xpaths:
+                        app_elements = tree.xpath(xpath)
+                        if app_elements and len(app_elements) > 0:
+                            application_type = app_elements[0].strip()
+                            logger.debug(f"Tipo de candidatura extraído de caminho alternativo: {application_type}")
+                            break
             except Exception as e:
                 logger.warning(f"Erro ao extrair com XPath: {str(e)}")
                 
@@ -210,11 +235,15 @@ def extract_company_info(url):
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
+        # Log do tipo de candidatura extraído
+        logger.debug(f"Tipo de candidatura final: {application_type}")
+            
         return {
             'link': url,
             'company_name': company_name,
             'company_link': company_link,
             'job_title': job_title,
+            'application_type': application_type,
             'job_description': job_description
         }
     
@@ -225,6 +254,7 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
+            'application_type': 'Not found',
             'job_description': 'Not found'
         }
     except Exception as e:
@@ -234,6 +264,7 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
+            'application_type': 'Not found', 
             'job_description': 'Not found'
         }
 
@@ -256,7 +287,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'application_type', 'job_description'])
     return df
 
 def get_results_html(urls):
@@ -315,17 +346,22 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 15%;
+        width: 12%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
     .linkedin-job-results-table td:nth-child(4) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 50%;
+        width: 10%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(6), 
+    .linkedin-job-results-table td:nth-child(6) {
+        width: 45%;
     }
     </style>
     <div class="table-responsive">
@@ -336,6 +372,7 @@ def get_results_html(urls):
             <th>Company Name</th>
             <th>Company Link</th>
             <th>Job Title</th>
+            <th>Application Type</th>
             <th>Job Description</th>
           </tr>
         </thead>
@@ -350,6 +387,7 @@ def get_results_html(urls):
           <td>{row['company_name']}</td>
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
+          <td>{row['application_type']}</td>
           <td class="full-text">{row['job_description']}</td>
         </tr>
         """
@@ -425,8 +463,8 @@ def export_to_excel(urls):
             # Definir a largura da coluna
             worksheet.column_dimensions[column_letter].width = max_length
             
-            # Configurações especiais para a coluna de descrição (coluna E, índice 4)
-            if i == 4:  # Job Description column
+            # Configurações especiais para a coluna de descrição (coluna F, índice 5)
+            if i == 5:  # Job Description column
                 # Ajustar altura das linhas automaticamente
                 worksheet.column_dimensions[column_letter].width = 100  # Largura máxima
                 
