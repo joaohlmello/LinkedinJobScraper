@@ -370,6 +370,24 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
 
 
 # Função auxiliar para transformar a análise em HTML
+def format_text_with_breaks(text):
+    """
+    Formata texto substituindo quebras de linha por tags HTML <br>.
+    Isso evita problemas com f-strings contendo caracteres de escape.
+    
+    Args:
+        text (str): Texto a ser formatado
+        
+    Returns:
+        str: Texto formatado com tags <br>
+    """
+    if not text:
+        return ""
+        
+    formatted = text.replace("\n\n", "<br><br>").replace("\n", "<br>")
+    return formatted
+
+
 def format_analysis_html(analysis):
     """
     Formata o resultado da análise em HTML para exibição na interface.
@@ -459,7 +477,7 @@ def format_analysis_html(analysis):
                     <div class="strengths-card">
                         <h5>Forças</h5>
                         <div class="strengths-content">
-                            {analysis.get('forcas', '').replace('\n\n', '<br><br>').replace('\n', '<br>')}
+                            {format_text_with_breaks(analysis.get('forcas', ''))}
                         </div>
                     </div>
                 </div>
@@ -467,7 +485,7 @@ def format_analysis_html(analysis):
                     <div class="weaknesses-card">
                         <h5>Fraquezas</h5>
                         <div class="weaknesses-content">
-                            {analysis.get('fraquezas', '').replace('\n\n', '<br><br>').replace('\n', '<br>')}
+                            {format_text_with_breaks(analysis.get('fraquezas', ''))}
                         </div>
                     </div>
                 </div>
