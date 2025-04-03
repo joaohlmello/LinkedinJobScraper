@@ -38,6 +38,11 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
+        # Find job description element using XPath from lxml
+        from lxml import html
+        tree = html.fromstring(response.content)
+        job_description_elements = tree.xpath('//*[@id="job-details"]/div/p/text()')
+        
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
             company_name = 'Not found'
@@ -57,31 +62,44 @@ def extract_company_info(url):
             job_title = job_title_element.get_text(strip=True)
         else:
             logger.warning(f"Job title element not found for URL: {url}")
+            
+        # Extract job description
+        job_description = 'Not found'
+        if job_description_elements:
+            # Join all text elements and limit to the first 500 characters to keep the table readable
+            job_description = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+            if len(job_description) > 500:
+                job_description = job_description[:497] + '...'
+        else:
+            logger.warning(f"Job description element not found for URL: {url}")
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
         return {
             'link': url,
-            'job_title': job_title,
             'company_name': company_name,
-            'company_link': company_link
+            'company_link': company_link,
+            'job_title': job_title,
+            'job_description': job_description
         }
     
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error for URL {url}: {str(e)}")
         return {
             'link': url,
-            'job_title': 'Not found',
             'company_name': f'Error: {str(e)}',
-            'company_link': 'Not found'
+            'company_link': 'Not found',
+            'job_title': 'Not found',
+            'job_description': 'Not found'
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
         return {
             'link': url,
-            'job_title': 'Not found',
             'company_name': f'Error: {str(e)}',
-            'company_link': 'Not found'
+            'company_link': 'Not found',
+            'job_title': 'Not found',
+            'job_description': 'Not found'
         }
 
 def process_linkedin_urls(urls):
@@ -103,7 +121,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
     return df
 
 def get_results_html(urls):
