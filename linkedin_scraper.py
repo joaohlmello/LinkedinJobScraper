@@ -32,8 +32,8 @@ def extract_company_info(url):
         # Parse HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find company element based on provided selector
-        company_element = soup.select_one('a.RFNOFVQEFZPHaKoCyqsqedOluNQlOEMFjaDeg[target="_self"][tabindex="0"]')
+        # Find company element using the topcard__org-name-link class which is the current structure
+        company_element = soup.select_one('a.topcard__org-name-link')
         
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
@@ -111,15 +111,15 @@ def get_results_html(urls):
     
     df = process_linkedin_urls(urls)
     
+    # Format links as HTML anchor tags before converting to HTML
+    df['link'] = df['link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
+    df['company_link'] = df['company_link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
+    
     # Convert DataFrame to HTML table with Bootstrap styling
     html_table = df.to_html(
         classes='table table-striped table-hover table-dark',
         index=False,
-        escape=False,
-        render_links=True
+        escape=False
     )
-    
-    # Make links clickable
-    html_table = html_table.replace('&lt;', '<').replace('&gt;', '>')
     
     return html_table
