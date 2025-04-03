@@ -176,13 +176,14 @@ def extract_company_info(url):
                 # Extrair o tipo de candidatura usando o XPath fornecido
                 logger.debug("Tentando extrair o tipo de candidatura usando XPath")
                 
-                # XPath específico fornecido pelo usuário
-                application_type_xpath = '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span'
+                # XPath do elemento pai conforme sugerido pelo usuário
+                application_type_xpath = '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div'
                 application_type_elements = tree.xpath(application_type_xpath)
                 
                 if application_type_elements and len(application_type_elements) > 0:
+                    # Extrair o texto completo de todos os filhos do elemento pai
                     application_type = application_type_elements[0].text_content().strip()
-                    logger.debug(f"Tipo de candidatura extraído: {application_type}")
+                    logger.debug(f"Tipo de candidatura extraído do elemento pai: {application_type}")
                 else:
                     # Lista abrangente de XPaths alternativos para o tipo de candidatura
                     # Incluindo variações de estrutura mais comuns do LinkedIn
