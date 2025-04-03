@@ -24,6 +24,7 @@ app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key")
 
 # Check if Gemini API key is available
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+logger.debug(f"Gemini API Key está disponível: {GEMINI_API_KEY is not None}")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -118,12 +119,17 @@ def export_excel():
     """
     Export LinkedIn job data to Excel.
     """
+    logger.debug(f"Session keys: {session.keys()}")
+    if 'linkedin_urls' in session:
+        logger.debug(f"URLs in session: {len(session['linkedin_urls'])}")
+    
     if 'linkedin_urls' not in session or not session['linkedin_urls']:
         flash('No data to export. Please submit some LinkedIn job URLs first.', 'warning')
         return redirect('/')
     
     # Get URLs from session
     linkedin_urls = session['linkedin_urls']
+    logger.debug(f"Exporting {len(linkedin_urls)} URLs to Excel")
     
     try:
         # Generate Excel file
@@ -136,12 +142,16 @@ def export_excel():
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'linkedin_jobs_{timestamp}.xlsx'
         
-        # Send the file to the user
+        # Definir o MIME type correto para Excel
+        mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        
+        # Usar configuração que funciona em múltiplas versões de Flask
+        logger.debug(f"Enviando arquivo Excel: {filename}")
         return send_file(
             excel_buffer,
             as_attachment=True,
             download_name=filename,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            mimetype=mimetype
         )
     except Exception as e:
         logger.error(f"Error exporting to Excel: {str(e)}")

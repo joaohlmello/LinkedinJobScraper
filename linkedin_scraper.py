@@ -103,12 +103,12 @@ class ProxyManager:
     def get_random_proxy(self):
         """Retorna um proxy aleatório da lista"""
         # Atualizar a lista de proxies se necessário
-        if self.last_update is None or time.time() - self.last_update > self.update_interval:
+        if self.last_update is None or time.time() - self.last_update > self.update_interval or len(self.proxies) < 50:
             self.update_proxy_list()
             
         # Se não houver proxies disponíveis, retorna None
         if not self.proxies:
-            logger.warning("Não há proxies disponíveis")
+            logger.warning("Não há proxies disponíveis, tentando fazer requisição direta")
             return None
             
         # Escolher um proxy aleatório
@@ -119,6 +119,11 @@ class ProxyManager:
         if proxy in self.proxies:
             self.proxies.remove(proxy)
             logger.debug(f"Proxy {proxy} removido da lista. Restante: {len(self.proxies)} proxies")
+            
+        # Se houver poucos proxies, atualiza a lista automaticamente
+        if len(self.proxies) < 20:
+            logger.warning(f"Poucos proxies disponíveis ({len(self.proxies)}), atualizando lista")
+            self.update_proxy_list()
     
     def get_session_with_proxy(self, use_html_session=True):
         """Retorna uma sessão com um proxy configurado"""
@@ -770,6 +775,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         try:
             # Importar o analisador de vagas
             from gemini_analyzer import JobAnalyzer, format_analysis_html
+            logger.debug("Importação do analisador Gemini bem-sucedida")
             
             # Atualizar progresso - iniciando análise de vagas
             if progress_callback:

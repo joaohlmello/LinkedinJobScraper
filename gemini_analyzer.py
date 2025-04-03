@@ -24,14 +24,18 @@ class JobAnalyzer:
             logger.error("Chave de API do Gemini não encontrada nas variáveis de ambiente.")
             raise ValueError("GEMINI_API_KEY não está definida nas variáveis de ambiente")
         
-        # Inicializar cliente Gemini
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-pro-latest")
-        
-        # Configurar o prompt base
-        self.system_prompt = self._get_system_prompt()
-        
-        logger.info(f"Analisador de vagas inicializado com o modelo gemini-1.5-pro-latest")
+        try:
+            # Inicializar cliente Gemini
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel("gemini-1.5-pro-latest")
+            
+            # Configurar o prompt base
+            self.system_prompt = self._get_system_prompt()
+            
+            logger.info(f"Analisador de vagas inicializado com o modelo gemini-1.5-pro-latest")
+        except Exception as e:
+            logger.error(f"Erro ao inicializar o cliente Gemini: {str(e)}")
+            raise ValueError(f"Não foi possível inicializar o cliente Gemini: {str(e)}")
     
     def _get_system_prompt(self):
         """
