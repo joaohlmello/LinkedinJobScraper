@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 
 def extract_company_info(url):
     """
-    Extract company name, job title, job description, and links from a LinkedIn job listing URL.
+    Extract company name, job title, and links from a LinkedIn job listing URL.
     
     Args:
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, company link, and job description
+        dict: Dictionary containing original link, job title, company name, and company link
     """
     try:
         # Set headers to mimic a browser request
@@ -38,12 +38,6 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # Try different selectors for job description as LinkedIn structure may vary
-        job_description_element = soup.select_one('#job-details > div > p')
-        
-        # If first selector doesn't work, try to get the entire job-details div
-        job_details_div = soup.select_one('#job-details')
-        
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
             company_name = 'Not found'
@@ -64,51 +58,30 @@ def extract_company_info(url):
         else:
             logger.warning(f"Job title element not found for URL: {url}")
         
-        # Extract job description
-        job_description = 'Not found'
-        
-        # Try the specific paragraph first
-        if job_description_element:
-            job_description = job_description_element.get_text(strip=True)
-        # If that fails, try to get text from the whole job-details div
-        elif job_details_div:
-            job_description = job_details_div.get_text(strip=True)
-            # Clean up extra whitespace
-            job_description = ' '.join(job_description.split())
-        else:
-            logger.warning(f"Job description element not found for URL: {url}")
-            
-        # Truncate the description if it's too long (for display purposes)
-        if job_description != 'Not found' and len(job_description) > 300:
-            job_description = job_description[:297] + '...'
-        
-        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, job description length: {len(job_description) if job_description != 'Not found' else 0}")
+        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
         return {
             'link': url,
-            'company_name': company_name,
-            'company_link': company_link,
             'job_title': job_title,
-            'job_description': job_description
+            'company_name': company_name,
+            'company_link': company_link
         }
     
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error for URL {url}: {str(e)}")
         return {
             'link': url,
-            'company_name': f'Error: {str(e)}',
-            'company_link': 'Not found',
             'job_title': 'Not found',
-            'job_description': 'Not found'
+            'company_name': f'Error: {str(e)}',
+            'company_link': 'Not found'
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
         return {
             'link': url,
-            'company_name': f'Error: {str(e)}',
-            'company_link': 'Not found',
             'job_title': 'Not found',
-            'job_description': 'Not found'
+            'company_name': f'Error: {str(e)}',
+            'company_link': 'Not found'
         }
 
 def process_linkedin_urls(urls):
@@ -130,7 +103,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title'])
     return df
 
 def get_results_html(urls):
