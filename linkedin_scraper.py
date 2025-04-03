@@ -24,8 +24,10 @@ def extract_company_info(url):
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, and company link
+        dict: Dictionary containing original link, job title, company name, company link, job description, and searched_at timestamp
     """
+    # Obter data e hora atual para a coluna "searched_at" no formato compatível com Excel
+    current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     try:
         # Set headers to mimic a browser request
         headers = {
@@ -215,7 +217,8 @@ def extract_company_info(url):
             'company_name': company_name,
             'company_link': company_link,
             'job_title': job_title,
-            'job_description': job_description
+            'job_description': job_description,
+            'searched_at': current_datetime
         }
     
     except requests.exceptions.RequestException as e:
@@ -225,7 +228,8 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
-            'job_description': 'Not found'
+            'job_description': 'Not found',
+            'searched_at': current_datetime
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
@@ -234,7 +238,8 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
-            'job_description': 'Not found'
+            'job_description': 'Not found',
+            'searched_at': current_datetime
         }
 
 def normalize_linkedin_url(url):
@@ -298,7 +303,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description', 'searched_at'])
     return df
 
 def get_results_html(urls):
@@ -367,7 +372,12 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 50%;
+        width: 40%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(6), 
+    .linkedin-job-results-table td:nth-child(6) {
+        width: 10%;
     }
     </style>
     <div class="table-responsive">
@@ -379,6 +389,7 @@ def get_results_html(urls):
             <th>Company Link</th>
             <th>Job Title</th>
             <th>Job Description</th>
+            <th>Searched At</th>
           </tr>
         </thead>
         <tbody>
@@ -393,6 +404,7 @@ def get_results_html(urls):
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
           <td class="full-text">{row['job_description']}</td>
+          <td>{row['searched_at']}</td>
         </tr>
         """
     
