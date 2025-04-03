@@ -38,10 +38,36 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # Find job description element using XPath from lxml
+        # Find job description elements using multiple possible XPath patterns
         from lxml import html
         tree = html.fromstring(response.content)
-        job_description_elements = tree.xpath('//*[@id="job-details"]/div/p/text()')
+        
+        # Tentativa com múltiplos XPaths para capturar a descrição do trabalho
+        job_description_elements = []
+        
+        # Tenta o padrão básico primeiro
+        basic_elements = tree.xpath('//*[@id="job-details"]//p/text()')
+        if basic_elements:
+            job_description_elements.extend(basic_elements)
+            
+        # Tenta padrão alternativo se o primeiro falhar
+        if not job_description_elements:
+            alt_elements = tree.xpath('//article//div/p/text()')
+            if alt_elements:
+                job_description_elements.extend(alt_elements)
+                
+        # Tenta um padrão mais genérico se os anteriores falharem
+        if not job_description_elements:
+            generic_elements = tree.xpath('//div[contains(@class, "description")]/*/text() | //div[contains(@class, "description")]/text()')
+            if generic_elements:
+                job_description_elements.extend(generic_elements)
+        
+        # Se tudo falhar, tenta pegar todo o conteúdo do elemento job-details
+        if not job_description_elements:
+            logger.debug("Tentando obter descrição completa do trabalho")
+            full_description = tree.xpath('//*[@id="job-details"]//text()')
+            if full_description:
+                job_description_elements.extend(full_description)
         
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
