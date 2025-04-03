@@ -9,6 +9,8 @@ import csv
 from io import BytesIO
 from requests_html import HTMLSession
 import re
+import openpyxl
+from openpyxl.styles import Alignment
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -406,16 +408,45 @@ def export_to_excel(urls):
     # Create a BytesIO object to store the Excel file
     excel_buffer = BytesIO()
     
-    # Export DataFrame to Excel
+    # Export DataFrame to Excel with specific settings for text handling
     with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+        # Usar o parâmetro 'truncate_sheet' como False para evitar truncamento
         df.to_excel(writer, sheet_name='LinkedIn Jobs', index=False)
         
-        # Auto-adjust columns' width
+        # Configurar as opções de célula e worksheet
         worksheet = writer.sheets['LinkedIn Jobs']
+        
+        # Configurar as colunas
         for i, col in enumerate(df.columns):
-            max_length = max(df[col].astype(str).apply(len).max(), len(col)) + 2
-            # Cap width at 50 to avoid overly wide columns
-            worksheet.column_dimensions[chr(65 + i)].width = min(max_length, 50)
+            column_letter = chr(65 + i)
+            # Obter o comprimento máximo do texto, mas limitado a um valor razoável para a largura
+            max_length = min(50, max(df[col].astype(str).apply(len).max(), len(col)) + 2)
+            
+            # Definir a largura da coluna
+            worksheet.column_dimensions[column_letter].width = max_length
+            
+            # Configurações especiais para a coluna de descrição (coluna E, índice 4)
+            if i == 4:  # Job Description column
+                # Ajustar altura das linhas automaticamente
+                worksheet.column_dimensions[column_letter].width = 100  # Largura máxima
+                
+                # Configurar células específicas da coluna de descrição
+                for row_idx, value in enumerate(df['job_description'], start=2):  # Start from 2 as 1 is header
+                    cell = worksheet.cell(row=row_idx, column=i+1)
+                    
+                    # Definir configurações de célula para textos longos
+                    cell.alignment = Alignment(
+                        wrap_text=True,
+                        vertical='top'
+                    )
+                    
+                    # Configurar altura de linha proporcional ao conteúdo
+                    # (Excel ajustará automaticamente com wrap_text=True)
+                    
+                    # Ajustar a célula para exibir todo o texto
+                    # Cada caractere aproximadamente ocupa 0.9 pixel
+                    row_height = min(400, max(24, len(str(value)) // 100 * 15))
+                    worksheet.row_dimensions[row_idx].height = row_height
     
     # Reset buffer position to the beginning
     excel_buffer.seek(0)
