@@ -167,17 +167,24 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             # Configuração da geração
             generation_config = genai.GenerationConfig(
                 temperature=0.2,
-                response_mime_type="application/json",
-                structured_response={
-                    "nota_palavras_chave": "integer",
-                    "nota_requisitos": "integer",
-                    "nota_experiencia": "integer", 
-                    "nota_qualificacoes": "integer",
-                    "nota_global": "integer",
-                    "forcas": "string",
-                    "fraquezas": "string"
-                }
+                response_mime_type="application/json"
             )
+            
+            # Definição do esquema de resposta esperado
+            response_schema = {
+                "type": "object",
+                "properties": {
+                    "nota_palavras_chave": {"type": "integer"},
+                    "nota_requisitos": {"type": "integer"},
+                    "nota_experiencia": {"type": "integer"},
+                    "nota_qualificacoes": {"type": "integer"},
+                    "nota_global": {"type": "integer"},
+                    "forcas": {"type": "string"},
+                    "fraquezas": {"type": "string"}
+                },
+                "required": ["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
+                           "nota_qualificacoes", "nota_global", "forcas", "fraquezas"]
+            }
             
             # Configuração do sistema
             safety_settings = [{
@@ -189,25 +196,28 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Montar o conteúdo completo
+                # Montar a mensagem do sistema e do usuário
+                prompt = f"""
+                Sistema: {self.system_prompt}
+                
+                Usuário: {user_prompt}
+                
+                Por favor, analise a compatibilidade entre o currículo fornecido no contexto e a vaga de emprego descrita.
+                Retorne o resultado no formato JSON a seguir:
+                {json.dumps(response_schema, indent=2)}
+                """
+                
+                # Fazer a chamada ao modelo
                 response = self.model.generate_content(
-                    contents=[
-                        genai.Content(
-                            parts=[genai.Part(text=self.system_prompt)],
-                            role="system"
-                        ),
-                        genai.Content(
-                            parts=[genai.Part(text=user_prompt)],
-                            role="user"
-                        )
-                    ],
+                    prompt,
                     generation_config=generation_config,
                     safety_settings=safety_settings,
                 )
                 
                 # Obter a resposta
-                if response and hasattr(response, 'candidates') and response.candidates:
-                    result_json = response.candidates[0].content.parts[0].text
+                if response and hasattr(response, 'text'):
+                    # A API mais recente retorna o texto diretamente
+                    result_json = response.text
                 else:
                     logger.error("Resposta inválida do Gemini API")
                     return {
