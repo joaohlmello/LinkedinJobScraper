@@ -7,6 +7,8 @@ import os
 import datetime
 import csv
 from io import BytesIO
+from requests_html import HTMLSession
+import re
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -29,13 +31,23 @@ def extract_company_info(url):
             'Accept-Language': 'en-US,en;q=0.9'
         }
         
-        # Send GET request to the URL
-        logger.debug(f"Sending request to: {url}")
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise exception for HTTP errors
+        # Inicializar o HTMLSession para capturar HTML renderizado
+        logger.debug(f"Iniciando HTMLSession para: {url}")
+        session = HTMLSession()
         
-        # Parse HTML content
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # Enviar solicitação e renderizar JavaScript
+        try:
+            r = session.get(url, headers=headers)
+            logger.debug("Página carregada com HTMLSession")
+        except Exception as e:
+            logger.warning(f"Erro ao carregar com HTMLSession: {str(e)}")
+            # Fallback para requests regular
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            r = response
+        
+        # Usar BeautifulSoup para encontrar elementos fundamentais
+        soup = BeautifulSoup(r.text, 'html.parser')
         
         # Find company element using the topcard__org-name-link class which is the current structure
         company_element = soup.select_one('a.topcard__org-name-link')
@@ -43,66 +55,70 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # Usar Trafilatura para extrair o conteúdo textual completo da página
-        logger.debug("Usando Trafilatura para extrair a descrição do trabalho")
-        downloaded = trafilatura.fetch_url(url)
-        full_text = trafilatura.extract(downloaded)
-        
-        # Extrair a descrição do trabalho usando XPath para os elementos específicos
+        # MÉTODO 1: HTML renderizado pela sessão
         job_description_text = ""
-        
-        # Primeiro, tentar extrair usando XPath diretamente
         try:
-            logger.debug("Tentando extrair a descrição do trabalho diretamente usando XPath")
-            from lxml import html
-            tree = html.fromstring(response.content)
-            
-            # Foco nos elementos específicos div.mt4 e p[dir="ltr"]
-            job_description_elements = []
-            xpath_patterns = [
-                # Descrição do trabalho no formato mais recente do LinkedIn
-                '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
-                
-                # Descrição do trabalho apenas de divs com classe mt4
-                '//div[contains(@class, "mt4")]//text()',
-                
-                # Descrição do trabalho de parágrafos com direção ltr
-                '//p[@dir="ltr"]//text()'
-            ]
-            
-            # Tentar extrair com cada padrão XPath
-            for xpath in xpath_patterns:
-                logger.debug(f"Primary method - Trying XPath pattern: {xpath}")
-                elements = tree.xpath(xpath)
-                if elements:
-                    logger.debug(f"Primary method - Found {len(elements)} elements with pattern: {xpath}")
-                    job_description_elements = elements
-                    break
-                    
-            # Se encontrou elementos, juntar os textos
-            if job_description_elements:
-                job_description_text = ' '.join([text.strip() for text in job_description_elements if text.strip()])
-                logger.debug(f"Successfully extracted job description using XPath with {len(job_description_elements)} elements")
+            if hasattr(r, 'html'):
+                logger.debug("Extraindo descrição usando HTMLSession")
+                # Procurar especificamente pelo elemento que contém a descrição do trabalho
+                job_description_elements = r.html.find('div.description__text')
+                if job_description_elements:
+                    logger.debug(f"Encontrados {len(job_description_elements)} elementos de descrição com HTMLSession")
+                    # Extrair o texto completo do elemento
+                    job_description_text = job_description_elements[0].text
+                    logger.debug(f"HTMLSession extraiu texto com {len(job_description_text)} caracteres")
         except Exception as e:
-            logger.warning(f"Erro ao extrair descrição com XPath inicial: {str(e)}")
+            logger.warning(f"Erro ao extrair com HTMLSession: {str(e)}")
         
-        # Se o método XPath falhou, tentar usar Trafilatura
-        if not job_description_text and full_text:
-            logger.debug("XPath falhou, usando Trafilatura como backup")
-            job_description_text = full_text
+        # MÉTODO 2: Usar Trafilatura para extrair todo o conteúdo da página
+        if not job_description_text or len(job_description_text) < 100:
+            logger.debug("Usando Trafilatura para extrair todo o conteúdo")
+            downloaded = trafilatura.fetch_url(url)
+            full_text = trafilatura.extract(downloaded, include_comments=False, include_tables=True, 
+                                            no_fallback=False, include_links=False, include_formatting=False)
+            
+            if full_text and len(full_text) > 0:
+                logger.debug(f"Trafilatura extraiu {len(full_text)} caracteres")
+                # Buscar apenas a parte relevante da descrição do trabalho
+                # Geralmente começa após palavras-chave específicas
+                job_markers = ["About the job", "Job description", "Responsibilities", 
+                               "Qualifications", "Requirements", "About the role", 
+                               "Who You Are", "What You Will Do", "Working At"]
+                
+                start_pos = 0
+                for marker in job_markers:
+                    pos = full_text.find(marker)
+                    if pos > -1:
+                        start_pos = pos
+                        logger.debug(f"Encontrado marcador '{marker}' na posição {pos}")
+                        break
+                
+                if start_pos > 0:
+                    job_description_text = full_text[start_pos:]
+                    logger.debug(f"Texto extraído a partir do marcador: {len(job_description_text)} caracteres")
+                else:
+                    job_description_text = full_text
+                    logger.debug(f"Usando texto completo do Trafilatura")
         
-        # Usar um terceiro método de backup se os anteriores falharam
-        if not job_description_text:
-            logger.debug("Trafilatura não encontrou descrição, usando lxml como backup")
+        # MÉTODO 3: Usar XPath para extrações específicas
+        if not job_description_text or len(job_description_text) < 100:
             try:
+                logger.debug("Tentando extrair a descrição usando XPath")
                 from lxml import html
-                tree = html.fromstring(response.content)
+                if hasattr(r, 'content'):
+                    tree = html.fromstring(r.content)
+                elif hasattr(r, 'html') and hasattr(r.html, 'html'):
+                    tree = html.fromstring(r.html.html)
+                else:
+                    logger.warning("Não foi possível obter o conteúdo HTML para análise XPath")
+                    raise Exception("Conteúdo HTML não disponível")
                 
-                # Usando XPaths específicos conforme solicitado
+                # Foco nos elementos específicos div.mt4 e p[dir="ltr"]
                 job_description_elements = []
-                
-                # Foco nos elementos específicos: div.mt4 e p[dir="ltr"]
                 xpath_patterns = [
+                    # Descrição no formato mais recente (div.show-more-less-html)
+                    '//div[contains(@class, "show-more-less-html")]//text()',
+                    
                     # Descrição do trabalho no formato mais recente do LinkedIn
                     '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
                     
@@ -113,21 +129,29 @@ def extract_company_info(url):
                     '//p[@dir="ltr"]//text()'
                 ]
                 
-                # Tentar cada padrão até encontrar um que retorne conteúdo
+                # Tentar extrair com cada padrão XPath
                 for xpath in xpath_patterns:
-                    logger.debug(f"Trying XPath pattern: {xpath}")
+                    logger.debug(f"XPath pattern: {xpath}")
                     elements = tree.xpath(xpath)
-                    if elements:
+                    if elements and len(elements) > 0:
                         logger.debug(f"Found {len(elements)} elements with pattern: {xpath}")
                         job_description_elements = elements
                         break
-                    
-                # Se encontrou elementos com lxml, junta-os
+                        
+                # Se encontrou elementos, juntar os textos
                 if job_description_elements:
-                    job_description_text = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+                    extracted_text = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+                    if len(extracted_text) > len(job_description_text):
+                        job_description_text = extracted_text
+                        logger.debug(f"XPath extraiu texto maior: {len(job_description_text)} caracteres")
             except Exception as e:
-                logger.warning(f"Erro no método de backup final: {str(e)}")
-        
+                logger.warning(f"Erro ao extrair com XPath: {str(e)}")
+                
+        # Fechar a sessão
+        try:
+            session.close()
+        except Exception:
+            pass
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
             company_name = 'Not found'
@@ -155,43 +179,9 @@ def extract_company_info(url):
             job_description = ' '.join(job_description_text.split())
             logger.debug(f"Job description extracted successfully (first 50 chars): {job_description[:50]}...")
         else:
-            # Tentar usar elementos capturados pelo método de backup (lxml)
-            job_description_elements = []
-            try:
-                # Tentar extrair novamente a descrição usando lxml se necessário
-                from lxml import html
-                tree = html.fromstring(response.content)
-                
-                # Usar os mesmos padrões XPath que definimos anteriormente
-                job_description_elements = []
-                
-                # Lista de padrões XPath específicos conforme solicitado
-                xpath_patterns = [
-                    # Descrição do trabalho no formato mais recente do LinkedIn
-                    '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
-                    
-                    # Descrição do trabalho apenas de divs com classe mt4
-                    '//div[contains(@class, "mt4")]//text()',
-                    
-                    # Descrição do trabalho de parágrafos com direção ltr
-                    '//p[@dir="ltr"]//text()'
-                ]
-                
-                # Testar cada padrão
-                for xpath in xpath_patterns:
-                    logger.debug(f"Backup method - Trying XPath pattern: {xpath}")
-                    elements = tree.xpath(xpath)
-                    if elements:
-                        logger.debug(f"Backup method - Found {len(elements)} elements with pattern: {xpath}")
-                        job_description_elements = elements
-                        break
-                
-                if job_description_elements:
-                    job_description = ' '.join([text.strip() for text in job_description_elements if text.strip()])
-                else:
-                    logger.warning(f"Job description not found for URL: {url}")
-            except Exception as e:
-                logger.warning(f"Failed to extract job description using backup method: {str(e)}")
+            # Método de último recurso - capturar especificamente os títulos e itens da página
+            logger.warning(f"Job description not found for URL: {url}")
+            job_description = "Job description not available. Please check the original link."
         
         logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
         
