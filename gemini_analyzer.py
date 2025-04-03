@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import time
+import re
 import google.generativeai as genai
 
 # Configurar logging
@@ -232,8 +233,25 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             # Analisar e retornar o resultado
             if result_json:
                 try:
+                    # Tentar extrair o JSON da resposta, verificando se há código de formatação
+                    # ao redor da resposta JSON
+                    json_content = result_json
+                    
+                    # Tentar encontrar conteúdo JSON entre marcadores de código
+                    json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', result_json)
+                    if json_match:
+                        json_content = json_match.group(1).strip()
+                        logger.info("Encontrado JSON entre marcadores de código")
+                    
+                    # Se não encontrar entre marcadores de código, procurar por chaves { } externas
+                    if not json_match:
+                        json_match = re.search(r'(\{[\s\S]*\})', result_json)
+                        if json_match:
+                            json_content = json_match.group(1).strip()
+                            logger.info("Encontrado JSON entre chaves externas")
+                    
                     # Processar o resultado como JSON
-                    analysis_data = json.loads(result_json)
+                    analysis_data = json.loads(json_content)
                     
                     # Adicionar informações da vaga ao resultado
                     analysis_data['job_title'] = job_title
