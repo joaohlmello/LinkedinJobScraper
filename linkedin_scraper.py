@@ -57,6 +57,9 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
+        # Find application type (button aria-label in jobs-apply-button--top-card div)
+        application_type_element = soup.select_one('div.jobs-apply-button--top-card button[aria-label]')
+        
         # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
         try:
@@ -208,13 +211,25 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
         
-        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
+        # Extract application type from button aria-label
+        application_type = 'Not found'
+        if application_type_element:
+            try:
+                aria_label = application_type_element.get('aria-label')
+                if aria_label and isinstance(aria_label, str):
+                    application_type = aria_label.strip()
+                logger.debug(f"Extracted application type: {application_type}")
+            except Exception as e:
+                logger.warning(f"Error extracting application type: {str(e)}")
+        
+        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}, application type: {application_type}")
         
         return {
             'link': url,
             'company_name': company_name,
             'company_link': company_link,
             'job_title': job_title,
+            'application_type': application_type,
             'job_description': job_description
         }
     
@@ -225,6 +240,7 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
+            'application_type': 'Not found',
             'job_description': 'Not found'
         }
     except Exception as e:
@@ -234,6 +250,7 @@ def extract_company_info(url):
             'company_name': f'Error: {str(e)}',
             'company_link': 'Not found',
             'job_title': 'Not found',
+            'application_type': 'Not found',
             'job_description': 'Not found'
         }
 
@@ -256,7 +273,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description'])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'application_type', 'job_description'])
     return df
 
 def get_results_html(urls):
@@ -305,7 +322,7 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(1), 
     .linkedin-job-results-table td:nth-child(1) {
-        width: 15%;
+        width: 13%;
     }
     
     .linkedin-job-results-table th:nth-child(2), 
@@ -315,7 +332,7 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 15%;
+        width: 13%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
@@ -325,7 +342,12 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 50%;
+        width: 12%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(6), 
+    .linkedin-job-results-table td:nth-child(6) {
+        width: 42%;
     }
     </style>
     <div class="table-responsive">
@@ -336,6 +358,7 @@ def get_results_html(urls):
             <th>Company Name</th>
             <th>Company Link</th>
             <th>Job Title</th>
+            <th>Application Type</th>
             <th>Job Description</th>
           </tr>
         </thead>
@@ -350,6 +373,7 @@ def get_results_html(urls):
           <td>{row['company_name']}</td>
           <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
+          <td>{row['application_type']}</td>
           <td class="full-text">{row['job_description']}</td>
         </tr>
         """
@@ -425,8 +449,8 @@ def export_to_excel(urls):
             # Definir a largura da coluna
             worksheet.column_dimensions[column_letter].width = max_length
             
-            # Configurações especiais para a coluna de descrição (coluna E, índice 4)
-            if i == 4:  # Job Description column
+            # Configurações especiais para a coluna de descrição (coluna F, índice 5)
+            if i == 5:  # Job Description column
                 # Ajustar altura das linhas automaticamente
                 worksheet.column_dimensions[column_letter].width = 100  # Largura máxima
                 
