@@ -48,84 +48,85 @@ def extract_company_info(url):
         downloaded = trafilatura.fetch_url(url)
         full_text = trafilatura.extract(downloaded)
         
-        # Tenta extrair a descrição completa do trabalho do texto
+        # Extrair a descrição do trabalho usando XPath para os elementos específicos
         job_description_text = ""
-        if full_text:
-            # Usar o texto completo como descrição do trabalho
-            job_description_text = full_text
-            
-            # Melhorar a extração removendo partes irrelevantes
-            # Dividir o texto em linhas para análise
-            lines = full_text.split('\n')
-            
-            # Procurar por palavras-chave que indicam o início da descrição do trabalho
-            job_description_section = []
-            found_description = False
-            
-            for i, line in enumerate(lines):
-                # Lista expandida de palavras-chave que podem indicar a seção de descrição do trabalho
-                keywords = [
-                    'sobre o cargo', 'descrição', 'job description', 'about the job', 
-                    'sobre a vaga', 'responsabilidades', 'responsibilities', 
-                    'requisitos', 'requirements', 'qualificações', 'qualifications',
-                    'atividades', 'activities', 'atribuições', 'duties', 
-                    'o que você vai fazer', 'what you will do'
-                ]
-                
-                # Verificar se a linha contém alguma das palavras-chave
-                if any(keyword in line.lower() for keyword in keywords):
-                    found_description = True
-                
-                # Se encontramos a seção de descrição, vamos coletá-la
-                if found_description:
-                    job_description_section.append(line)
-            
-            # Se encontramos alguma seção específica, use-a
-            if job_description_section:
-                job_description_text = '\n'.join(job_description_section)
-                
-        # Usar lxml como backup se o Trafilatura não funcionar bem
-        if not job_description_text:
-            logger.debug("Trafilatura não encontrou descrição, usando lxml como backup")
+        
+        # Primeiro, tentar extrair usando XPath diretamente
+        try:
+            logger.debug("Tentando extrair a descrição do trabalho diretamente usando XPath")
             from lxml import html
             tree = html.fromstring(response.content)
             
-            # Tenta vários XPaths para encontrar a descrição
+            # Foco nos elementos específicos div.mt4 e p[dir="ltr"]
             job_description_elements = []
-            
-            # Lista expandida de XPath para capturar a descrição do trabalho
             xpath_patterns = [
-                # XPath para seção de job-details, que geralmente contém a descrição
-                '//*[@id="job-details"]//text()',
+                # Descrição do trabalho no formato mais recente do LinkedIn
+                '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
                 
-                # XPaths para formatos comuns no LinkedIn
-                '//div[contains(@class, "description")]//text()', 
-                '//section[contains(@class, "description")]//text()',
-                '//div[contains(@class, "show-more-less-html")]//text()',
+                # Descrição do trabalho apenas de divs com classe mt4
+                '//div[contains(@class, "mt4")]//text()',
                 
-                # XPaths mais específicos para conteúdo de descrição de trabalho
-                '//div[contains(@class, "job-description")]//text()',
-                '//div[@id="job-details"]//text()',
-                '//div[contains(@class, "jobs-description")]//text()',
-                '//div[contains(@class, "jobs-box__html-content")]//text()',
-                '//div[contains(@class, "jobs-box__details")]//text()',
-                
-                # XPath mais genérico para pegar todo o conteúdo
-                '//main//text()'
+                # Descrição do trabalho de parágrafos com direção ltr
+                '//p[@dir="ltr"]//text()'
             ]
             
-            # Tentar cada padrão até encontrar um que retorne conteúdo
+            # Tentar extrair com cada padrão XPath
             for xpath in xpath_patterns:
+                logger.debug(f"Primary method - Trying XPath pattern: {xpath}")
                 elements = tree.xpath(xpath)
                 if elements:
-                    job_description_elements.extend(elements)
-                    # Se já encontramos conteúdo suficiente, podemos parar
-                    if len(job_description_elements) > 20:  # Suficiente para uma descrição razoável
-                        break
-                
-            # Se encontrou elementos com lxml, junta-os
+                    logger.debug(f"Primary method - Found {len(elements)} elements with pattern: {xpath}")
+                    job_description_elements = elements
+                    break
+                    
+            # Se encontrou elementos, juntar os textos
             if job_description_elements:
                 job_description_text = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+                logger.debug(f"Successfully extracted job description using XPath with {len(job_description_elements)} elements")
+        except Exception as e:
+            logger.warning(f"Erro ao extrair descrição com XPath inicial: {str(e)}")
+        
+        # Se o método XPath falhou, tentar usar Trafilatura
+        if not job_description_text and full_text:
+            logger.debug("XPath falhou, usando Trafilatura como backup")
+            job_description_text = full_text
+        
+        # Usar um terceiro método de backup se os anteriores falharam
+        if not job_description_text:
+            logger.debug("Trafilatura não encontrou descrição, usando lxml como backup")
+            try:
+                from lxml import html
+                tree = html.fromstring(response.content)
+                
+                # Usando XPaths específicos conforme solicitado
+                job_description_elements = []
+                
+                # Foco nos elementos específicos: div.mt4 e p[dir="ltr"]
+                xpath_patterns = [
+                    # Descrição do trabalho no formato mais recente do LinkedIn
+                    '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
+                    
+                    # Descrição do trabalho apenas de divs com classe mt4
+                    '//div[contains(@class, "mt4")]//text()',
+                    
+                    # Descrição do trabalho de parágrafos com direção ltr
+                    '//p[@dir="ltr"]//text()'
+                ]
+                
+                # Tentar cada padrão até encontrar um que retorne conteúdo
+                for xpath in xpath_patterns:
+                    logger.debug(f"Trying XPath pattern: {xpath}")
+                    elements = tree.xpath(xpath)
+                    if elements:
+                        logger.debug(f"Found {len(elements)} elements with pattern: {xpath}")
+                        job_description_elements = elements
+                        break
+                    
+                # Se encontrou elementos com lxml, junta-os
+                if job_description_elements:
+                    job_description_text = ' '.join([text.strip() for text in job_description_elements if text.strip()])
+            except Exception as e:
+                logger.warning(f"Erro no método de backup final: {str(e)}")
         
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
@@ -164,27 +165,26 @@ def extract_company_info(url):
                 # Usar os mesmos padrões XPath que definimos anteriormente
                 job_description_elements = []
                 
-                # Lista de padrões XPath a serem testados
+                # Lista de padrões XPath específicos conforme solicitado
                 xpath_patterns = [
-                    '//*[@id="job-details"]//text()',
-                    '//div[contains(@class, "description")]//text()', 
-                    '//section[contains(@class, "description")]//text()',
-                    '//div[contains(@class, "show-more-less-html")]//text()',
-                    '//div[contains(@class, "job-description")]//text()',
-                    '//div[@id="job-details"]//text()',
-                    '//div[contains(@class, "jobs-description")]//text()',
-                    '//div[contains(@class, "jobs-box__html-content")]//text()',
-                    '//div[contains(@class, "jobs-box__details")]//text()',
-                    '//main//text()'
+                    # Descrição do trabalho no formato mais recente do LinkedIn
+                    '//div[contains(@class, "mt4")]//p[@dir="ltr"]//text()',
+                    
+                    # Descrição do trabalho apenas de divs com classe mt4
+                    '//div[contains(@class, "mt4")]//text()',
+                    
+                    # Descrição do trabalho de parágrafos com direção ltr
+                    '//p[@dir="ltr"]//text()'
                 ]
                 
                 # Testar cada padrão
                 for xpath in xpath_patterns:
+                    logger.debug(f"Backup method - Trying XPath pattern: {xpath}")
                     elements = tree.xpath(xpath)
                     if elements:
-                        job_description_elements.extend(elements)
-                        if len(job_description_elements) > 20:
-                            break
+                        logger.debug(f"Backup method - Found {len(elements)} elements with pattern: {xpath}")
+                        job_description_elements = elements
+                        break
                 
                 if job_description_elements:
                     job_description = ' '.join([text.strip() for text in job_description_elements if text.strip()])
