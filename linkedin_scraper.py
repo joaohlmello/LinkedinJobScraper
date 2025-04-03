@@ -24,8 +24,7 @@ def extract_company_info(url):
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, company link, job description, searched_at timestamp,
-              and additional fields: city, anounced_at, candidates_count, remote, easy
+        dict: Dictionary containing original link, job title, company name, company link, job description, and searched_at timestamp
     """
     # Obter data e hora atual para a coluna "searched_at" no formato compatível com Excel
     current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -172,217 +171,6 @@ def extract_company_info(url):
                     if len(extracted_text) > len(job_description_text):
                         job_description_text = extracted_text
                         logger.debug(f"XPath extraiu texto maior: {len(job_description_text)} caracteres")
-                    
-                # Extrair os novos campos usando múltiplas abordagens
-                city = "Not found"
-                anounced_at = "Not found"
-                candidates_count = "Not found"
-                remote = "Not found"
-                easy = "Not found"
-                
-                try:
-                    # ----- Abordagem 1: XPaths originais -----
-                    # Cidade - tentar vários padrões
-                    city_patterns = [
-                        '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[3]/div/span[1]/text()',
-                        '//span[contains(@class, "job-details-jobs-unified-top-card__bullet")][1]/text()',
-                        '//span[contains(@class, "topcard__flavor")][1]/text()',
-                        '//div[contains(@class, "topcard")]//*[contains(@class, "location")]/text()',
-                        '//li[contains(@class, "job-criteria__item")][1]//span[contains(@class, "job-criteria__text")]/text()'
-                    ]
-                    
-                    for xpath in city_patterns:
-                        city_elements = tree.xpath(xpath)
-                        if city_elements and len(city_elements) > 0:
-                            city = ' '.join([e.strip() for e in city_elements if e.strip()]).strip()
-                            logger.debug(f"Extraído city usando padrão {xpath}: {city}")
-                            if city:
-                                break
-                    
-                    # Data de anúncio - tentar vários padrões
-                    date_patterns = [
-                        '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[3]/div/span[3]/span[2]/text()',
-                        '//span[contains(@class, "job-details-jobs-unified-top-card__posted-date")]/text()',
-                        '//span[contains(@class, "posted-time-ago__text")]/text()',
-                        '//span[contains(@class, "posted-date")]/text()',
-                        '//span[contains(text(), "ago")]/text()',
-                        '//span[contains(text(), "hour")]/text()',
-                        '//span[contains(text(), "day")]/text()',
-                        '//span[contains(text(), "month")]/text()',
-                        '//span[contains(text(), "week")]/text()'
-                    ]
-                    
-                    for xpath in date_patterns:
-                        date_elements = tree.xpath(xpath)
-                        if date_elements and len(date_elements) > 0:
-                            anounced_at = ' '.join([e.strip() for e in date_elements if e.strip()]).strip()
-                            logger.debug(f"Extraído anounced_at usando padrão {xpath}: {anounced_at}")
-                            if anounced_at:
-                                break
-                    
-                    # Número de candidatos - tentar vários padrões
-                    candidates_patterns = [
-                        '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[3]/div/span[5]/text()',
-                        '//span[contains(@class, "job-details-jobs-unified-top-card__applicant-count")]/text()',
-                        '//span[contains(@class, "num-applicants")]/text()',
-                        '//span[contains(text(), "applicant")]/text()',
-                        '//span[contains(text(), "candidato")]/text()'
-                    ]
-                    
-                    for xpath in candidates_patterns:
-                        candidates_elements = tree.xpath(xpath)
-                        if candidates_elements and len(candidates_elements) > 0:
-                            candidates_count = ' '.join([e.strip() for e in candidates_elements if e.strip()]).strip()
-                            logger.debug(f"Extraído candidates_count usando padrão {xpath}: {candidates_count}")
-                            if candidates_count:
-                                break
-                    
-                    # Trabalho remoto - tentar vários padrões
-                    remote_patterns = [
-                        '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[4]/ul/li[1]/span/span[1]/span/span[1]/text()',
-                        '//span[contains(@class, "workplace-type")]/text()',
-                        '//span[contains(text(), "Remote")]/text()',
-                        '//span[contains(text(), "Remoto")]/text()',
-                        '//span[contains(text(), "On-site")]/text()',
-                        '//span[contains(text(), "Hybrid")]/text()',
-                        '//span[contains(text(), "Híbrido")]/text()',
-                        '//li[contains(@class, "job-criteria__item")][2]//span[contains(@class, "job-criteria__text")]/text()'
-                    ]
-                    
-                    for xpath in remote_patterns:
-                        remote_elements = tree.xpath(xpath)
-                        if remote_elements and len(remote_elements) > 0:
-                            remote = ' '.join([e.strip() for e in remote_elements if e.strip()]).strip()
-                            logger.debug(f"Extraído remote usando padrão {xpath}: {remote}")
-                            if remote:
-                                break
-                    
-                    # Easy Apply - tentar vários padrões
-                    easy_patterns = [
-                        '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span',
-                        '//button[contains(@class, "apply")]/span/text()',
-                        '//button[contains(text(), "Apply")]/text()',
-                        '//button[contains(text(), "Easy Apply")]/text()',
-                        '//button[contains(text(), "Candidatar")]/text()',
-                        '//button[contains(@class, "jobs-apply-button")]/span/text()',
-                        '//a[contains(@class, "apply")]/span/text()'
-                    ]
-                    
-                    for xpath in easy_patterns:
-                        easy_elements = tree.xpath(xpath)
-                        if easy_elements and len(easy_elements) > 0:
-                            if hasattr(easy_elements[0], 'text_content'):
-                                easy = easy_elements[0].text_content().strip()
-                            elif isinstance(easy_elements[0], str):
-                                easy = easy_elements[0].strip()
-                            else:
-                                easy = str(easy_elements[0]).strip()
-                            
-                            logger.debug(f"Extraído easy usando padrão {xpath}: {easy}")
-                            if easy:
-                                # Verificar se contém "Easy Apply" ou semelhante
-                                if "easy" in easy.lower() or "apply" in easy.lower() or "candidatar" in easy.lower():
-                                    easy = "Easy Apply"
-                                break
-                    
-                    # ----- Abordagem 2: Busca no HTML completo -----
-                    if city == "Not found":
-                        # Buscar cidade no texto completo
-                        if hasattr(r, 'text'):
-                            # Procurar padrões comuns de cidade/localização
-                            location_patterns = [
-                                r'Location: ([^,\n]+)',
-                                r'Localização: ([^,\n]+)',
-                                r'Local: ([^,\n]+)',
-                                r'Remote in ([^,\n]+)',
-                                r'Remoto em ([^,\n]+)',
-                                r'Híbrido em ([^,\n]+)',
-                                r'Hybrid in ([^,\n]+)'
-                            ]
-                            
-                            for pattern in location_patterns:
-                                location_match = re.search(pattern, r.text)
-                                if location_match:
-                                    city = location_match.group(1).strip()
-                                    logger.debug(f"Extraído city do texto usando regex: {city}")
-                                    break
-                    
-                    if anounced_at == "Not found":
-                        # Buscar data de publicação no texto completo
-                        if hasattr(r, 'text'):
-                            # Procurar padrões comuns de datas
-                            date_patterns = [
-                                r'Posted ([^·\n]+)',
-                                r'Publicado há ([^·\n]+)',
-                                r'Publicado ([^·\n]+)',
-                                r'Posted: ([^·\n]+)',
-                                r'Posted about ([^·\n]+)',
-                                r'Publicado: ([^·\n]+)'
-                            ]
-                            
-                            for pattern in date_patterns:
-                                date_match = re.search(pattern, r.text)
-                                if date_match:
-                                    anounced_at = date_match.group(1).strip()
-                                    logger.debug(f"Extraído anounced_at do texto usando regex: {anounced_at}")
-                                    break
-                    
-                    if candidates_count == "Not found":
-                        # Buscar número de candidatos no texto completo
-                        if hasattr(r, 'text'):
-                            # Procurar padrões comuns de contagem de candidatos
-                            candidates_patterns = [
-                                r'(\d+)\s+applicant',
-                                r'Over (\d+)\s+applicant',
-                                r'(\d+)\s+candidato',
-                                r'Mais de (\d+)\s+candidato',
-                                r'(\d+)\+\s+applicant',
-                                r'(\d+)\+\s+candidato'
-                            ]
-                            
-                            for pattern in candidates_patterns:
-                                candidates_match = re.search(pattern, r.text)
-                                if candidates_match:
-                                    candidates_count = f"{candidates_match.group(1).strip()} applicants"
-                                    logger.debug(f"Extraído candidates_count do texto usando regex: {candidates_count}")
-                                    break
-                    
-                    if remote == "Not found":
-                        # Buscar tipo de trabalho no texto completo
-                        if hasattr(r, 'text'):
-                            if re.search(r'\bRemote\b', r.text):
-                                remote = "Remote"
-                            elif re.search(r'\bHybrid\b', r.text):
-                                remote = "Hybrid"
-                            elif re.search(r'\bOn-site\b', r.text):
-                                remote = "On-site"
-                            elif re.search(r'\bRemoto\b', r.text):
-                                remote = "Remoto"
-                            elif re.search(r'\bHíbrido\b', r.text):
-                                remote = "Híbrido"
-                            elif re.search(r'\bPresencial\b', r.text):
-                                remote = "Presencial"
-                            
-                            if remote != "Not found":
-                                logger.debug(f"Extraído remote do texto usando palavras-chave: {remote}")
-                    
-                    if easy == "Not found":
-                        # Verificar se há botão de Easy Apply no texto completo
-                        if hasattr(r, 'text'):
-                            if re.search(r'Easy Apply', r.text):
-                                easy = "Easy Apply"
-                            elif re.search(r'Apply now', r.text):
-                                easy = "Apply"
-                            elif re.search(r'Candidatura Simplificada', r.text):
-                                easy = "Easy Apply"
-                            elif re.search(r'Candidatar-se já', r.text):
-                                easy = "Apply"
-                            
-                            if easy != "Not found":
-                                logger.debug(f"Extraído easy do texto usando palavras-chave: {easy}")
-                
-                except Exception as e:
-                    logger.warning(f"Erro ao extrair campos adicionais com abordagem múltipla: {str(e)}")
             except Exception as e:
                 logger.warning(f"Erro ao extrair com XPath: {str(e)}")
                 
@@ -430,12 +218,7 @@ def extract_company_info(url):
             'company_link': company_link,
             'job_title': job_title,
             'job_description': job_description,
-            'searched_at': current_datetime,
-            'city': city if 'city' in locals() else 'Not found',
-            'anounced_at': anounced_at if 'anounced_at' in locals() else 'Not found',
-            'candidates_count': candidates_count if 'candidates_count' in locals() else 'Not found',
-            'remote': remote if 'remote' in locals() else 'Not found',
-            'easy': easy if 'easy' in locals() else 'Not found'
+            'searched_at': current_datetime
         }
     
     except requests.exceptions.RequestException as e:
@@ -446,12 +229,7 @@ def extract_company_info(url):
             'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
-            'searched_at': current_datetime,
-            'city': 'Not found',
-            'anounced_at': 'Not found',
-            'candidates_count': 'Not found',
-            'remote': 'Not found',
-            'easy': 'Not found'
+            'searched_at': current_datetime
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
@@ -461,12 +239,7 @@ def extract_company_info(url):
             'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
-            'searched_at': current_datetime,
-            'city': 'Not found',
-            'anounced_at': 'Not found',
-            'candidates_count': 'Not found',
-            'remote': 'Not found',
-            'easy': 'Not found'
+            'searched_at': current_datetime
         }
 
 def normalize_linkedin_url(url):
@@ -530,10 +303,7 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=[
-        'link', 'company_name', 'company_link', 'job_title', 'job_description', 'searched_at',
-        'city', 'anounced_at', 'candidates_count', 'remote', 'easy'
-    ])
+    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description', 'searched_at'])
     return df
 
 def get_results_html(urls):
@@ -582,45 +352,32 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(1), 
     .linkedin-job-results-table td:nth-child(1) {
-        width: 10%;
+        width: 15%;
     }
     
     .linkedin-job-results-table th:nth-child(2), 
     .linkedin-job-results-table td:nth-child(2) {
-        width: 8%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 10%;
+        width: 15%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
     .linkedin-job-results-table td:nth-child(4) {
-        width: 8%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 32%;
+        width: 40%;
     }
     
     .linkedin-job-results-table th:nth-child(6), 
     .linkedin-job-results-table td:nth-child(6) {
-        width: 8%;
-    }
-    
-    .linkedin-job-results-table th:nth-child(7), 
-    .linkedin-job-results-table td:nth-child(7),
-    .linkedin-job-results-table th:nth-child(8), 
-    .linkedin-job-results-table td:nth-child(8),
-    .linkedin-job-results-table th:nth-child(9), 
-    .linkedin-job-results-table td:nth-child(9),
-    .linkedin-job-results-table th:nth-child(10), 
-    .linkedin-job-results-table td:nth-child(10),
-    .linkedin-job-results-table th:nth-child(11), 
-    .linkedin-job-results-table td:nth-child(11) {
-        width: 6%;
+        width: 10%;
     }
     </style>
     <div class="table-responsive">
@@ -633,11 +390,6 @@ def get_results_html(urls):
             <th>Job Title</th>
             <th>Job Description</th>
             <th>Searched At</th>
-            <th>City</th>
-            <th>Announced At</th>
-            <th>Candidates</th>
-            <th>Remote</th>
-            <th>Easy Apply</th>
           </tr>
         </thead>
         <tbody>
@@ -653,11 +405,6 @@ def get_results_html(urls):
           <td>{row['job_title']}</td>
           <td class="full-text">{row['job_description']}</td>
           <td>{row['searched_at']}</td>
-          <td>{row['city']}</td>
-          <td>{row['anounced_at']}</td>
-          <td>{row['candidates_count']}</td>
-          <td>{row['remote']}</td>
-          <td>{row['easy']}</td>
         </tr>
         """
     
