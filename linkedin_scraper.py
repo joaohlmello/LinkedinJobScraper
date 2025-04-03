@@ -217,12 +217,12 @@ def extract_company_info(url):
         
         # Encontrar o elemento que contém informações sobre cidade, data de anúncio e candidatos
         try:
-            # Tentar encontrar o container com as informações adicionais
+            # MÉTODO 1: Container específico
             tertiary_container = soup.select_one(".job-details-jobs-unified-top-card__primary-description-container") or \
                                  soup.select_one(".job-details-jobs-unified-top-card__tertiary-description-container")
             
             if tertiary_container:
-                logger.debug("Container de informações adicionais encontrado")
+                logger.debug("Container de informações adicionais encontrado (método 1)")
                 
                 # Extrair todos os spans com informações de texto
                 spans = tertiary_container.select('.tvm__text')
@@ -245,8 +245,76 @@ def extract_company_info(url):
                     elif not any(keyword in span_text.lower() for keyword in ['ago', 'hour', 'day', 'week', 'month']):
                         city = span_text
                         logger.debug(f"Cidade identificada: {city}")
-            else:
-                logger.debug("Container de informações adicionais não encontrado")
+            
+            # MÉTODO 2: Busca por classes específicas ou padrões comuns
+            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found':
+                logger.debug("Tentando método 2 para encontrar informações adicionais")
+                
+                # Tentar encontrar a localização
+                location_elements = soup.select('.job-details-jobs-unified-top-card__bullet, .topcard__flavor--bullet, .job-details-jobs-unified-top-card__workplace-type')
+                for element in location_elements:
+                    text = element.get_text(strip=True)
+                    if text and text not in ['.', '·', ''] and not any(keyword in text.lower() for keyword in ['ago', 'hour', 'day', 'week', 'month', 'remote', 'hybrid']):
+                        city = text
+                        logger.debug(f"Cidade identificada (método 2): {city}")
+                        break
+                
+                # Tentar encontrar a data de anúncio
+                date_elements = soup.select('.job-details-jobs-unified-top-card__subtitle-secondary-grouping .tvm__text, .posted-time-ago__text, .job-details-jobs-unified-top-card__posted-date')
+                for element in date_elements:
+                    text = element.get_text(strip=True)
+                    if text and ('ago' in text.lower() or any(month in text.lower() for month in ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'])):
+                        announced_at = text
+                        logger.debug(f"Data de anúncio identificada (método 2): {announced_at}")
+                        break
+                
+                # Tentar encontrar o número de candidatos
+                candidate_elements = soup.select('.num-applicants__caption, .jobs-unified-top-card__applicant-count, .job-details-jobs-unified-top-card__applicant-count')
+                for element in candidate_elements:
+                    text = element.get_text(strip=True)
+                    if text and ('applicant' in text.lower() or 'candidate' in text.lower() or 'applied' in text.lower()):
+                        candidates = text
+                        logger.debug(f"Candidatos identificados (método 2): {candidates}")
+                        break
+            
+            # MÉTODO 3: Análise de texto para encontrar padrões em todo o documento
+            if city == 'Not found' or announced_at == 'Not found' or candidates == 'Not found':
+                logger.debug("Tentando método 3 para encontrar informações adicionais")
+                
+                # Obter todos os textos pequenos da página que poderiam conter informações relevantes
+                small_texts = []
+                for element in soup.select('span, div.small, p.small, .job-details-jobs-unified-top-card__subtitle-secondary-grouping'):
+                    text = element.get_text(strip=True)
+                    if len(text) < 100 and len(text) > 2:  # filtrar textos muito curtos ou muito longos
+                        small_texts.append(text)
+                
+                # Procurar padrões para localização
+                if city == 'Not found':
+                    for text in small_texts:
+                        # Verifica se o texto contém algum indicador de cidade/localização
+                        if not any(keyword in text.lower() for keyword in ['ago', 'hour', 'day', 'week', 'month', 'remote', 'hybrid', 'applicant', 'candidate']):
+                            # Verifica se o texto parece ser uma localização (não contém outros indicadores)
+                            if any(char in text for char in [',', '-']) or text.split():
+                                city = text
+                                logger.debug(f"Cidade identificada (método 3): {city}")
+                                break
+                
+                # Procurar padrões para data de anúncio
+                if announced_at == 'Not found':
+                    for text in small_texts:
+                        if 'ago' in text.lower() or 'posted' in text.lower() or any(month in text.lower() for month in ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']):
+                            announced_at = text
+                            logger.debug(f"Data de anúncio identificada (método 3): {announced_at}")
+                            break
+                
+                # Procurar padrões para número de candidatos
+                if candidates == 'Not found':
+                    for text in small_texts:
+                        if 'applicant' in text.lower() or 'candidate' in text.lower() or 'applied' in text.lower():
+                            candidates = text
+                            logger.debug(f"Candidatos identificados (método 3): {candidates}")
+                            break
+                
         except Exception as e:
             logger.warning(f"Erro ao extrair informações adicionais: {str(e)}")
         
