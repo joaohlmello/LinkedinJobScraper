@@ -3,6 +3,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import logging
 import trafilatura
+import os
+import datetime
+import csv
+from io import BytesIO
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -212,3 +216,65 @@ def get_results_html(urls):
     )
     
     return html_table
+
+def export_to_csv(urls):
+    """
+    Export LinkedIn job data to CSV format.
+    
+    Args:
+        urls (list): List of LinkedIn job URLs
+        
+    Returns:
+        BytesIO: CSV file as BytesIO object
+    """
+    if not urls:
+        return None
+    
+    # Get the DataFrame with results
+    df = process_linkedin_urls(urls)
+    
+    # Create a BytesIO object to store the CSV
+    csv_buffer = BytesIO()
+    
+    # Write DataFrame to CSV
+    df.to_csv(csv_buffer, index=False, encoding='utf-8')
+    
+    # Reset buffer position to the beginning
+    csv_buffer.seek(0)
+    
+    return csv_buffer
+
+def export_to_excel(urls):
+    """
+    Export LinkedIn job data to Excel format.
+    
+    Args:
+        urls (list): List of LinkedIn job URLs
+        
+    Returns:
+        BytesIO: Excel file as BytesIO object
+    """
+    if not urls:
+        return None
+    
+    # Get the DataFrame with results
+    df = process_linkedin_urls(urls)
+    
+    # Create a BytesIO object to store the Excel file
+    excel_buffer = BytesIO()
+    
+    # Export DataFrame to Excel
+    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='LinkedIn Jobs', index=False)
+        
+        # Auto-adjust columns' width
+        worksheet = writer.sheets['LinkedIn Jobs']
+        for i, col in enumerate(df.columns):
+            max_length = max(df[col].astype(str).apply(len).max(), len(col)) + 2
+            # Cap width at 50 to avoid overly wide columns
+            worksheet.column_dimensions[chr(65 + i)].width = min(max_length, 50)
+    
+    # Reset buffer position to the beginning
+    excel_buffer.seek(0)
+    
+    return excel_buffer

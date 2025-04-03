@@ -30,3 +30,18 @@ pre {
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
+.export-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.export-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.export-buttons .btn i {
+    font-size: 1.1rem;
+}

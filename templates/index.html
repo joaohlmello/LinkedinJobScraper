@@ -6,6 +6,8 @@
     <title>LinkedIn Job Scraper</title>
     <!-- Bootstrap CSS (Replit Dark Theme) -->
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -55,13 +57,42 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5>Results</h5>
+                        <div class="export-buttons">
+                            <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
+                                <i class="bi bi-file-earmark-text"></i> Export to CSV
+                            </a>
+                            <a href="{{ url_for('export_excel') }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
                             {{ results_html|safe }}
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% elif has_results %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Export Options</h5>
+                        <div class="export-buttons">
+                            <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
+                                <i class="bi bi-file-earmark-text"></i> Export to CSV
+                            </a>
+                            <a href="{{ url_for('export_excel') }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p>You can export your previously processed data using the buttons above.</p>
                     </div>
                 </div>
             </div>
@@ -81,6 +112,7 @@
                             <li>Click the "Extract Information" button.</li>
                             <li>The script will extract job title and company information from each URL.</li>
                             <li>Results will be displayed in a table with the original link, company name, company link, job title, and job description.</li>
+                            <li>You can export the results to CSV or Excel format using the buttons above the results table.</li>
                         </ol>
                         <p>Example URL format:</p>
                         <pre class="bg-dark text-light p-2">https://www.linkedin.com/jobs/view/4197948497/?eBP=NON_CHARGEABLE_CHANNEL&refId=bkHAVjq057sZNx6xA%2BnKig%3D%3D&trackingId=hSdg4bhpEUyduU4ScMhsgg%3D%3D&trk=flagship3_search_srp_jobs</pre>
