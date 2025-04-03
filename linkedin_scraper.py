@@ -57,8 +57,28 @@ def extract_company_info(url):
         # Find job title element
         job_title_element = soup.select_one('h1.top-card-layout__title')
         
-        # Find application type (button aria-label in jobs-apply-button--top-card div)
+        # Find application type using multiple selectors
+        application_type_element = None
+        
+        # Tentativa 1: botão dentro da div jobs-apply-button--top-card 
         application_type_element = soup.select_one('div.jobs-apply-button--top-card button[aria-label]')
+        
+        # Tentativa 2: qualquer botão de aplicação com aria-label
+        if not application_type_element:
+            application_type_element = soup.select_one('button.jobs-apply-button[aria-label]')
+            
+        # Tentativa 3: botão genérico com palavra "apply" no texto
+        if not application_type_element:
+            apply_buttons = soup.select('button')
+            for button in apply_buttons:
+                button_text = button.get_text(strip=True).lower()
+                if 'apply' in button_text:
+                    application_type_element = button
+                    break
+        
+        # Tentativa 4: span com classe que contém a palavra apply
+        if not application_type_element:
+            application_type_element = soup.select_one('span[class*="apply"]')
         
         # MÉTODO 1: HTML renderizado pela sessão - foco no elemento job-details
         job_description_text = ""
@@ -211,14 +231,38 @@ def extract_company_info(url):
             logger.warning(f"Job description not found for URL: {url}")
             job_description = "Job description not available. Please check the original link."
         
-        # Extract application type from button aria-label
+        # Extract application type from button aria-label or button text
         application_type = 'Not found'
         if application_type_element:
             try:
+                # Tentar extrair o texto do atributo aria-label
                 aria_label = application_type_element.get('aria-label')
                 if aria_label and isinstance(aria_label, str):
                     application_type = aria_label.strip()
-                logger.debug(f"Extracted application type: {application_type}")
+                    logger.debug(f"Extracted application type from aria-label: {application_type}")
+                
+                # Se não encontrou aria-label, tentar usar o texto do próprio botão
+                if application_type == 'Not found':
+                    button_text = application_type_element.get_text(strip=True)
+                    if button_text:
+                        if 'Apply' in button_text or 'apply' in button_text:
+                            application_type = button_text
+                            logger.debug(f"Extracted application type from button text: {application_type}")
+                
+                # Procurar por textos específicos na página que indiquem o tipo de aplicação
+                if application_type == 'Not found':
+                    easy_apply_elements = soup.select('.jobs-apply-button--top-card')
+                    if easy_apply_elements:
+                        for elem in easy_apply_elements:
+                            elem_text = elem.get_text(strip=True)
+                            if 'Easy Apply' in elem_text:
+                                application_type = 'Easy Apply'
+                                logger.debug("Found Easy Apply text in the page")
+                                break
+                            elif 'Apply' in elem_text:
+                                application_type = 'Apply'
+                                logger.debug("Found Apply text in the page")
+                                break
             except Exception as e:
                 logger.warning(f"Error extracting application type: {str(e)}")
         
