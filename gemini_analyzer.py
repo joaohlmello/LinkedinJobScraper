@@ -2,8 +2,7 @@ import os
 import json
 import logging
 import time
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -25,13 +24,13 @@ class JobAnalyzer:
             raise ValueError("GEMINI_API_KEY não está definida nas variáveis de ambiente")
         
         # Inicializar cliente Gemini
-        self.client = genai.Client(api_key=api_key)
-        self.model_name = "gemini-1.5-pro-latest"  # Modelo mais recente que suporta schemas
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel("gemini-1.5-pro-latest")
         
         # Configurar o prompt base
         self.system_prompt = self._get_system_prompt()
         
-        logger.info(f"Analisador de vagas inicializado com o modelo {self.model_name}")
+        logger.info(f"Analisador de vagas inicializado com o modelo gemini-1.5-pro-latest")
     
     def _get_system_prompt(self):
         """
@@ -165,73 +164,66 @@ Essenciais: Excel Avançado, PowerPoint."""
 Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
             """
             
-            # Preparar o conteúdo para a API
-            contents = [
-                types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=user_prompt)],
-                ),
-            ]
-            
-            # Criar a configuração com o esquema de resposta esperado
-            generate_content_config = types.GenerateContentConfig(
+            # Configuração da geração
+            generation_config = genai.GenerationConfig(
+                temperature=0.2,
                 response_mime_type="application/json",
-                response_schema=genai.types.Schema(
-                    type=genai.types.Type.OBJECT,
-                    required=["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
-                              "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
-                    properties={
-                        "nota_palavras_chave": genai.types.Schema(
-                            type=genai.types.Type.INTEGER,
-                        ),
-                        "nota_requisitos": genai.types.Schema(
-                            type=genai.types.Type.INTEGER,
-                        ),
-                        "nota_experiencia": genai.types.Schema(
-                            type=genai.types.Type.INTEGER,
-                        ),
-                        "nota_qualificacoes": genai.types.Schema(
-                            type=genai.types.Type.INTEGER,
-                        ),
-                        "nota_global": genai.types.Schema(
-                            type=genai.types.Type.INTEGER,
-                        ),
-                        "forcas": genai.types.Schema(
-                            type=genai.types.Type.STRING,
-                        ),
-                        "fraquezas": genai.types.Schema(
-                            type=genai.types.Type.STRING,
-                        ),
-                    },
-                ),
-                system_instruction=[
-                    types.Part.from_text(text=self.system_prompt),
-                ],
+                structured_response={
+                    "nota_palavras_chave": "integer",
+                    "nota_requisitos": "integer",
+                    "nota_experiencia": "integer", 
+                    "nota_qualificacoes": "integer",
+                    "nota_global": "integer",
+                    "forcas": "string",
+                    "fraquezas": "string"
+                }
             )
+            
+            # Configuração do sistema
+            safety_settings = [{
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+            }]
             
             # Fazer a chamada à API do Gemini
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Fazer a chamada ao modelo
-                result = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=contents,
-                    config=generate_content_config,
+                # Montar o conteúdo completo
+                response = self.model.generate_content(
+                    contents=[
+                        genai.Content(
+                            parts=[genai.Part(text=self.system_prompt)],
+                            role="system"
+                        ),
+                        genai.Content(
+                            parts=[genai.Part(text=user_prompt)],
+                            role="user"
+                        )
+                    ],
+                    generation_config=generation_config,
+                    safety_settings=safety_settings,
                 )
                 
-                # Obter o texto da resposta
-                response_text = result.text if hasattr(result, 'text') else None
+                # Obter a resposta
+                if response and hasattr(response, 'candidates') and response.candidates:
+                    result_json = response.candidates[0].content.parts[0].text
+                else:
+                    logger.error("Resposta inválida do Gemini API")
+                    return {
+                        "error": "Formato de resposta inválido da API do Gemini",
+                        "raw_response": str(response)
+                    }
                 
             except Exception as e:
                 logger.error(f"Erro na chamada à API do Gemini: {str(e)}")
                 raise Exception(f"Falha na análise com Gemini API: {str(e)}")
             
             # Analisar e retornar o resultado
-            if response_text:
+            if result_json:
                 try:
                     # Processar o resultado como JSON
-                    analysis_data = json.loads(response_text)
+                    analysis_data = json.loads(result_json)
                     
                     # Adicionar informações da vaga ao resultado
                     analysis_data['job_title'] = job_title
@@ -245,13 +237,13 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                     logger.error(f"Erro ao decodificar JSON do resultado: {e}")
                     return {
                         "error": f"Formato de resposta inválido: {e}",
-                        "raw_response": response_text
+                        "raw_response": result_json
                     }
             else:
                 logger.error("Resposta vazia ou sem texto do Gemini API")
                 return {
                     "error": "Resposta vazia da API do Gemini",
-                    "raw_response": str(result) if result else "Nenhuma resposta"
+                    "raw_response": str(response) if response else "Nenhuma resposta"
                 }
                 
         except Exception as e:
