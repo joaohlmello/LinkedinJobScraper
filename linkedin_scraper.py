@@ -11,14 +11,140 @@ from requests_html import HTMLSession
 import re
 import openpyxl
 from openpyxl.styles import Alignment
+import json
+import random
+import time
+import socket
+from requests.exceptions import RequestException, ProxyError, ConnectTimeout
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+class ProxyManager:
+    """
+    Gerencia uma lista de proxies gratuitos para rotacionar IPs entre as requisições.
+    """
+    def __init__(self):
+        # Lista de proxies iniciais conhecidos
+        self.proxies = []
+        self.last_update = None
+        self.update_interval = 30 * 60  # 30 minutos em segundos
+        # Inicializar a lista de proxies
+        self.update_proxy_list()
+        
+    def update_proxy_list(self):
+        """Atualiza a lista de proxies disponíveis de serviços públicos gratuitos"""
+        logger.debug("Atualizando lista de proxies")
+        
+        # Método 1: Usar proxylist.geonode.com
+        try:
+            url = "https://proxylist.geonode.com/api/proxy-list?limit=100&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90&protocols=http%2Chttps"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                for proxy in data.get('data', []):
+                    ip = proxy.get('ip')
+                    port = proxy.get('port')
+                    protocol = proxy.get('protocols')[0].lower()
+                    if ip and port and protocol:
+                        proxy_str = f"{protocol}://{ip}:{port}"
+                        if proxy_str not in self.proxies:
+                            self.proxies.append(proxy_str)
+                logger.debug(f"Adicionados {len(data.get('data', []))} proxies do geonode")
+        except Exception as e:
+            logger.warning(f"Erro ao obter proxies do geonode: {str(e)}")
+            
+        # Método 2: Usar free-proxy-list.net através de parsing HTML
+        try:
+            url = "https://free-proxy-list.net/"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                rows = soup.select('table.table tbody tr')
+                count = 0
+                for row in rows:
+                    cols = row.select('td')
+                    if len(cols) >= 8:
+                        ip = cols[0].text.strip()
+                        port = cols[1].text.strip()
+                        https = cols[6].text.strip()
+                        protocol = 'https' if https == 'yes' else 'http'
+                        proxy_str = f"{protocol}://{ip}:{port}"
+                        if proxy_str not in self.proxies:
+                            self.proxies.append(proxy_str)
+                            count += 1
+                logger.debug(f"Adicionados {count} proxies do free-proxy-list")
+        except Exception as e:
+            logger.warning(f"Erro ao obter proxies do free-proxy-list: {str(e)}")
+            
+        # Método 3: Adicionar alguns proxies conhecidos se a lista estiver vazia
+        if not self.proxies:
+            logger.warning("Nenhum proxy obtido dos serviços online. Adicionando proxies padrão.")
+            default_proxies = [
+                "http://34.124.225.130:8080",
+                "http://122.9.21.228:8080",
+                "http://103.149.146.252:80",
+                "http://20.210.113.32:8123",
+                "http://20.206.106.192:80",
+                "http://165.227.95.162:3128",
+                "http://185.162.229.59:80",
+                "http://217.249.227.229:8080",
+                "http://20.24.43.214:80",
+                "http://45.77.198.1:80"
+            ]
+            self.proxies.extend(default_proxies)
+            
+        # Filtrar proxies inválidos
+        self.proxies = list(set(self.proxies))  # Remover duplicatas
+        logger.debug(f"Lista de proxies atualizada. Total: {len(self.proxies)} proxies disponíveis")
+        self.last_update = time.time()
+        
+    def get_random_proxy(self):
+        """Retorna um proxy aleatório da lista"""
+        # Atualizar a lista de proxies se necessário
+        if self.last_update is None or time.time() - self.last_update > self.update_interval:
+            self.update_proxy_list()
+            
+        # Se não houver proxies disponíveis, retorna None
+        if not self.proxies:
+            logger.warning("Não há proxies disponíveis")
+            return None
+            
+        # Escolher um proxy aleatório
+        return random.choice(self.proxies)
+    
+    def remove_proxy(self, proxy):
+        """Remove um proxy inválido da lista"""
+        if proxy in self.proxies:
+            self.proxies.remove(proxy)
+            logger.debug(f"Proxy {proxy} removido da lista. Restante: {len(self.proxies)} proxies")
+    
+    def get_session_with_proxy(self, use_html_session=True):
+        """Retorna uma sessão com um proxy configurado"""
+        # Escolher um proxy aleatório
+        proxy = self.get_random_proxy()
+        
+        if use_html_session:
+            session = HTMLSession()
+        else:
+            session = requests.Session()
+            
+        if proxy:
+            session.proxies = {"http": proxy, "https": proxy}
+            logger.debug(f"Usando proxy: {proxy}")
+        else:
+            logger.debug("Usando conexão direta (sem proxy)")
+            
+        return session, proxy
+
+# Inicializar o gerenciador de proxies
+proxy_manager = ProxyManager()
+
 def extract_company_info(url):
     """
     Extract company name, job title, and links from a LinkedIn job listing URL.
+    Uses rotating proxies to avoid IP blocking.
     
     Args:
         url (str): LinkedIn job listing URL
@@ -28,24 +154,54 @@ def extract_company_info(url):
     """
     # Obter data e hora atual para a coluna "searched_at" no formato compatível com Excel
     current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Headers padrão para simular um navegador
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Connection': 'keep-alive',
+        'Referer': 'https://www.google.com/'
+    }
+    
     try:
-        # Set headers to mimic a browser request
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9'
-        }
+        # Obter uma sessão com proxy
+        logger.debug(f"Iniciando requisição com IP rotativo para: {url}")
         
-        # Inicializar o HTMLSession para capturar HTML renderizado
-        logger.debug(f"Iniciando HTMLSession para: {url}")
-        session = HTMLSession()
-        
-        # Enviar solicitação e renderizar JavaScript
-        try:
-            r = session.get(url, headers=headers)
-            logger.debug("Página carregada com HTMLSession")
-        except Exception as e:
-            logger.warning(f"Erro ao carregar com HTMLSession: {str(e)}")
-            # Fallback para requests regular
+        # Tentar até 3 proxies diferentes
+        for attempt in range(3):
+            try:
+                # Obter uma sessão HTMLSession com proxy configurado
+                session, proxy = proxy_manager.get_session_with_proxy(use_html_session=True)
+                
+                # Adicionar headers para simular um navegador
+                for key, value in headers.items():
+                    session.headers[key] = value
+                
+                # Enviar solicitação e renderizar JavaScript
+                r = session.get(url, timeout=30)
+                logger.debug(f"Página carregada com sucesso usando {'proxy: ' + proxy if proxy else 'conexão direta'}")
+                break  # Se chegou aqui, a requisição foi bem-sucedida
+                
+            except (ProxyError, ConnectTimeout, RequestException) as e:
+                logger.warning(f"Tentativa {attempt+1}/3 falhou: {str(e)}")
+                
+                # Se o erro foi relacionado ao proxy, removê-lo da lista
+                if proxy:
+                    proxy_manager.remove_proxy(proxy)
+                
+                # Se foi a última tentativa, fazer requisição direta
+                if attempt == 2:
+                    logger.debug("Todas as tentativas com proxy falharam. Tentando conexão direta.")
+                    session = HTMLSession()
+                    for key, value in headers.items():
+                        session.headers[key] = value
+                    r = session.get(url, timeout=30)
+                    logger.debug("Página carregada com HTMLSession sem proxy")
+                    
+        # Fallback para requests regular se HTMLSession falhar
+        if not r or not hasattr(r, 'html'):
+            logger.warning("HTMLSession falhou. Tentando com requests padrão.")
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             r = response
@@ -472,6 +628,7 @@ def calculate_announced_date(searched_at, announced_at):
 def process_linkedin_urls(urls):
     """
     Process a list of LinkedIn job URLs and return the results as a DataFrame.
+    Uses IP rotation to avoid blocking and adds random delays between requests.
     
     Args:
         urls (list): List of LinkedIn job URLs
@@ -481,14 +638,24 @@ def process_linkedin_urls(urls):
     """
     results = []
     
-    for url in urls:
+    # Embaralhar URLs para evitar padrões previsíveis de acesso
+    random_urls = urls.copy()
+    random.shuffle(random_urls)
+    
+    for i, url in enumerate(random_urls):
         url = url.strip()
         if url:  # Skip empty URLs
+            # Adicionar um atraso aleatório entre as requisições para evitar detecção de automação
+            if i > 0:
+                delay = random.uniform(2.0, 5.0)
+                logger.debug(f"Aguardando {delay:.2f} segundos antes da próxima requisição")
+                time.sleep(delay)
+            
             # Normalizar o URL para o formato reduzido
             normalized_url = normalize_linkedin_url(url)
-            logger.debug(f"URL normalizado: {normalized_url}")
+            logger.debug(f"Processando URL {i+1}/{len(random_urls)}: {normalized_url}")
             
-            # Usar o URL normalizado para extração
+            # Usar o URL normalizado para extração com IP rotativo
             result = extract_company_info(normalized_url)
             
             # Substituir o link original pelo normalizado
@@ -501,12 +668,15 @@ def process_linkedin_urls(urls):
             )
             
             results.append(result)
+            logger.debug(f"URL {i+1}/{len(random_urls)} processada com sucesso")
     
     # Create DataFrame from results with columns in the specified order
     df = pd.DataFrame(results, columns=[
         'link', 'company_name', 'company_link', 'job_title', 'job_description', 
         'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
     ])
+    
+    logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso.")
     return df
 
 def get_results_html(urls):

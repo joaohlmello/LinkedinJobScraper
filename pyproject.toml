@@ -14,7 +14,8 @@ dependencies = [
     "pandas>=2.2.3",
     "psycopg2-binary>=2.9.10",
     "requests-html>=0.10.0",
-    "requests>=2.32.3",
+    "requests[socks]>=2.32.3",
     "selenium>=4.30.0",
+    "stem>=1.8.2",
     "trafilatura>=2.0.0",
 ]
