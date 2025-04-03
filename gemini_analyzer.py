@@ -2,8 +2,7 @@ import os
 import json
 import logging
 import time
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -199,19 +198,19 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             
             # Configurar as configurações de segurança
             safety_settings = [
-                types.SafetySetting(
+                genai.types.SafetySetting(
                     category="HARM_CATEGORY_HARASSMENT",
                     threshold="BLOCK_NONE",
                 ),
-                types.SafetySetting(
+                genai.types.SafetySetting(
                     category="HARM_CATEGORY_HATE_SPEECH",
                     threshold="BLOCK_NONE",
                 ),
-                types.SafetySetting(
+                genai.types.SafetySetting(
                     category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
                     threshold="BLOCK_NONE",
                 ),
-                types.SafetySetting(
+                genai.types.SafetySetting(
                     category="HARM_CATEGORY_DANGEROUS_CONTENT",
                     threshold="BLOCK_NONE",
                 ),
@@ -219,18 +218,18 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             
             # Criar o conteúdo da solicitação
             contents = [
-                types.Content(
+                genai.types.Content(
                     role="system",
-                    parts=[types.Part.from_text(text=self.system_prompt)],
+                    parts=[genai.types.Part.from_text(text=self.system_prompt)],
                 ),
-                types.Content(
+                genai.types.Content(
                     role="user",
-                    parts=[types.Part.from_text(text=user_prompt)],
+                    parts=[genai.types.Part.from_text(text=user_prompt)],
                 ),
             ]
             
             # Configuração da geração
-            generate_content_config = types.GenerateContentConfig(
+            generate_content_config = genai.types.GenerateContentConfig(
                 safety_settings=safety_settings,
                 response_mime_type="application/json",
                 response_schema=response_schema,
