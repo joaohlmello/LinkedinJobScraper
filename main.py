@@ -11,7 +11,10 @@ processing_progress = {
     'current': 0,
     'status': 'idle',
     'message': '',
-    'results': None
+    'results': None,
+    'analyze_jobs': False,
+    'df_json': None,
+    'urls': []
 }
 
 # Set up logging
@@ -95,29 +98,39 @@ def export_csv():
     """
     Export LinkedIn job data to CSV.
     """
+    global processing_progress
     logger.debug(f"Session keys: {session.keys()}")
     
-    if 'linkedin_urls' not in session or not session['linkedin_urls']:
+    # Primeiro verificar no processamento global
+    urls = processing_progress.get('urls', [])
+    analyze_jobs = processing_progress.get('analyze_jobs', False)
+    df_json = processing_progress.get('df_json')
+    
+    # Se não tivermos URLs no objeto global, tentar buscar da sessão (compatibilidade)
+    if not urls and 'linkedin_urls' in session:
+        urls = session['linkedin_urls']
+    
+    # Verificar se temos URLs para processar
+    if not urls:
         flash('Não há dados para exportar. Por favor, envie alguns URLs do LinkedIn primeiro.', 'warning')
         return redirect('/')
     
-    # Obter URLs da sessão
-    linkedin_urls = session['linkedin_urls']
-    
-    # Verificar se foi solicitada análise com Gemini
-    analyze_jobs = 'analyze_jobs' in session and session['analyze_jobs']
     logger.debug(f"Exportando com análise Gemini: {analyze_jobs}")
     
-    # Verificar se já temos dados processados na sessão
-    df_json = session.get('processed_data')
+    # Verificar se já temos dados processados
     if df_json:
-        logger.debug("Usando dados processados da sessão para exportação CSV")
+        logger.debug("Usando dados processados do objeto global para exportação CSV")
     else:
-        logger.debug("Não há dados processados na sessão, será necessário reprocessar")
+        # Tentar pegar da sessão como fallback (compatibilidade)
+        df_json = session.get('processed_data')
+        if df_json:
+            logger.debug("Usando dados processados da sessão para exportação CSV")
+        else:
+            logger.debug("Não há dados processados, será necessário reprocessar")
     
     try:
         # Gerar arquivo CSV
-        csv_buffer = export_to_csv(linkedin_urls, df_json, analyze_jobs)
+        csv_buffer = export_to_csv(urls, df_json, analyze_jobs)
         if not csv_buffer:
             flash('Falha ao gerar arquivo CSV.', 'danger')
             return redirect('/')
@@ -143,30 +156,40 @@ def export_excel():
     """
     Export LinkedIn job data to Excel.
     """
+    global processing_progress
     logger.debug(f"Session keys: {session.keys()}")
     
-    if 'linkedin_urls' not in session or not session['linkedin_urls']:
+    # Primeiro verificar no processamento global
+    urls = processing_progress.get('urls', [])
+    analyze_jobs = processing_progress.get('analyze_jobs', False)
+    df_json = processing_progress.get('df_json')
+    
+    # Se não tivermos URLs no objeto global, tentar buscar da sessão (compatibilidade)
+    if not urls and 'linkedin_urls' in session:
+        urls = session['linkedin_urls']
+    
+    # Verificar se temos URLs para processar
+    if not urls:
         flash('Não há dados para exportar. Por favor, envie alguns URLs do LinkedIn primeiro.', 'warning')
         return redirect('/')
     
-    # Obter URLs da sessão
-    linkedin_urls = session['linkedin_urls']
-    logger.debug(f"Exportando {len(linkedin_urls)} URLs para Excel")
-    
-    # Verificar se foi solicitada análise com Gemini
-    analyze_jobs = 'analyze_jobs' in session and session['analyze_jobs']
+    logger.debug(f"Exportando {len(urls)} URLs para Excel")
     logger.debug(f"Exportando com análise Gemini: {analyze_jobs}")
     
-    # Verificar se já temos dados processados na sessão
-    df_json = session.get('processed_data')
+    # Verificar se já temos dados processados
     if df_json:
-        logger.debug("Usando dados processados da sessão para exportação Excel")
+        logger.debug("Usando dados processados do objeto global para exportação Excel")
     else:
-        logger.debug("Não há dados processados na sessão, será necessário reprocessar")
+        # Tentar pegar da sessão como fallback (compatibilidade)
+        df_json = session.get('processed_data')
+        if df_json:
+            logger.debug("Usando dados processados da sessão para exportação Excel")
+        else:
+            logger.debug("Não há dados processados, será necessário reprocessar")
     
     try:
         # Gerar arquivo Excel
-        excel_buffer = export_to_excel(linkedin_urls, df_json, analyze_jobs)
+        excel_buffer = export_to_excel(urls, df_json, analyze_jobs)
         if not excel_buffer:
             flash('Falha ao gerar arquivo Excel.', 'danger')
             return redirect('/')
@@ -248,8 +271,11 @@ def process_async():
     processing_progress['current'] = 0
     processing_progress['message'] = 'Iniciando processamento...'
     processing_progress['results'] = None
+    processing_progress['urls'] = linkedin_urls.copy()  # Armazenar URLs no objeto global
+    processing_progress['analyze_jobs'] = analyze_jobs  # Armazenar flag de análise
+    processing_progress['df_json'] = None  # Limpar dados anteriores
     
-    # Armazenar URLs na sessão para exportação
+    # Armazenar URLs na sessão para exportação (para compatibilidade)
     session['linkedin_urls'] = linkedin_urls
     
     # Iniciar processamento em segundo plano
@@ -295,9 +321,9 @@ def process_urls_background(urls, analyze_jobs=False):
             )
             logger.debug(f"Chamada para get_results_html concluída. Resultado vazio? {results_html is None}")
             
-            # Armazenar a flag de análise na sessão para exportação
-            with app.app_context():
-                session['analyze_jobs'] = analyze_jobs
+            # A sessão só pode ser modificada dentro de um contexto de requisição
+            # Vamos armazenar apenas no objeto de progresso global
+            processing_progress['analyze_jobs'] = analyze_jobs
             
             # Armazenar o DataFrame pré-processado na sessão para exportação
             try:
@@ -308,9 +334,9 @@ def process_urls_background(urls, analyze_jobs=False):
                 if df_export is not None:
                     df_json = df_export.to_json(orient='records')
                     
-                    with app.app_context():
-                        session['processed_data'] = df_json
-                        logger.debug(f"DataFrame convertido para JSON e armazenado na sessão. Tamanho: {len(df_json)}")
+                    # Armazenar no objeto de progresso global em vez de na sessão
+                    processing_progress['df_json'] = df_json
+                    logger.debug(f"DataFrame convertido para JSON e armazenado no objeto de progresso. Tamanho: {len(df_json)}")
                 else:
                     logger.error("DataFrame de exportação não retornado pela função get_results_html")
             except Exception as df_e:
