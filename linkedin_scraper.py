@@ -24,7 +24,8 @@ def extract_company_info(url):
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, company link, job description, and searched_at timestamp
+        dict: Dictionary containing original link, job title, company name, company link, job description, searched_at timestamp,
+              and additional fields: city, anounced_at, candidates_count, remote, easy
     """
     # Obter data e hora atual para a coluna "searched_at" no formato compatível com Excel
     current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -171,6 +172,47 @@ def extract_company_info(url):
                     if len(extracted_text) > len(job_description_text):
                         job_description_text = extracted_text
                         logger.debug(f"XPath extraiu texto maior: {len(job_description_text)} caracteres")
+                    
+                # Extrair os novos campos usando os XPaths fornecidos
+                city = "Not found"
+                anounced_at = "Not found"
+                candidates_count = "Not found"
+                remote = "Not found"
+                easy = "Not found"
+                
+                try:
+                    # Tentar extrair city
+                    city_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[3]/div/span[1]/text()')
+                    if city_elements and len(city_elements) > 0:
+                        city = city_elements[0].strip()
+                        logger.debug(f"Extraído city: {city}")
+                    
+                    # Tentar extrair anounced_at
+                    anounced_at_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[3]/div/span[3]/span[2]/text()')
+                    if anounced_at_elements and len(anounced_at_elements) > 0:
+                        anounced_at = anounced_at_elements[0].strip()
+                        logger.debug(f"Extraído anounced_at: {anounced_at}")
+                    
+                    # Tentar extrair candidates_count
+                    candidates_count_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[3]/div/span[5]/text()')
+                    if candidates_count_elements and len(candidates_count_elements) > 0:
+                        candidates_count = candidates_count_elements[0].strip()
+                        logger.debug(f"Extraído candidates_count: {candidates_count}")
+                    
+                    # Tentar extrair remote
+                    remote_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[4]/ul/li[1]/span/span[1]/span/span[1]/text()')
+                    if remote_elements and len(remote_elements) > 0:
+                        remote = remote_elements[0].strip()
+                        logger.debug(f"Extraído remote: {remote}")
+                    
+                    # Tentar extrair easy
+                    easy_elements = tree.xpath('/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span')
+                    if easy_elements and len(easy_elements) > 0:
+                        easy_text = easy_elements[0].text_content() if hasattr(easy_elements[0], 'text_content') else str(easy_elements[0])
+                        easy = easy_text.strip()
+                        logger.debug(f"Extraído easy: {easy}")
+                except Exception as e:
+                    logger.warning(f"Erro ao extrair campos adicionais com XPath: {str(e)}")
             except Exception as e:
                 logger.warning(f"Erro ao extrair com XPath: {str(e)}")
                 
@@ -218,7 +260,12 @@ def extract_company_info(url):
             'company_link': company_link,
             'job_title': job_title,
             'job_description': job_description,
-            'searched_at': current_datetime
+            'searched_at': current_datetime,
+            'city': city if 'city' in locals() else 'Not found',
+            'anounced_at': anounced_at if 'anounced_at' in locals() else 'Not found',
+            'candidates_count': candidates_count if 'candidates_count' in locals() else 'Not found',
+            'remote': remote if 'remote' in locals() else 'Not found',
+            'easy': easy if 'easy' in locals() else 'Not found'
         }
     
     except requests.exceptions.RequestException as e:
@@ -229,7 +276,12 @@ def extract_company_info(url):
             'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
-            'searched_at': current_datetime
+            'searched_at': current_datetime,
+            'city': 'Not found',
+            'anounced_at': 'Not found',
+            'candidates_count': 'Not found',
+            'remote': 'Not found',
+            'easy': 'Not found'
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
@@ -239,7 +291,12 @@ def extract_company_info(url):
             'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
-            'searched_at': current_datetime
+            'searched_at': current_datetime,
+            'city': 'Not found',
+            'anounced_at': 'Not found',
+            'candidates_count': 'Not found',
+            'remote': 'Not found',
+            'easy': 'Not found'
         }
 
 def normalize_linkedin_url(url):
@@ -303,7 +360,10 @@ def process_linkedin_urls(urls):
             results.append(result)
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=['link', 'company_name', 'company_link', 'job_title', 'job_description', 'searched_at'])
+    df = pd.DataFrame(results, columns=[
+        'link', 'company_name', 'company_link', 'job_title', 'job_description', 'searched_at',
+        'city', 'anounced_at', 'candidates_count', 'remote', 'easy'
+    ])
     return df
 
 def get_results_html(urls):
@@ -352,32 +412,45 @@ def get_results_html(urls):
     
     .linkedin-job-results-table th:nth-child(1), 
     .linkedin-job-results-table td:nth-child(1) {
-        width: 15%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(2), 
     .linkedin-job-results-table td:nth-child(2) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(3), 
     .linkedin-job-results-table td:nth-child(3) {
-        width: 15%;
+        width: 10%;
     }
     
     .linkedin-job-results-table th:nth-child(4), 
     .linkedin-job-results-table td:nth-child(4) {
-        width: 10%;
+        width: 8%;
     }
     
     .linkedin-job-results-table th:nth-child(5), 
     .linkedin-job-results-table td:nth-child(5) {
-        width: 40%;
+        width: 32%;
     }
     
     .linkedin-job-results-table th:nth-child(6), 
     .linkedin-job-results-table td:nth-child(6) {
-        width: 10%;
+        width: 8%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(7), 
+    .linkedin-job-results-table td:nth-child(7),
+    .linkedin-job-results-table th:nth-child(8), 
+    .linkedin-job-results-table td:nth-child(8),
+    .linkedin-job-results-table th:nth-child(9), 
+    .linkedin-job-results-table td:nth-child(9),
+    .linkedin-job-results-table th:nth-child(10), 
+    .linkedin-job-results-table td:nth-child(10),
+    .linkedin-job-results-table th:nth-child(11), 
+    .linkedin-job-results-table td:nth-child(11) {
+        width: 6%;
     }
     </style>
     <div class="table-responsive">
@@ -390,6 +463,11 @@ def get_results_html(urls):
             <th>Job Title</th>
             <th>Job Description</th>
             <th>Searched At</th>
+            <th>City</th>
+            <th>Announced At</th>
+            <th>Candidates</th>
+            <th>Remote</th>
+            <th>Easy Apply</th>
           </tr>
         </thead>
         <tbody>
@@ -405,6 +483,11 @@ def get_results_html(urls):
           <td>{row['job_title']}</td>
           <td class="full-text">{row['job_description']}</td>
           <td>{row['searched_at']}</td>
+          <td>{row['city']}</td>
+          <td>{row['anounced_at']}</td>
+          <td>{row['candidates_count']}</td>
+          <td>{row['remote']}</td>
+          <td>{row['easy']}</td>
         </tr>
         """
     
