@@ -175,25 +175,77 @@ def extract_company_info(url):
                 
                 # Extrair o tipo de candidatura usando o XPath fornecido
                 logger.debug("Tentando extrair o tipo de candidatura usando XPath")
+                
+                # XPath específico fornecido pelo usuário
                 application_type_xpath = '/html/body/div[6]/div[3]/div[2]/div/div/main/div[2]/div[1]/div/div[1]/div/div/div/div[5]/div/div/div/button/span'
                 application_type_elements = tree.xpath(application_type_xpath)
+                
                 if application_type_elements and len(application_type_elements) > 0:
                     application_type = application_type_elements[0].text_content().strip()
                     logger.debug(f"Tipo de candidatura extraído: {application_type}")
                 else:
-                    # Tentar XPaths alternativos para o tipo de candidatura
+                    # Lista abrangente de XPaths alternativos para o tipo de candidatura
+                    # Incluindo variações de estrutura mais comuns do LinkedIn
                     alternative_app_type_xpaths = [
+                        # XPaths para botões de candidatura
                         '//button[contains(@class, "jobs-apply-button")]//span/text()',
+                        '//button[contains(@class, "jobs-apply-button")]/text()',
+                        '//button[contains(@class, "jobs-apply-button")]',
                         '//div[contains(@class, "jobs-apply-button-container")]//button//span/text()',
-                        '//div[contains(@class, "apply-button-container")]//button//span/text()'
+                        '//div[contains(@class, "apply-button-container")]//button//span/text()',
+                        '//div[contains(@class, "jobs-s-apply")]//button//span/text()',
+                        
+                        # XPaths gerais para botões de aplicação
+                        '//button[contains(@aria-label, "Apply") or contains(@aria-label, "Candidatar")]//span/text()',
+                        '//button[contains(@data-control-name, "apply")]//span/text()',
+                        
+                        # XPaths baseados em classes comuns
+                        '//span[contains(@class, "jobs-apply-button__text")]/text()',
+                        '//span[contains(@class, "artdeco-button__text")]/text()',
+                        
+                        # XPaths para elementos próximos do botão de aplicação
+                        '//*[contains(text(), "Apply") or contains(text(), "Easy Apply") or contains(text(), "Candidatar") or contains(text(), "Candidatura")]/text()',
+                        '//div[contains(@class, "jobs-apply-button-container")]//*/text()'
                     ]
                     
-                    for xpath in alternative_app_type_xpaths:
-                        app_elements = tree.xpath(xpath)
-                        if app_elements and len(app_elements) > 0:
-                            application_type = app_elements[0].strip()
-                            logger.debug(f"Tipo de candidatura extraído de caminho alternativo: {application_type}")
-                            break
+                    # Primeiro tentar extrair com text_content para todos os elementos de botão
+                    button_elements = tree.xpath('//button[contains(@class, "jobs-apply-button")]')
+                    if button_elements and len(button_elements) > 0:
+                        application_type = button_elements[0].text_content().strip()
+                        if application_type:
+                            logger.debug(f"Tipo de candidatura extraído de elemento de botão: {application_type}")
+                        
+                    # Se não encontrou com método anterior, tentar cada padrão XPath
+                    if application_type == 'Not found':
+                        for xpath in alternative_app_type_xpaths:
+                            app_elements = tree.xpath(xpath)
+                            if app_elements and len(app_elements) > 0:
+                                # Para elementos de texto, pegar o primeiro valor não vazio
+                                for elem in app_elements:
+                                    if isinstance(elem, str):
+                                        text = elem.strip()
+                                    else:
+                                        text = elem.text_content().strip() if hasattr(elem, 'text_content') else ""
+                                    
+                                    if text:
+                                        application_type = text
+                                        logger.debug(f"Tipo de candidatura extraído de caminho alternativo: {application_type}")
+                                        break
+                                
+                                if application_type != 'Not found':
+                                    break
+                        
+                    # Como último recurso, procurar por termos comuns na página
+                    if application_type == 'Not found':
+                        common_terms = ["Easy Apply", "Apply", "Apply Now", "Candidatar", "Candidatura Simplificada", 
+                                        "Candidatura Externa", "Candidatar Agora", "Candidatar-se", "Apply on company site"]
+                        
+                        page_text = ' '.join(tree.xpath('//text()'))
+                        for term in common_terms:
+                            if term in page_text:
+                                application_type = term
+                                logger.debug(f"Tipo de candidatura extraído de texto da página: {application_type}")
+                                break
             except Exception as e:
                 logger.warning(f"Erro ao extrair com XPath: {str(e)}")
                 
