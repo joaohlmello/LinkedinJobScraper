@@ -47,6 +47,17 @@
                                 <textarea class="form-control" id="linkedin_urls" name="linkedin_urls" rows="5" placeholder="https://www.linkedin.com/jobs/view/4197948497/..."></textarea>
                             </div>
                             
+                            <div class="mb-3">
+                                <label for="ignore_urls" class="form-label">
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-slash-circle"></i> Ignorar</span>
+                                    URLs a serem ignoradas (uma por linha):
+                                </label>
+                                <textarea class="form-control" id="ignore_urls" name="ignore_urls" rows="3" placeholder="Coloque aqui URLs que você não quer processar novamente"></textarea>
+                                <div class="form-text text-light">
+                                    URLs listadas aqui serão ignoradas durante o processamento. Útil para pular vagas já processadas ou irrelevantes.
+                                </div>
+                            </div>
+                            
                             {% if gemini_available %}
                             <div class="mb-3 form-check">
                                 <input type="checkbox" class="form-check-input" id="analyze_jobs" name="analyze_jobs">
@@ -118,7 +129,17 @@
                             
                             <!-- Lista de Lotes Processados -->
                             <div id="batches-container" class="mt-3 d-none">
-                                <h6>Lotes Processados:</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6>Lotes Processados:</h6>
+                                    <div class="export-buttons">
+                                        <button id="export-selected-batches" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-file-earmark-zip"></i> Exportar lotes selecionados
+                                        </button>
+                                        <button id="select-all-batches" class="btn btn-outline-secondary btn-sm ms-1">
+                                            <i class="bi bi-check-all"></i> Selecionar todos
+                                        </button>
+                                    </div>
+                                </div>
                                 <div id="batches-list" class="list-group">
                                     <!-- Os lotes processados serão adicionados aqui dinamicamente -->
                                 </div>
@@ -271,14 +292,19 @@
                                 
                                 batchItem.innerHTML = `
                                     <div>
+                                        <input type="checkbox" class="batch-checkbox me-2" 
+                                               data-batch-index="${batch.batch_index}" 
+                                               ${batch.has_error ? 'disabled' : ''}>
                                         <span class="${statusClass}"><i class="bi ${statusIcon}"></i></span>
                                         Lote ${batch.batch_index + 1} (${batch.urls_count} URLs)
                                     </div>
-                                    <a href="/export/csv?batch_index=${batch.batch_index}" 
-                                       class="btn btn-sm btn-outline-success" 
-                                       ${batch.has_error ? 'disabled' : ''}>
-                                        <i class="bi bi-download"></i> CSV
-                                    </a>
+                                    <div>
+                                        <a href="/export/csv?batch_index=${batch.batch_index}" 
+                                           class="btn btn-sm btn-outline-success" 
+                                           ${batch.has_error ? 'disabled' : ''}>
+                                            <i class="bi bi-download"></i> CSV
+                                        </a>
+                                    </div>
                                 `;
                                 
                                 batchesList.appendChild(batchItem);
@@ -371,6 +397,67 @@
                         console.error('Erro ao verificar progresso:', error);
                     });
             }
+            
+            // Função para lidar com a exportação de múltiplos lotes
+            function setupBatchExportHandlers() {
+                const exportSelectedButton = document.getElementById('export-selected-batches');
+                const selectAllButton = document.getElementById('select-all-batches');
+                
+                if (exportSelectedButton) {
+                    exportSelectedButton.addEventListener('click', function() {
+                        // Obter todos os checkboxes marcados
+                        const selectedCheckboxes = document.querySelectorAll('.batch-checkbox:checked:not(:disabled)');
+                        
+                        if (selectedCheckboxes.length === 0) {
+                            alert('Selecione pelo menos um lote para exportar.');
+                            return;
+                        }
+                        
+                        // Coletar os índices dos lotes selecionados
+                        const selectedIndices = Array.from(selectedCheckboxes).map(checkbox => 
+                            checkbox.getAttribute('data-batch-index')
+                        );
+                        
+                        // Redirecionar para a rota de exportação com os índices como parâmetros
+                        window.location.href = `/export/csv?batch_indices=${selectedIndices.join(',')}`;
+                    });
+                }
+                
+                if (selectAllButton) {
+                    selectAllButton.addEventListener('click', function() {
+                        // Obter todos os checkboxes não desabilitados
+                        const checkboxes = document.querySelectorAll('.batch-checkbox:not(:disabled)');
+                        
+                        // Verificar se todos estão marcados
+                        const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+                        
+                        // Marcar/desmarcar todos
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = !allChecked;
+                        });
+                        
+                        // Atualizar texto do botão
+                        selectAllButton.innerHTML = allChecked ? 
+                            '<i class="bi bi-check-all"></i> Selecionar todos' : 
+                            '<i class="bi bi-x-lg"></i> Desmarcar todos';
+                    });
+                }
+            }
+            
+            // Configurar manipuladores de eventos após cada atualização da lista de lotes
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList' && mutation.target.id === 'batches-list') {
+                        setupBatchExportHandlers();
+                    }
+                });
+            });
+            
+            // Observar mudanças na lista de lotes
+            observer.observe(batchesList, { childList: true });
+            
+            // Configurar manipuladores iniciais
+            setupBatchExportHandlers();
             
             // Submissão do formulário
             scraperForm.addEventListener('submit', function(event) {

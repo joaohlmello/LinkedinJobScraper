@@ -27,12 +27,12 @@ class JobAnalyzer:
         try:
             # Inicializar cliente Gemini
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
+            self.model = genai.GenerativeModel("gemini-2.5-pro-preview-03-25")
             
             # Configurar o prompt base
             self.system_prompt = self._get_system_prompt()
             
-            logger.info(f"Analisador de vagas inicializado com o modelo gemini-2.5-pro-exp-03-25")
+            logger.info(f"Analisador de vagas inicializado com o modelo gemini-2.5-pro-preview-03-25")
         except Exception as e:
             logger.error(f"Erro ao inicializar o cliente Gemini: {str(e)}")
             raise ValueError(f"Não foi possível inicializar o cliente Gemini: {str(e)}")
@@ -62,6 +62,8 @@ class JobAnalyzer:
 -fraquezas (use quebra de pagina entre os topicos)
 
 #CURRICULO
+JOÃO MELLO               joaohlmello@gmail.com | Linkedin: joaohlmello | (21) 96947-1930 | São Paulo - SP
+
 SUMÁRIO
 Gerente de projetos e processos sênior com 10 anos de experiência (6 liderando) na gestão de projetos e processos de tecnologia, corporativos e de CAPEX, utilizando metodologias lean, ágeis, preditivas e Inteligência Artificial. Histórico comprovado em: Gestão de portfólios complexos (R$100MM+); Liderança de equipes multifuncionais diretas (20+) e indiretas (300+); Gestão estratégica de clientes e stakeholders; Modelagem e implementação de processos; Desenvolvimento d ...[Truncated]
 
@@ -76,7 +78,7 @@ Gestão de Stakeholders e Crises: Liderança do turnaround do maior projeto da e
 
 Gestão de Projetos Estratégicos: Implementação de OKR como metodologia de planejamento estratégico da empresa, integrando 90 projetos a 15 objetivos estratégicos e 3 diretrizes. Condução de ritos com a alta gestão, assegurando visibilidade e alinhamento. Planejamento e  monitoramento com as equipes executoras.
 
-Análise de Dados e Modelagem de Processos: Desenvolvimento e implementação de sistema de gestão PPM para acompanhamento de milhões de produtos, através do mapeamento e integração de centenas de etapas do processo, incluindo o monitoramento de KPIs e dashboards em tempo real para avaliação de desempenho.
+Análise de Dados e Modelagem de Processos: Desenvolvimento e implementação de sistema de gestão para acompanhamento de milhões de produtos, através do mapeamento e integração de centenas de etapas do processo, incluindo o monitoramento de KPIs e dashboards em tempo real, e automações com IA
 
 
 Gestão da Qualidade: Aprovação de políticas e diretrizes corporativas, manutenção da certificação ISO através do desenvolvimento de sistema de gestão da conformidade, estabelecimento de padrões, coordenação de auditorias internas e externas, e implementação de melhoria contínua com foco no cliente e gestão de riscos.
