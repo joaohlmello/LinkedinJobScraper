@@ -284,7 +284,7 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                 "error": f"Erro na análise: {str(e)}"
             }
     
-    def analyze_jobs_batch(self, jobs_data, max_retries=3, delay_between_calls=2, progress_callback=None):
+    def analyze_jobs_batch(self, jobs_data, max_retries=5, delay_between_calls=2, progress_callback=None):
         """
         Analisa um lote de vagas de emprego.
         
@@ -321,18 +321,20 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             while not success and retry_count < max_retries:
                 try:
                     if retry_count > 0:
-                        # Espera exponencial em caso de retry
-                        wait_time = delay_between_calls * (2 ** (retry_count - 1))
-                        logger.info(f"Tentativa {retry_count+1}/{max_retries} - Aguardando {wait_time}s")
+                        # Aumentar tempo de espera entre tentativas e usar backoff exponencial
+                        # Base de 5 segundos com fator exponencial para cada tentativa
+                        wait_time = 5 * (2 ** (retry_count - 1))
+                        logger.info(f"Tentativa {retry_count+1}/{max_retries} - Aguardando {wait_time}s antes de tentar novamente")
                         
                         # Atualizar progresso se houver retry
                         if progress_callback:
                             progress_callback(
                                 i, 
                                 total_jobs, 
-                                f"Vaga {i+1}/{total_jobs}: Tentativa {retry_count+1}/{max_retries}..."
+                                f"Vaga {i+1}/{total_jobs}: Tentativa {retry_count+1}/{max_retries} em {wait_time}s..."
                             )
                             
+                        # Dormir pelo tempo calculado
                         time.sleep(wait_time)
                     
                     # Analisar a vaga

@@ -40,8 +40,21 @@ def index():
     if request.method == 'POST':
         # Get LinkedIn URLs from the form
         linkedin_urls_text = request.form.get('linkedin_urls', '')
-        linkedin_urls = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
+        linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
         
+        # Remover URLs duplicados mantendo a ordem original
+        linkedin_urls = []
+        seen_urls = set()
+        for url in linkedin_urls_raw:
+            if url not in seen_urls:
+                linkedin_urls.append(url)
+                seen_urls.add(url)
+        
+        # Verificar se há duplicatas e notificar o usuário
+        if len(linkedin_urls) < len(linkedin_urls_raw):
+            duplicates_removed = len(linkedin_urls_raw) - len(linkedin_urls)
+            flash(f'{duplicates_removed} URL(s) duplicado(s) foram removidos para otimizar o processamento.', 'info')
+            
         # Check if user wants to analyze jobs with Gemini AI
         analyze_jobs = 'analyze_jobs' in request.form
         
@@ -244,14 +257,28 @@ def process_async():
     
     # Obter URLs do formulário
     linkedin_urls_text = request.form.get('linkedin_urls', '')
-    linkedin_urls = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
+    linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
+    
+    # Remover URLs duplicados mantendo a ordem original
+    linkedin_urls = []
+    seen_urls = set()
+    for url in linkedin_urls_raw:
+        if url not in seen_urls:
+            linkedin_urls.append(url)
+            seen_urls.add(url)
+    
+    # Construir mensagem para duplicados removidos
+    message = 'Por favor, insira pelo menos uma URL de vaga do LinkedIn'
+    if len(linkedin_urls) < len(linkedin_urls_raw):
+        duplicates_removed = len(linkedin_urls_raw) - len(linkedin_urls)
+        logger.debug(f"Removidos {duplicates_removed} URLs duplicados do processamento")
     
     # Verificar se há URLs para processar
     if not linkedin_urls:
         logger.debug("Nenhuma URL fornecida")
         return jsonify({
             'success': False,
-            'message': 'Por favor, insira pelo menos uma URL de vaga do LinkedIn'
+            'message': message
         })
     
     logger.debug(f"URLs para processar: {linkedin_urls}")
