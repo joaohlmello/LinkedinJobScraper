@@ -69,18 +69,60 @@
                             </div>
                             {% endif %}
                             
+                            <div class="mb-3">
+                                <label for="batch_size" class="form-label">Tamanho do lote:</label>
+                                <select class="form-select" id="batch_size" name="batch_size">
+                                    <option value="5">5 URLs por lote</option>
+                                    <option value="10" selected>10 URLs por lote</option>
+                                    <option value="20">20 URLs por lote</option>
+                                </select>
+                                <div class="form-text text-light">
+                                    Processar em lotes menores é mais rápido e seguro para grandes quantidades de URLs.
+                                </div>
+                            </div>
+                            
                             <button type="submit" id="submit-button" class="btn btn-primary">Extract Information</button>
                         </form>
                         
                         <!-- Barra de Progresso -->
                         <div id="progress-container" class="mt-4 d-none">
                             <h5><i class="bi bi-arrow-repeat spin"></i> <span id="progress-status">Processando...</span></h5>
-                            <div class="progress" style="height: 25px;">
-                                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                                     role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" 
-                                     style="width: 0%">0%</div>
+                            
+                            <!-- Progresso do Lote Atual -->
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <small>Progresso do lote atual:</small>
+                                    <small><span id="current-batch">0</span>/<span id="total-batches">0</span></small>
+                                </div>
+                                <div class="progress" style="height: 20px;">
+                                    <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" 
+                                         style="width: 0%">0%</div>
+                                </div>
                             </div>
-                            <p id="progress-message" class="text-light mt-2">Iniciando...</p>
+                            
+                            <!-- Progresso Total -->
+                            <div>
+                                <div class="d-flex justify-content-between">
+                                    <small>Progresso total:</small>
+                                    <small><span id="processed-batches">0</span> lotes processados</small>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div id="total-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                                         role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" 
+                                         style="width: 0%">0%</div>
+                                </div>
+                            </div>
+                            
+                            <p id="progress-message" class="text-light mt-2">Iniciando processamento em lotes...</p>
+                            
+                            <!-- Lista de Lotes Processados -->
+                            <div id="batches-container" class="mt-3 d-none">
+                                <h6>Lotes Processados:</h6>
+                                <div id="batches-list" class="list-group">
+                                    <!-- Os lotes processados serão adicionados aqui dinamicamente -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -98,9 +140,6 @@
                             <div class="export-buttons">
                                 <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
                                     <i class="bi bi-file-earmark-text"></i> Export to CSV
-                                </a>
-                                <a href="{{ url_for('export_excel') }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
                                 </a>
                             </div>
                         </div>
@@ -121,9 +160,6 @@
                             <div class="export-buttons">
                                 <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
                                     <i class="bi bi-file-earmark-text"></i> Export to CSV
-                                </a>
-                                <a href="{{ url_for('export_excel') }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
                                 </a>
                             </div>
                         </div>
@@ -149,13 +185,14 @@
                             {% if gemini_available %}
                             <li>Opcionalmente, marque a caixa "Analisar compatibilidade" para avaliar as vagas com Gemini AI.</li>
                             {% endif %}
+                            <li>Selecione o tamanho do lote para processamento mais eficiente.</li>
                             <li>Click the "Extract Information" button.</li>
                             <li>The script will extract job title and company information from each URL.</li>
                             <li>Results will be displayed in a table with the original link, company name, company link, job title, and job description.</li>
                             {% if gemini_available %}
                             <li>Se selecionada a opção de análise, o Gemini AI avaliará a compatibilidade com seu currículo.</li>
                             {% endif %}
-                            <li>You can export the results to CSV or Excel format using the buttons above the results table.</li>
+                            <li>You can export the results to CSV format using the button above the results table.</li>
                         </ol>
                         <p>Example URL format:</p>
                         <pre class="bg-dark text-light p-2">https://www.linkedin.com/jobs/view/4197948497/?eBP=NON_CHARGEABLE_CHANNEL&refId=bkHAVjq057sZNx6xA%2BnKig%3D%3D&trackingId=hSdg4bhpEUyduU4ScMhsgg%3D%3D&trk=flagship3_search_srp_jobs</pre>
@@ -175,8 +212,14 @@
             const submitButton = document.getElementById('submit-button');
             const progressContainer = document.getElementById('progress-container');
             const progressBar = document.getElementById('progress-bar');
+            const totalProgressBar = document.getElementById('total-progress-bar');
             const progressMessage = document.getElementById('progress-message');
             const progressStatus = document.getElementById('progress-status');
+            const currentBatchSpan = document.getElementById('current-batch');
+            const totalBatchesSpan = document.getElementById('total-batches');
+            const processedBatchesSpan = document.getElementById('processed-batches');
+            const batchesContainer = document.getElementById('batches-container');
+            const batchesList = document.getElementById('batches-list');
             
             // Intervalo para o polling
             let progressInterval;
@@ -189,14 +232,58 @@
                 fetch('/check_progress')
                     .then(response => response.json())
                     .then(data => {
-                        // Atualizar a barra de progresso
+                        // Atualizar a barra de progresso do lote atual
                         let percent = data.percent || 0;
                         progressBar.style.width = `${percent}%`;
                         progressBar.textContent = `${percent}%`;
                         progressBar.setAttribute('aria-valuenow', percent);
                         
+                        // Atualizar a barra de progresso total
+                        let batchPercent = data.batch_percent || 0;
+                        totalProgressBar.style.width = `${batchPercent}%`;
+                        totalProgressBar.textContent = `${batchPercent}%`;
+                        totalProgressBar.setAttribute('aria-valuenow', batchPercent);
+                        
+                        // Atualizar informações dos lotes
+                        currentBatchSpan.textContent = data.current_batch || 0;
+                        totalBatchesSpan.textContent = data.total_batches || 0;
+                        processedBatchesSpan.textContent = data.processed_batches || 0;
+                        
                         // Atualizar a mensagem de progresso
                         progressMessage.textContent = data.message || 'Processando...';
+                        
+                        // Verificar se há lotes processados
+                        if (data.processed_batches > 0 && data.batches_info && data.batches_info.length > 0) {
+                            // Exibir o contêiner de lotes
+                            batchesContainer.classList.remove('d-none');
+                            
+                            // Limpar a lista de lotes
+                            batchesList.innerHTML = '';
+                            
+                            // Adicionar cada lote processado à lista
+                            data.batches_info.forEach(batch => {
+                                const batchItem = document.createElement('div');
+                                batchItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                                
+                                // Verificar se o lote tem erro
+                                let statusClass = batch.has_error ? 'text-danger' : 'text-success';
+                                let statusIcon = batch.has_error ? 'bi-x-circle' : 'bi-check-circle';
+                                
+                                batchItem.innerHTML = `
+                                    <div>
+                                        <span class="${statusClass}"><i class="bi ${statusIcon}"></i></span>
+                                        Lote ${batch.batch_index + 1} (${batch.urls_count} URLs)
+                                    </div>
+                                    <a href="/export/csv?batch_index=${batch.batch_index}" 
+                                       class="btn btn-sm btn-outline-success" 
+                                       ${batch.has_error ? 'disabled' : ''}>
+                                        <i class="bi bi-download"></i> CSV
+                                    </a>
+                                `;
+                                
+                                batchesList.appendChild(batchItem);
+                            });
+                        }
                         
                         // Verificar o status
                         if (data.status === 'completed') {
@@ -206,6 +293,10 @@
                                 progressBar.classList.remove('progress-bar-animated');
                                 progressBar.classList.remove('bg-primary');
                                 progressBar.classList.add('bg-success');
+                                
+                                totalProgressBar.classList.remove('progress-bar-animated');
+                                totalProgressBar.classList.remove('bg-info');
+                                totalProgressBar.classList.add('bg-success');
                                 
                                 // Mostrar os resultados
                                 if (data.results) {
@@ -222,9 +313,6 @@
                                                     <div class="export-buttons">
                                                         <a href="/export/csv" class="btn btn-success btn-sm">
                                                             <i class="bi bi-file-earmark-text"></i> Export to CSV
-                                                        </a>
-                                                        <a href="/export/excel" class="btn btn-primary btn-sm">
-                                                            <i class="bi bi-file-earmark-spreadsheet"></i> Export to Excel
                                                         </a>
                                                     </div>
                                                 </div>
@@ -261,6 +349,10 @@
                                 progressBar.classList.remove('bg-primary');
                                 progressBar.classList.add('bg-danger');
                                 
+                                totalProgressBar.classList.remove('progress-bar-animated');
+                                totalProgressBar.classList.remove('bg-info');
+                                totalProgressBar.classList.add('bg-danger');
+                                
                                 // Exibir mensagem de erro
                                 progressMessage.innerHTML = `<strong class="text-danger">Erro:</strong> ${data.message}`;
                                 
@@ -284,30 +376,39 @@
             scraperForm.addEventListener('submit', function(event) {
                 event.preventDefault();
                 
-                // Resetar o estado
-                lastStatus = '';
-                
-                // Desativar o botão de envio
+                // Desativar o botão submit
                 submitButton.disabled = true;
                 
-                // Esconder os resultados anteriores
-                const resultsContainer = document.getElementById('results-container');
-                resultsContainer.classList.remove('show');
-                
-                // Mostrar o container de progresso
+                // Exibir o contêiner de progresso
                 progressContainer.classList.remove('d-none');
-                progressStatus.textContent = 'Processando...';
+                batchesContainer.classList.add('d-none');
+                
+                // Resetar as barras de progresso
                 progressBar.style.width = '0%';
                 progressBar.textContent = '0%';
-                progressBar.classList.remove('bg-danger');
-                progressBar.classList.add('bg-primary');
-                progressBar.classList.add('progress-bar-animated');
-                progressMessage.textContent = 'Iniciando processamento...';
+                progressBar.setAttribute('aria-valuenow', 0);
+                progressBar.classList.remove('bg-success', 'bg-danger');
+                progressBar.classList.add('bg-primary', 'progress-bar-animated');
+                
+                totalProgressBar.style.width = '0%';
+                totalProgressBar.textContent = '0%';
+                totalProgressBar.setAttribute('aria-valuenow', 0);
+                totalProgressBar.classList.remove('bg-success', 'bg-danger');
+                totalProgressBar.classList.add('bg-info', 'progress-bar-animated');
+                
+                // Resetar informações dos lotes
+                currentBatchSpan.textContent = '0';
+                totalBatchesSpan.textContent = '0';
+                processedBatchesSpan.textContent = '0';
+                
+                // Inicializar a mensagem de status
+                progressStatus.textContent = 'Processando...';
+                progressMessage.textContent = 'Iniciando processamento em lotes...';
                 
                 // Obter os dados do formulário
                 const formData = new FormData(scraperForm);
                 
-                // Enviar a requisição para o processamento assíncrono
+                // Enviar a requisição
                 fetch('/process_async', {
                     method: 'POST',
                     body: formData
@@ -315,27 +416,23 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Iniciar o polling de progresso
+                        // Iniciar a verificação de progresso
                         progressInterval = setInterval(checkProgress, 1000);
                     } else {
-                        // Erro ao iniciar o processamento
-                        progressStatus.textContent = 'Erro ao iniciar o processamento';
-                        progressMessage.textContent = data.message || 'Ocorreu um erro ao iniciar o processamento.';
-                        progressBar.classList.remove('bg-primary');
-                        progressBar.classList.add('bg-danger');
+                        // Exibir mensagem de erro
+                        progressStatus.textContent = 'Erro ao iniciar processamento';
+                        progressMessage.textContent = data.message || 'Ocorreu um erro.';
                         
-                        // Reativar o formulário
+                        // Reativar o botão submit
                         submitButton.disabled = false;
                     }
                 })
                 .catch(error => {
                     console.error('Erro ao enviar formulário:', error);
-                    progressStatus.textContent = 'Erro de conexão';
-                    progressMessage.textContent = 'Ocorreu um erro de conexão ao tentar iniciar o processamento.';
-                    progressBar.classList.remove('bg-primary');
-                    progressBar.classList.add('bg-danger');
+                    progressStatus.textContent = 'Erro ao enviar formulário';
+                    progressMessage.textContent = 'Verifique se as URLs são válidas.';
                     
-                    // Reativar o formulário
+                    // Reativar o botão submit
                     submitButton.disabled = false;
                 });
             });

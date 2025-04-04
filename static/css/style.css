@@ -104,7 +104,7 @@ pre {
     border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
-#progress-bar {
+#progress-bar, #total-progress-bar {
     transition: width 0.5s ease;
     height: 100%;
     font-weight: bold;
@@ -113,6 +113,22 @@ pre {
 #progress-message {
     font-size: 0.9rem;
     margin-top: 0.5rem;
+}
+
+#batches-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#batches-list .list-group-item {
+    padding: 0.5rem 1rem;
+    background-color: rgba(33, 37, 41, 0.5);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+#batches-list .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
 }
 
 #results-container {
