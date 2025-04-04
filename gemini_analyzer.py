@@ -27,12 +27,12 @@ class JobAnalyzer:
         try:
             # Inicializar cliente Gemini
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-1.5-pro-latest")
+            self.model = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
             
             # Configurar o prompt base
             self.system_prompt = self._get_system_prompt()
             
-            logger.info(f"Analisador de vagas inicializado com o modelo gemini-1.5-pro-latest")
+            logger.info(f"Analisador de vagas inicializado com o modelo gemini-2.5-pro-exp-03-25")
         except Exception as e:
             logger.error(f"Erro ao inicializar o cliente Gemini: {str(e)}")
             raise ValueError(f"Não foi possível inicializar o cliente Gemini: {str(e)}")
@@ -63,7 +63,7 @@ class JobAnalyzer:
 
 #CURRICULO
 SUMÁRIO
-Gerente de projetos sênior com 10 anos de experiência na gestão de projetos de tecnologia, corporativos e de CAPEX, utilizando metodologias ágeis e preditivas. Histórico comprovado em: Gestão de portfólios complexos (R$100MM+); Liderança de equipes multifuncionais diretas (20+) e indiretas (300+); Gestão estratégica de clientes e stakeholders; Modelagem e implementação de processos lean; Desenvolvimento de sistemas de gestão e; Análise e monitoramento de dados e KPIs; Gerenciamento proativo de riscos, orçamento e custos; Implantação de PMO.
+Gerente de projetos e processos sênior com 10 anos de experiência (6 liderando) na gestão de projetos e processos de tecnologia, corporativos e de CAPEX, utilizando metodologias lean, ágeis, preditivas e Inteligência Artificial. Histórico comprovado em: Gestão de portfólios complexos (R$100MM+); Liderança de equipes multifuncionais diretas (20+) e indiretas (300+); Gestão estratégica de clientes e stakeholders; Modelagem e implementação de processos; Desenvolvimento d ...[Truncated]
 
 
 EXPERIÊNCIA
@@ -73,36 +73,42 @@ Ago 22 – Out 22: Consultor Estratégico
 Liderança executiva de projetos estratégicos e de equipe multifuncional de 20 pessoas, responsável por tecnologia, planejamento e qualidade, em uma consultoria de São Paulo com 500 funcionários e clientes como Vale e Brasken. Experiência global, no sentido de reportar trimestralmente ao CEO do fundo de private equity na Bélgica (TPF).
 
 Gestão de Stakeholders e Crises: Liderança do turnaround do maior projeto da empresa (R$100MM, 300 pessoas), com gestão da mudança, incluindo: comunicação proativa com o cliente, alinhando expectativas e realizando entregas menores, e o replanejamento de escopo, prazo, orçamento e estrutura organizacional.
- 
+
 Gestão de Projetos Estratégicos: Implementação de OKR como metodologia de planejamento estratégico da empresa, integrando 90 projetos a 15 objetivos estratégicos e 3 diretrizes. Condução de ritos com a alta gestão, assegurando visibilidade e alinhamento. Planejamento e  monitoramento com as equipes executoras.
 
 Análise de Dados e Modelagem de Processos: Desenvolvimento e implementação de sistema de gestão PPM para acompanhamento de milhões de produtos, através do mapeamento e integração de centenas de etapas do processo, incluindo o monitoramento de KPIs e dashboards em tempo real para avaliação de desempenho.
 
+
 Gestão da Qualidade: Aprovação de políticas e diretrizes corporativas, manutenção da certificação ISO através do desenvolvimento de sistema de gestão da conformidade, estabelecimento de padrões, coordenação de auditorias internas e externas, e implementação de melhoria contínua com foco no cliente e gestão de riscos.
 
+Gestão de Produtos Digitais: Implementação de uma cultura de produto, utilizando discovery, user journey map, PRDs (product requirement documents), storys com critério de aceite, e sprints de delivery e review. Liderança executiva do desenvolvimento, com foco na jornada do cliente e eficiência operacional
+Gerenciamento de Custos: Gestão do orçamento da diretoria (R$3MM) e negociação de contratos, com redução de até 40%, assegurando a viabilidade do nosso principal projeto interno.
+Gestão de Produtos Digitais: Implementação de uma cultura de produto, utilizando discovery, PRDs (product requirement documents), storys com critério de aceite, e sprints de delivery e review.
+Commercial Support: Supported commercial initiatives, through implementing a detailed CRM system, and helping improve the commercial processes along the way. Also supported in proposals and bids.
+ 
 JM GESTÃO & TECNOLOGIA (Cliente Oncoclínicas)
-Fev 21 – Out 22: Gerente de Projetos & Fundador
-Empreendendo em consultoria de gerenciamento de projetos e implantação de PMO, e tendo Oncoclínicas como cliente. Gerenciamento de R$18MM em 4 projetos de CAPEX, e desenvolvimento de sistemas de gestão de PMO.
+Fev 21 – Out 22: Consultor de Processos e Projetos & Fundador
+Empreendendo em consultoria de gerenciamento de projetos e processos de PMO, e tendo Oncoclínicas como cliente. Gerenciamento de R$18MM em 4 projetos de CAPEX, e desenvolvimento de sistemas de gestão de PMO.
 
 Gestão de Projetos Complexos: Coordenação de equipes multidisciplinares (internas, cliente e terceiros)) em projetos complexos, que envolvem engenharia, tecnologia, suprimentos, operações e regulatório, aplicando metodologias estruturadas, como: estrutura analítica do projeto (EAP) - work breakdown structure (WBS), caminho crítico - critical path method (CPM) e valor agregado -  earned value management (EVM). 
 
-Implementação de PMO: Padronização da EAP, cronogramas e curvas S para equalização do acompanhamento físico-financeiro, implementação de processos de gestão da mudança e aprovação de pleitos aditivos.
-
-Gerenciamento de Riscos: Implementação do processo, resultando em zero ocorrências não mapeadas. Mapeamento, análise, definição de respostas e monitoramento contínuo. Adoção como procedimento padrão.
+Implementação de Processos de PMO: Padronização da EAP, cronogramas e curvas S para equalização do acompanhamento físico-financeiro, implementação de processos de gestão da mudança e aprovação de pleitos aditivos. Implementação do gerenciamento de riscos, resultando em zero ocorrências não mapeadas. Mapeamento, análise, definição de respostas e monitoramento contínuo. Adoção como procedimento padrão.
 
 Transformação Digital: Desenvolvimento de sistema de ERP de contratos e custos, que se tornou diferencial contra players maiores, gerando economia global de R$700k e otimizando processos significativamente.
 
 Planos de Treinamento: Desenvolvimento e execução de planos de treinamento de sistemas e de transição para operação. Documentação de data book completo, assegurando histórico e capacitação da equipe.
+Gestão de Stakeholders: Estratégia de comunicação adaptada a cada interlocutor, do fornecedor ao sócio, apoiado por robusto processo de documentação de requisitos e gerenciamento de mudanças.
+Operação assistida: Desenvolvimento e execução de planos de treinamento e transição para operação. Documentação de data book completo, assegurando histórico e capacitação da equipe.
 
 EQSEED
 Out 20 – Jul 21: Head de Projetos e Operações & Sócio
-Fev 20 – Set 20: Especialista em Gestão de Projetos
+Fev 20 – Set 20: Especialista em Gestão de Projetos e Processos
 Respondendo ao CEO inglês, e responsável por projetos de transformação digital e operações em uma startup fintech com 20 funcionários. Marketplace de investimentos em  venture capital para o mercado financeiro.
 Liderança Multifuncional: Promoção de especialista para head em oito meses. Gestão do time de Operações após a saída do COO (4 pessoas), responsável pelas áreas funcionais de  finanças, contabilidade, TI e RH.
 
 Gestão de Projetos Ágeis: Implementação de metodologias ágeis (OKRs e Kanban) para toda a empresa, principalmente tecnologia, marketing e comercial, dando visibilidade de todas as atividades e iniciativas, e viabilizando uma priorização integrada dos roadmaps de projetos com a necessidade do negócio
 
-Transformação Digital: Automação do batimento financeiro, reduzindo o lead time em 80%. Sistematização da análise de investimentos, aumentando a produtividade em 6x. Monitoramento da interação dos usuários com a plataforma, viabilizando a gestão do funil de vendas e aumentando a conversão de leads em 15%.
+Transformação Digital de Processos: Automação do batimento financeiro, reduzindo o lead time em 80%. Sistematização da análise de investimentos, aumentando a produtividade em 6x. Monitoramento da interação dos usuários com a plataforma, viabilizando a gestão do funil de vendas e aumentando a conversão de leads em 15%. Automação dos processos de pós vendas, aumentando NPS para a zona de Excelência.
 
 Gestão Financeira: Gerenciamento do Runway (tempo até a falência por falta de caixa) durante o COVID-19, incluindo a renegociação de todos os contratos e fluxo de caixa descontado por cenários.
 
@@ -118,13 +124,16 @@ MBA em Gerenciamento de Projetos  – Fundação Getúlio Vargas (FGV) – Concl
 Graduação em Engenharia – Estácio – Concluído
 Certificação Project Management Professional (PMP) – Project Management Institute (PMI) – 2020
 Certificação Scrum Foundations Professional Certificate (SFPC) – Certiprof – 2020
+Certificação Lean Six Sigma Green Belt – Advanced Innovation Group Pro Excellence (AIGPE) – 2020
 
 CONHECIMENTOS
 Idiomas: Inglês fluente;
-Metodologias e Frameworks: PMBOK, Waterfall, Scrum, Kanban;
-Sistemas de Gestão: Ms Project, JIRA, Confluence, Azure Devops;
+Metodologias e Frameworks: PMBOK, Waterfall/Preditiva/Tradicional, Agile, Scrum, Kanban, Lean;
+Sistemas de Gestão: Ms Project, JIRA, Confluence, Azure Devops, Pipefy;
 ERP: Totvs, Oracle;
 Dados: Power BI, Google Data Studio, Metabase, SQL, Python;
+Desenvolvimento: Low code, Python, Replit, N8N, Glide, Power Apps, Powe Automate;
+Inteligência Artificial (AI): API OpenAI e API Gemini;
 Essenciais: Excel Avançado, PowerPoint."""
     
     def analyze_job(self, job_data):
@@ -192,10 +201,12 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             }
             
             # Configuração do sistema
-            safety_settings = [{
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_NONE"
-            }]
+            safety_settings = [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
             
             # Fazer a chamada à API do Gemini
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
