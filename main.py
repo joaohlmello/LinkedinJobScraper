@@ -4,7 +4,7 @@ import logging
 import threading
 import json
 from datetime import datetime
-from linkedin_scraper import get_results_html, export_to_csv, process_linkedin_urls
+from linkedin_scraper import get_results_html, export_to_csv
 from models import db, ProcessedBatch, IgnoredURL
 
 # Set up logging
@@ -627,7 +627,7 @@ def process_batches_background(batches, analyze_jobs=False):
             
             # Executar o processamento deste lote
             try:
-                results_html, df_export = process_linkedin_urls(
+                results_html, df_export = get_results_html(
                     batch_urls, 
                     analyze_jobs=analyze_jobs, 
                     progress_callback=batch_progress_callback
