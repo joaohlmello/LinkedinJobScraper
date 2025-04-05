@@ -484,85 +484,109 @@ def process_async():
     # Log da solicitação para depuração
     logger.debug(f"Solicitação de processamento assíncrono recebida: {request.form}")
     
-    # Obter URLs do formulário
-    linkedin_urls_text = request.form.get('linkedin_urls', '')
-    ignore_urls_text = request.form.get('ignore_urls', '')
-    
-    # Processar URLs a serem ignoradas e salvá-las no banco de dados
-    ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
-    if ignore_urls:
-        # Atualizar o conjunto de URLs a serem ignoradas
-        processing_progress['ignored_urls'].update(ignore_urls)
-        logger.debug(f"Adicionadas {len(ignore_urls)} URLs à lista de ignorados")
+    try:
+        # Obter URLs do formulário
+        linkedin_urls_text = request.form.get('linkedin_urls', '')
+        ignore_urls_text = request.form.get('ignore_urls', '')
+        batch_size_text = request.form.get('batch_size', '10')
         
-        # Salvar no banco de dados
+        # Converter o tamanho do lote para inteiro
         try:
-            with app.app_context():
-                for url in ignore_urls:
-                    # Verificar se já existe
-                    existing = IgnoredURL.query.filter_by(url=url).first()
-                    if not existing:
-                        new_url = IgnoredURL(url=url)
-                        db.session.add(new_url)
-                db.session.commit()
-                logger.debug(f"URLs ignoradas salvas no banco de dados")
-        except Exception as e:
-            logger.error(f"Erro ao salvar URLs ignoradas no banco de dados: {str(e)}")
-    
-    # Processar URLs a serem analisadas
-    linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
-    
-    # Remover duplicatas mantendo a ordem original
-    linkedin_urls = []
-    seen_urls = set()
-    for url in linkedin_urls_raw:
-        if url not in seen_urls and url not in processing_progress['ignored_urls']:
-            linkedin_urls.append(url)
-            seen_urls.add(url)
-    
-    if not linkedin_urls:
-        flash('Por favor, forneça pelo menos um URL válido do LinkedIn que não esteja na lista de ignorados.', 'warning')
-        return redirect('/')
-    
-    # Verificar se usuário quer analisar jobs com Gemini AI
-    analyze_jobs = 'analyze_jobs' in request.form
-    if analyze_jobs and not GEMINI_API_KEY:
-        flash('Análise com Gemini AI solicitada, mas a chave de API não está disponível.', 'warning')
-        analyze_jobs = False
-    
-    # Dividir URLs em lotes conforme o tamanho configurado
-    batch_size = processing_progress['batch_size']
-    batches = [linkedin_urls[i:i+batch_size] for i in range(0, len(linkedin_urls), batch_size)]
-    
-    logger.debug(f"URLs divididos em {len(batches)} lotes de até {batch_size} cada")
-    
-    # Verificar se já existe um processamento em andamento
-    if processing_progress['status'] == 'processing':
-        # Adicionar novo trabalho à fila
-        new_job = {
-            'batches': batches,
-            'analyze_jobs': analyze_jobs
-        }
-        processing_progress['job_queue'].append(new_job)
-        logger.debug(f"Processamento já em andamento. Trabalho adicionado à fila. Fila atual: {len(processing_progress['job_queue'])}")
-        flash('Processamento já em andamento. Sua solicitação foi adicionada à fila e será processada em seguida.', 'info')
-    else:
-        # Iniciar novo processamento
-        processing_progress['status'] = 'processing'
-        processing_progress['all_batches'] = batches
-        processing_progress['total_batches'] = len(batches)
-        processing_progress['analyze_jobs'] = analyze_jobs
+            batch_size = int(batch_size_text)
+            processing_progress['batch_size'] = batch_size
+        except ValueError:
+            logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 10")
+            batch_size = 10
+            processing_progress['batch_size'] = batch_size
         
-        # Iniciar o processamento em uma thread separada
-        thread = threading.Thread(target=process_batches_background, args=(batches, analyze_jobs))
-        thread.daemon = True
-        thread.start()
+        # Processar URLs a serem ignoradas e salvá-las no banco de dados
+        ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
+        if ignore_urls:
+            # Atualizar o conjunto de URLs a serem ignoradas
+            processing_progress['ignored_urls'].update(ignore_urls)
+            logger.debug(f"Adicionadas {len(ignore_urls)} URLs à lista de ignorados")
+            
+            # Salvar no banco de dados
+            try:
+                with app.app_context():
+                    for url in ignore_urls:
+                        # Verificar se já existe
+                        existing = IgnoredURL.query.filter_by(url=url).first()
+                        if not existing:
+                            new_url = IgnoredURL(url=url)
+                            db.session.add(new_url)
+                    db.session.commit()
+                    logger.debug(f"URLs ignoradas salvas no banco de dados")
+            except Exception as e:
+                logger.error(f"Erro ao salvar URLs ignoradas no banco de dados: {str(e)}")
         
-        logger.debug(f"Iniciado processamento assíncrono com {len(batches)} lotes")
-        flash(f'Iniciado processamento assíncrono de {len(linkedin_urls)} URLs em {len(batches)} lotes.', 'success')
+        # Processar URLs a serem analisadas
+        linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
+        
+        # Remover duplicatas mantendo a ordem original
+        linkedin_urls = []
+        seen_urls = set()
+        for url in linkedin_urls_raw:
+            if url not in seen_urls and url not in processing_progress['ignored_urls']:
+                linkedin_urls.append(url)
+                seen_urls.add(url)
+        
+        if not linkedin_urls:
+            return jsonify({
+                'success': False,
+                'message': 'Por favor, forneça pelo menos um URL válido do LinkedIn que não esteja na lista de ignorados.'
+            })
+        
+        # Verificar se usuário quer analisar jobs com Gemini AI
+        analyze_jobs = 'analyze_jobs' in request.form
+        if analyze_jobs and not GEMINI_API_KEY:
+            logger.warning('Análise com Gemini AI solicitada, mas a chave de API não está disponível.')
+            analyze_jobs = False
+        
+        # Dividir URLs em lotes conforme o tamanho configurado
+        batches = [linkedin_urls[i:i+batch_size] for i in range(0, len(linkedin_urls), batch_size)]
+        
+        logger.debug(f"URLs divididos em {len(batches)} lotes de até {batch_size} cada")
+        
+        # Verificar se já existe um processamento em andamento
+        if processing_progress['status'] == 'processing':
+            # Adicionar novo trabalho à fila
+            new_job = {
+                'batches': batches,
+                'analyze_jobs': analyze_jobs
+            }
+            processing_progress['job_queue'].append(new_job)
+            logger.debug(f"Processamento já em andamento. Trabalho adicionado à fila. Fila atual: {len(processing_progress['job_queue'])}")
+            return jsonify({
+                'success': True,
+                'message': 'Processamento já em andamento. Sua solicitação foi adicionada à fila e será processada em seguida.',
+                'queue_position': len(processing_progress['job_queue'])
+            })
+        else:
+            # Iniciar novo processamento
+            processing_progress['status'] = 'processing'
+            processing_progress['all_batches'] = batches
+            processing_progress['total_batches'] = len(batches)
+            processing_progress['analyze_jobs'] = analyze_jobs
+            
+            # Iniciar o processamento em uma thread separada
+            thread = threading.Thread(target=process_batches_background, args=(batches, analyze_jobs))
+            thread.daemon = True
+            thread.start()
+            
+            logger.debug(f"Iniciado processamento assíncrono com {len(batches)} lotes")
+            return jsonify({
+                'success': True,
+                'message': f'Iniciado processamento assíncrono de {len(linkedin_urls)} URLs em {len(batches)} lotes.',
+                'batch_count': len(batches)
+            })
     
-    # Redirecionar para a página inicial
-    return redirect('/')
+    except Exception as e:
+        logger.error(f"Erro ao processar solicitação assíncrona: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao processar solicitação: {str(e)}'
+        }), 500
 
 def update_progress(current, total, message):
     """
