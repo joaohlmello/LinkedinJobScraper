@@ -665,13 +665,14 @@ def calculate_announced_date(searched_at, announced_at):
         logger.error(f"Erro ao calcular data anunciada: {str(e)}")
         return 'Error calculating date'
 
-def process_linkedin_urls(urls, progress_callback=None):
+def process_linkedin_urls(urls, analyze_jobs=False, progress_callback=None):
     """
     Process a list of LinkedIn job URLs and return the results as a DataFrame.
     Uses IP rotation to avoid blocking and adds random delays between requests.
     
     Args:
         urls (list): List of LinkedIn job URLs
+        analyze_jobs (bool): Whether to analyze jobs with Gemini AI (unused in this function, but kept for API compatibility)
         progress_callback (function, optional): Callback function to update progress
             with signature (current, total, message)
         
@@ -757,7 +758,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         progress_callback(0, 100, "Iniciando extração de dados do LinkedIn...")
     
     # Obter um DataFrame com os dados brutos
-    df = process_linkedin_urls(urls, progress_callback=progress_callback)
+    df = process_linkedin_urls(urls, analyze_jobs=analyze_jobs, progress_callback=progress_callback)
     
     # Criar uma cópia para exportação antes de modificar com HTML
     df_export = df.copy()
@@ -1126,10 +1127,10 @@ def export_to_csv(urls, df_json=None, analyze_jobs=False):
         if analyze_jobs:
             # Processamento com análise - obter resultados HTML e converter para DataFrame
             # (Não ideal, mas mantém a compatibilidade)
-            df = process_linkedin_urls(urls)
+            df = process_linkedin_urls(urls, analyze_jobs=analyze_jobs)
         else:
             # Processamento simples
-            df = process_linkedin_urls(urls)
+            df = process_linkedin_urls(urls, analyze_jobs=analyze_jobs)
     
     # Remover colunas com formatação HTML
     if 'link' in df.columns and '<a href=' in str(df['link'].iloc[0]):
@@ -1186,10 +1187,10 @@ def export_to_excel(urls, df_json=None, analyze_jobs=False):
         if analyze_jobs:
             # Processamento com análise - obter resultados HTML e converter para DataFrame
             # (Não ideal, mas mantém a compatibilidade)
-            df = process_linkedin_urls(urls)
+            df = process_linkedin_urls(urls, analyze_jobs=analyze_jobs)
         else:
             # Processamento simples
-            df = process_linkedin_urls(urls)
+            df = process_linkedin_urls(urls, analyze_jobs=analyze_jobs)
     
     # Remover colunas com formatação HTML
     if 'link' in df.columns and '<a href=' in str(df['link'].iloc[0]):
