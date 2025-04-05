@@ -2,8 +2,34 @@ from flask import Flask, render_template, request, flash, send_file, session, re
 import os
 import logging
 import threading
+import json
 from datetime import datetime
-from linkedin_scraper import get_results_html, export_to_csv, export_to_excel, process_linkedin_urls
+from linkedin_scraper import get_results_html, export_to_csv, process_linkedin_urls
+from models import db, ProcessedBatch, IgnoredURL
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Create Flask app
+app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key")
+
+# Configure the database
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Initialize the database with this Flask app
+db.init_app(app)
+
+# Inicializar o banco de dados
+with app.app_context():
+    db.create_all()
+    logger.debug("Tabelas do banco de dados criadas/verificadas")
 
 # Variável global para armazenar o progresso do processamento
 processing_progress = {
@@ -24,13 +50,40 @@ processing_progress = {
     'ignored_urls': set()   # Conjunto de URLs a serem ignoradas no processamento
 }
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# Carregar URLs ignoradas do banco de dados
+def load_ignored_urls():
+    """Carrega a lista de URLs ignoradas do banco de dados"""
+    global processing_progress
+    try:
+        with app.app_context():
+            ignored_urls = IgnoredURL.query.all()
+            processing_progress['ignored_urls'] = set(url.url for url in ignored_urls)
+            logger.debug(f"Carregadas {len(processing_progress['ignored_urls'])} URLs ignoradas do banco de dados")
+    except Exception as e:
+        logger.error(f"Erro ao carregar URLs ignoradas: {str(e)}")
 
-# Create Flask app
-app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key")
+# Carregar lotes processados do banco de dados
+def load_processed_batches():
+    """Carrega os lotes processados do banco de dados"""
+    global processing_progress
+    try:
+        with app.app_context():
+            batches = ProcessedBatch.query.order_by(ProcessedBatch.batch_index).all()
+            processing_progress['processed_batches'] = [batch.to_dict() for batch in batches]
+            if processing_progress['processed_batches']:
+                processing_progress['current_batch'] = max(batch['batch_index'] for batch in processing_progress['processed_batches']) + 1
+            logger.debug(f"Carregados {len(processing_progress['processed_batches'])} lotes processados do banco de dados")
+    except Exception as e:
+        logger.error(f"Erro ao carregar lotes processados: {str(e)}")
+
+# Verificar se o banco de dados está inicializado antes de carregar os dados
+try:
+    # Carregar dados do banco de dados ao iniciar
+    with app.app_context():
+        load_ignored_urls()
+        load_processed_batches()
+except Exception as e:
+    logger.error(f"Erro ao carregar dados do banco de dados: {str(e)}")
 
 # Check if Gemini API key is available
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -108,10 +161,27 @@ def index():
     # Verificar se o Gemini API está disponível para o template
     gemini_available = bool(GEMINI_API_KEY)
     
+    # Obter lista de lotes processados para exibição
+    batches = []
+    for i, batch in enumerate(processing_progress['processed_batches']):
+        batch_info = {
+            'index': batch.get('batch_index', i),
+            'count': len(batch.get('urls', [])),
+            'has_error': batch.get('has_error', False),
+            'created_at': batch.get('created_at', '')
+        }
+        batches.append(batch_info)
+    
+    # Obter lista de URLs ignoradas
+    ignored_urls = list(processing_progress['ignored_urls'])
+    
     return render_template('index.html', 
                           results_html=results_html, 
                           has_results=has_results,
-                          gemini_available=gemini_available)
+                          gemini_available=gemini_available,
+                          batches=batches,
+                          ignored_urls=ignored_urls,
+                          processing_status=processing_progress['status'])
 
 @app.route('/export/csv', methods=['GET'])
 def export_csv():
@@ -349,8 +419,48 @@ def export_multiple_batches_csv(batch_indices):
         flash(f'Falha ao exportar os lotes selecionados: {str(e)}', 'danger')
         return redirect('/')
 
-# Rota de exportação para Excel removida conforme solicitado pelo usuário
-# A exportação em CSV é suficiente para as necessidades atuais
+@app.route('/select_batches', methods=['POST'])
+def select_batches():
+    """
+    Endpoint para selecionar lotes para exportação.
+    Retorna JSON em vez de redirecionar, para ser usado com AJAX.
+    """
+    batch_indices = request.form.getlist('batch_indices[]')
+    
+    if not batch_indices:
+        return jsonify({
+            'success': False,
+            'message': 'Por favor, selecione pelo menos um lote para exportar.'
+        }), 400
+    
+    # Converter para inteiros
+    try:
+        batch_indices = [int(idx) for idx in batch_indices]
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'Índices de lote inválidos.'
+        }), 400
+    
+    # Validar se todos os lotes existem
+    invalid_indices = []
+    for idx in batch_indices:
+        if idx < 0 or idx >= len(processing_progress['processed_batches']):
+            invalid_indices.append(idx)
+    
+    if invalid_indices:
+        return jsonify({
+            'success': False,
+            'message': f'Os seguintes lotes não foram encontrados: {", ".join(map(str, invalid_indices))}'
+        }), 400
+    
+    # Tudo bem, retornar sucesso
+    indices_string = ",".join(map(str, batch_indices))
+    return jsonify({
+        'success': True,
+        'batch_indices': indices_string,
+        'message': f'Selecionados {len(batch_indices)} lotes. Clique em Exportar para baixar.'
+    })
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -378,248 +488,81 @@ def process_async():
     linkedin_urls_text = request.form.get('linkedin_urls', '')
     ignore_urls_text = request.form.get('ignore_urls', '')
     
-    # Processar URLs a serem ignoradas
+    # Processar URLs a serem ignoradas e salvá-las no banco de dados
     ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
     if ignore_urls:
         # Atualizar o conjunto de URLs a serem ignoradas
         processing_progress['ignored_urls'].update(ignore_urls)
         logger.debug(f"Adicionadas {len(ignore_urls)} URLs à lista de ignorados")
+        
+        # Salvar no banco de dados
+        try:
+            with app.app_context():
+                for url in ignore_urls:
+                    # Verificar se já existe
+                    existing = IgnoredURL.query.filter_by(url=url).first()
+                    if not existing:
+                        new_url = IgnoredURL(url=url)
+                        db.session.add(new_url)
+                db.session.commit()
+                logger.debug(f"URLs ignoradas salvas no banco de dados")
+        except Exception as e:
+            logger.error(f"Erro ao salvar URLs ignoradas no banco de dados: {str(e)}")
     
     # Processar URLs a serem analisadas
     linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
     
-    # Remover URLs duplicados e ignoradas mantendo a ordem original
+    # Remover duplicatas mantendo a ordem original
     linkedin_urls = []
     seen_urls = set()
-    ignored_count = 0
-    duplicates_count = 0
-    
     for url in linkedin_urls_raw:
-        # Verificar se a URL deve ser ignorada
-        if url in processing_progress['ignored_urls']:
-            ignored_count += 1
-            continue
-            
-        # Verificar se a URL já foi processada (duplicata)
-        if url not in seen_urls:
+        if url not in seen_urls and url not in processing_progress['ignored_urls']:
             linkedin_urls.append(url)
             seen_urls.add(url)
-        else:
-            duplicates_count += 1
     
-    # Preparar mensagem de notificação
-    message = 'Por favor, insira pelo menos uma URL de vaga do LinkedIn'
-    if duplicates_count > 0 or ignored_count > 0:
-        message_parts = []
-        if duplicates_count > 0:
-            message_parts.append(f'Removidos {duplicates_count} URLs duplicados')
-        if ignored_count > 0:
-            message_parts.append(f'Ignorados {ignored_count} URLs da lista de exclusão')
-        
-        message = ' e '.join(message_parts) + ' para otimizar o processamento'
-        logger.debug(message)
-    
-    # Verificar se há URLs para processar
     if not linkedin_urls:
-        logger.debug("Nenhuma URL válida fornecida")
-        return jsonify({
-            'success': False,
-            'message': message
-        })
+        flash('Por favor, forneça pelo menos um URL válido do LinkedIn que não esteja na lista de ignorados.', 'warning')
+        return redirect('/')
     
-    # Verificar se o usuário deseja analisar vagas com Gemini AI
+    # Verificar se usuário quer analisar jobs com Gemini AI
     analyze_jobs = 'analyze_jobs' in request.form
-    logger.debug(f"Analisar vagas com Gemini AI: {analyze_jobs}")
-    
-    # Verificar se a API do Gemini está disponível
     if analyze_jobs and not GEMINI_API_KEY:
-        logger.warning("Análise com Gemini solicitada, mas API key não disponível")
+        flash('Análise com Gemini AI solicitada, mas a chave de API não está disponível.', 'warning')
         analyze_jobs = False
     
-    # Obter tamanho do lote do formulário ou usar padrão
-    try:
-        batch_size = int(request.form.get('batch_size', 10))
-        if batch_size < 1 or batch_size > 50:
-            batch_size = 10  # Valor padrão seguro
-    except ValueError:
-        batch_size = 10
+    # Dividir URLs em lotes conforme o tamanho configurado
+    batch_size = processing_progress['batch_size']
+    batches = [linkedin_urls[i:i+batch_size] for i in range(0, len(linkedin_urls), batch_size)]
     
-    # Dividir URLs em lotes do tamanho especificado
-    batches = []
-    total_urls = len(linkedin_urls)
+    logger.debug(f"URLs divididos em {len(batches)} lotes de até {batch_size} cada")
     
-    # Criar lotes de URLs
-    for i in range(0, total_urls, batch_size):
-        batch = linkedin_urls[i:i+batch_size]
-        batches.append(batch)
-    
-    # Verificar se já está em processamento
+    # Verificar se já existe um processamento em andamento
     if processing_progress['status'] == 'processing':
-        logger.debug("Processamento já em andamento - enfileirando trabalho")
-        
-        # Criar objeto de trabalho e adicionar à fila
-        job = {
+        # Adicionar novo trabalho à fila
+        new_job = {
             'batches': batches,
-            'analyze_jobs': analyze_jobs,
-            'batch_size': batch_size,
-            'total_urls': total_urls,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'analyze_jobs': analyze_jobs
         }
+        processing_progress['job_queue'].append(new_job)
+        logger.debug(f"Processamento já em andamento. Trabalho adicionado à fila. Fila atual: {len(processing_progress['job_queue'])}")
+        flash('Processamento já em andamento. Sua solicitação foi adicionada à fila e será processada em seguida.', 'info')
+    else:
+        # Iniciar novo processamento
+        processing_progress['status'] = 'processing'
+        processing_progress['all_batches'] = batches
+        processing_progress['total_batches'] = len(batches)
+        processing_progress['analyze_jobs'] = analyze_jobs
         
-        processing_progress['job_queue'].append(job)
-        queue_position = len(processing_progress['job_queue'])
+        # Iniciar o processamento em uma thread separada
+        thread = threading.Thread(target=process_batches_background, args=(batches, analyze_jobs))
+        thread.daemon = True
+        thread.start()
         
-        return jsonify({
-            'success': True,
-            'queued': True,
-            'message': f'Trabalho enfileirado na posição {queue_position}. Será processado automaticamente após a conclusão do trabalho atual.',
-            'queue_position': queue_position
-        })
+        logger.debug(f"Iniciado processamento assíncrono com {len(batches)} lotes")
+        flash(f'Iniciado processamento assíncrono de {len(linkedin_urls)} URLs em {len(batches)} lotes.', 'success')
     
-    # Inicializar o progresso global para o novo processamento
-    processing_progress['status'] = 'processing'
-    processing_progress['total'] = len(batches[0]) if batches else 0  # Total do primeiro lote
-    processing_progress['current'] = 0
-    processing_progress['message'] = 'Preparando lotes para processamento...'
-    processing_progress['results'] = None
-    processing_progress['analyze_jobs'] = analyze_jobs
-    processing_progress['df_json'] = None
-    processing_progress['all_batches'] = batches
-    processing_progress['total_batches'] = len(batches)
-    processing_progress['current_batch'] = 0
-    processing_progress['batch_size'] = batch_size
-    processing_progress['processed_batches'] = []
-    
-    # Log de informações sobre os lotes
-    logger.debug(f"Total de URLs: {total_urls}")
-    logger.debug(f"Tamanho do lote: {batch_size}")
-    logger.debug(f"Número total de lotes: {len(batches)}")
-    
-    # Armazenar URLs completos na sessão para compatibilidade
-    session['linkedin_urls'] = linkedin_urls
-    
-    # Iniciar processamento em segundo plano
-    thread = threading.Thread(
-        target=process_batches_background, 
-        args=(batches, analyze_jobs)
-    )
-    thread.daemon = True
-    thread.start()
-    
-    logger.debug("Thread de processamento em lotes iniciada")
-    
-    return jsonify({
-        'success': True,
-        'queued': False,
-        'message': f'Processamento iniciado com {len(batches)} lotes de {batch_size} URLs'
-    })
-
-def process_urls_background(urls, analyze_jobs=False):
-    """
-    Função para processar URLs em segundo plano e atualizar o progresso
-    """
-    global processing_progress
-    
-    try:
-        logger.debug(f"Iniciando processamento de {len(urls)} URLs em segundo plano. Análise de vagas: {analyze_jobs}")
-        logger.debug(f"URLs a serem processadas: {urls}")
-        
-        # Garantir que temos um valor inicial para os resultados
-        processing_progress['results'] = None
-        
-        # Processar URLs e obter resultados
-        results_html = None
-        try:
-            # Extrair dados e armazenar o DataFrame para exportação
-            from linkedin_scraper import process_linkedin_urls, get_results_html
-            import pandas as pd
-            
-            # Processar e obter resultados HTML formatados e DataFrame para exportação
-            results_html, df_export = get_results_html(
-                urls, 
-                analyze_jobs=analyze_jobs,
-                progress_callback=update_progress
-            )
-            logger.debug(f"Chamada para get_results_html concluída. Resultado vazio? {results_html is None}")
-            
-            # A sessão só pode ser modificada dentro de um contexto de requisição
-            # Vamos armazenar apenas no objeto de progresso global
-            processing_progress['analyze_jobs'] = analyze_jobs
-            
-            # Armazenar o DataFrame pré-processado na sessão para exportação
-            try:
-                logger.debug("Preparando DataFrame para armazenamento na sessão")
-                
-                # O DataFrame de exportação já contém todos os dados e é retornado por get_results_html
-                # Convertemos diretamente para JSON, sem precisar reprocessar nada
-                if df_export is not None:
-                    df_json = df_export.to_json(orient='records')
-                    
-                    # Armazenar no objeto de progresso global em vez de na sessão
-                    processing_progress['df_json'] = df_json
-                    logger.debug(f"DataFrame convertido para JSON e armazenado no objeto de progresso. Tamanho: {len(df_json)}")
-                else:
-                    logger.error("DataFrame de exportação não retornado pela função get_results_html")
-            except Exception as df_e:
-                logger.error(f"Erro ao processar DataFrame para sessão: {str(df_e)}")
-                # Não impede o fluxo principal se falhar
-        
-        except Exception as inner_e:
-            logger.error(f"Exceção capturada ao chamar get_results_html: {str(inner_e)}")
-            import traceback
-            logger.error(traceback.format_exc())
-            # Criar uma mensagem de erro formatada como HTML para exibir na interface
-            results_html = f"""
-            <div class="alert alert-danger">
-                <h4 class="alert-heading">Erro ao processar URLs</h4>
-                <p>Ocorreu um erro durante a extração de dados do LinkedIn.</p>
-                <hr>
-                <p class="mb-0">Detalhes do erro: {str(inner_e)}</p>
-            </div>
-            """
-        
-        # Verificar se os resultados foram obtidos
-        if results_html:
-            logger.debug(f"Resultados HTML obtidos. Tamanho: {len(results_html)}")
-            # Atualizar progresso com resultados
-            processing_progress['results'] = results_html
-            processing_progress['status'] = 'completed'
-            processing_progress['message'] = 'Processamento concluído com sucesso!'
-            
-            # Log adicional para confirmação
-            logger.debug("Status atualizado para 'completed' e resultados armazenados")
-        else:
-            # Se não houver resultados, criar uma mensagem padrão
-            logger.error("Não foi possível obter resultados HTML (resultado vazio)")
-            error_html = """
-            <div class="alert alert-warning">
-                <h4 class="alert-heading">Sem resultados</h4>
-                <p>Não foram encontrados resultados para as URLs fornecidas. Verifique se as URLs são válidas vagas do LinkedIn.</p>
-            </div>
-            """
-            processing_progress['results'] = error_html
-            processing_progress['status'] = 'completed'  # Marcamos como completo mesmo assim
-            processing_progress['message'] = 'Processamento concluído sem resultados'
-            
-    except Exception as e:
-        logger.error(f"Erro no processamento assíncrono: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        
-        # Criar uma mensagem de erro formatada
-        error_html = f"""
-        <div class="alert alert-danger">
-            <h4 class="alert-heading">Erro no processamento</h4>
-            <p>Ocorreu um erro durante o processamento das URLs.</p>
-            <hr>
-            <p class="mb-0">Detalhes do erro: {str(e)}</p>
-        </div>
-        """
-        
-        # Atualizar o progresso com a mensagem de erro
-        processing_progress['results'] = error_html
-        processing_progress['status'] = 'completed'  # Marcamos como completo para exibir o erro
-        processing_progress['message'] = f'Ocorreu um erro: {str(e)}'
+    # Redirecionar para a página inicial
+    return redirect('/')
 
 def update_progress(current, total, message):
     """
@@ -629,6 +572,7 @@ def update_progress(current, total, message):
     processing_progress['current'] = current
     processing_progress['total'] = total
     processing_progress['message'] = message
+    logger.debug(f"Progresso atualizado: {current}/{total} - {message}")
 
 def process_batches_background(batches, analyze_jobs=False):
     """
@@ -640,203 +584,141 @@ def process_batches_background(batches, analyze_jobs=False):
     """
     global processing_progress
     
+    processing_progress['status'] = 'processing'
+    processing_progress['current_batch'] = 0
+    processing_progress['total_batches'] = len(batches)
+    processing_progress['analyze_jobs'] = analyze_jobs
+    
     try:
-        total_batches = len(batches)
-        logger.debug(f"Iniciando processamento em lotes: {total_batches} lotes")
-        
-        # Lista para armazenar resultados de todos os lotes
-        all_results_html = []
-        all_df_jsons = []
-        
         # Processar cada lote sequencialmente
-        for batch_index, batch in enumerate(batches):
-            # Atualizar informações do lote atual
-            processing_progress['current_batch'] = batch_index + 1
-            processing_progress['urls'] = batch
-            processing_progress['total'] = len(batch)
-            processing_progress['current'] = 0
-            processing_progress['message'] = f'Processando lote {batch_index+1} de {total_batches}...'
-            processing_progress['results'] = None
-            processing_progress['df_json'] = None
+        for i, batch_urls in enumerate(batches):
+            batch_index = i
             
-            logger.debug(f"Iniciando processamento do lote {batch_index+1}/{total_batches} com {len(batch)} URLs")
+            # Verificar se este lote já foi processado e salvo no banco de dados
+            with app.app_context():
+                existing_batch = ProcessedBatch.query.filter_by(batch_index=batch_index).first()
+                if existing_batch and existing_batch.df_json:
+                    # Adicionar à lista de lotes processados
+                    batch_data = existing_batch.to_dict()
+                    
+                    # Atualizar lista de lotes processados se necessário
+                    found = False
+                    for j, existing in enumerate(processing_progress['processed_batches']):
+                        if existing.get('batch_index') == batch_index:
+                            processing_progress['processed_batches'][j] = batch_data
+                            found = True
+                            break
+                    
+                    if not found:
+                        processing_progress['processed_batches'].append(batch_data)
+                    
+                    logger.debug(f"Lote {batch_index} já existe no banco de dados, pulando processamento")
+                    continue
             
-            # Processar URLs do lote atual
+            # Atualizar informações de progresso para este lote
+            processing_progress['current_batch'] = batch_index
+            processing_progress['message'] = f'Processando lote {batch_index+1} de {len(batches)}'
+            
+            # Definir callback para atualizar o progresso dentro deste lote
+            def batch_progress_callback(current, total, message):
+                update_progress(current, total, f"Lote {batch_index+1}/{len(batches)}: {message}")
+            
+            logger.debug(f"Iniciando processamento do lote {batch_index} com {len(batch_urls)} URLs")
+            
+            # Executar o processamento deste lote
             try:
-                from linkedin_scraper import get_results_html
-                import pandas as pd
-                
-                # Função de callback para atualizar progresso do lote atual
-                def batch_progress_callback(current, total, message):
-                    update_progress(current, total, f"Lote {batch_index+1}/{total_batches}: {message}")
-                
-                # Processar o lote atual
-                results_html, df_export = get_results_html(
-                    batch,
-                    analyze_jobs=analyze_jobs,
+                results_html, df_export = process_linkedin_urls(
+                    batch_urls, 
+                    analyze_jobs=analyze_jobs, 
                     progress_callback=batch_progress_callback
                 )
                 
-                # Armazenar resultados temporários
-                if results_html and df_export is not None:
+                # Salvar resultados
+                batch_success = True
+                batch_error = None
+                df_json = None
+                
+                if df_export is not None:
                     # Converter DataFrame para JSON
                     df_json = df_export.to_json(orient='records')
+                    logger.debug(f"DataFrame do lote {batch_index} gerado com {len(df_export)} registros")
+            except Exception as e:
+                logger.error(f"Erro ao processar lote {batch_index}: {str(e)}")
+                results_html = f"<div class='alert alert-danger'>Erro ao processar lote {batch_index}: {str(e)}</div>"
+                batch_success = False
+                batch_error = str(e)
+                df_json = None
+            
+            # Adicionar resultados deste lote à lista de lotes processados
+            batch_data = {
+                'batch_index': batch_index,
+                'urls': batch_urls,
+                'results_html': results_html,
+                'df_json': df_json,
+                'has_error': not batch_success,
+                'error': batch_error
+            }
+            
+            # Atualizar lista de lotes processados
+            found = False
+            for j, existing in enumerate(processing_progress['processed_batches']):
+                if existing.get('batch_index') == batch_index:
+                    processing_progress['processed_batches'][j] = batch_data
+                    found = True
+                    break
+            
+            if not found:
+                processing_progress['processed_batches'].append(batch_data)
+            
+            # Salvar no banco de dados
+            try:
+                with app.app_context():
+                    # Verificar novamente se já existe (para evitar concorrência)
+                    existing_batch = ProcessedBatch.query.filter_by(batch_index=batch_index).first()
+                    if existing_batch:
+                        # Atualizar
+                        existing_batch.urls = json.dumps(batch_urls)
+                        existing_batch.results_html = results_html
+                        existing_batch.df_json = df_json
+                        existing_batch.has_error = not batch_success
+                    else:
+                        # Criar novo
+                        new_batch = ProcessedBatch(
+                            batch_index=batch_index,
+                            urls=json.dumps(batch_urls),
+                            results_html=results_html,
+                            df_json=df_json,
+                            has_error=not batch_success
+                        )
+                        db.session.add(new_batch)
                     
-                    # Armazenar resultados do lote atual
-                    processing_progress['results'] = results_html
-                    processing_progress['df_json'] = df_json
-                    
-                    # Adicionar resultados à lista de todos os lotes processados
-                    batch_result = {
-                        'batch_index': batch_index,
-                        'urls': batch,
-                        'results_html': results_html,
-                        'df_json': df_json
-                    }
-                    processing_progress['processed_batches'].append(batch_result)
-                    
-                    # Adicionar aos resultados acumulados
-                    all_results_html.append(results_html)
-                    all_df_jsons.append(df_json)
-                    
-                    logger.debug(f"Lote {batch_index+1}/{total_batches} processado com sucesso")
-                else:
-                    error_html = f"""
-                    <div class="alert alert-warning">
-                        <h4 class="alert-heading">Sem resultados no lote {batch_index+1}</h4>
-                        <p>Não foram encontrados resultados para as URLs deste lote.</p>
-                    </div>
-                    """
-                    processing_progress['results'] = error_html
-                    
-                    # Adicionar erro à lista de lotes processados
-                    batch_result = {
-                        'batch_index': batch_index,
-                        'urls': batch,
-                        'results_html': error_html,
-                        'df_json': None,
-                        'error': True
-                    }
-                    processing_progress['processed_batches'].append(batch_result)
-                    
-                    # Adicionar aos resultados acumulados
-                    all_results_html.append(error_html)
-                    
-                    logger.warning(f"Lote {batch_index+1}/{total_batches} não retornou resultados")
-                
-            except Exception as batch_error:
-                logger.error(f"Erro ao processar lote {batch_index+1}/{total_batches}: {str(batch_error)}")
-                
-                # Criar mensagem de erro formatada
-                error_html = f"""
-                <div class="alert alert-danger">
-                    <h4 class="alert-heading">Erro no lote {batch_index+1}</h4>
-                    <p>Ocorreu um erro durante o processamento deste lote.</p>
-                    <hr>
-                    <p class="mb-0">Detalhes do erro: {str(batch_error)}</p>
-                </div>
-                """
-                
-                # Armazenar erro nos resultados do lote
-                processing_progress['results'] = error_html
-                
-                # Adicionar erro à lista de lotes processados
-                batch_result = {
-                    'batch_index': batch_index,
-                    'urls': batch,
-                    'results_html': error_html,
-                    'df_json': None,
-                    'error': True
-                }
-                processing_progress['processed_batches'].append(batch_result)
-                
-                # Adicionar aos resultados acumulados
-                all_results_html.append(error_html)
+                    db.session.commit()
+                    logger.debug(f"Lote {batch_index} salvo no banco de dados com sucesso")
+            except Exception as e:
+                logger.error(f"Erro ao salvar lote {batch_index} no banco de dados: {str(e)}")
         
-        # Finalizar o processamento
-        if all_results_html:
-            # Combinar resultados de todos os lotes em um único HTML
-            combined_html = "".join(all_results_html)
-            processing_progress['results'] = combined_html
-            
-            # Indicar que todos os lotes foram processados
-            processing_progress['status'] = 'completed'
-            processing_progress['message'] = f'Todos os {total_batches} lotes processados com sucesso!'
-            logger.info(f"Processamento de todos os {total_batches} lotes concluído")
-        else:
-            # Se não houver resultados, marcar como erro
-            error_html = """
-            <div class="alert alert-danger">
-                <h4 class="alert-heading">Sem resultados</h4>
-                <p>Nenhum dos lotes retornou resultados. Verifique se as URLs são válidas.</p>
-            </div>
-            """
-            processing_progress['results'] = error_html
-            processing_progress['status'] = 'completed'
-            processing_progress['message'] = 'Processamento concluído sem resultados'
-            logger.error("Nenhum dos lotes retornou resultados")
-        
-        # Verificar se há trabalhos na fila para processar em seguida
-        if processing_progress['job_queue']:
-            logger.debug(f"Existem {len(processing_progress['job_queue'])} trabalhos na fila. Iniciando o próximo...")
-            
-            # Obter o próximo trabalho da fila
-            next_job = processing_progress['job_queue'].pop(0)
-            
-            # Log de informações sobre o próximo trabalho
-            logger.debug(f"Próximo trabalho: {len(next_job['batches'])} lotes, {next_job['total_urls']} URLs")
-            logger.debug(f"Análise com Gemini: {next_job['analyze_jobs']}")
-            
-            # Iniciar uma nova thread para processar o próximo trabalho
-            thread = threading.Thread(
-                target=process_batches_background, 
-                args=(next_job['batches'], next_job['analyze_jobs'])
-            )
-            thread.daemon = True
-            thread.start()
-            
-            logger.debug("Thread para próximo trabalho da fila iniciada")
-            
-            # Atualizar status para 'processando' novamente
-            processing_progress['status'] = 'processing'
-            processing_progress['message'] = 'Iniciando próximo trabalho da fila...'
-    
-    except Exception as e:
-        logger.error(f"Erro no processamento em lotes: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        
-        # Criar mensagem de erro formatada
-        error_html = f"""
-        <div class="alert alert-danger">
-            <h4 class="alert-heading">Erro no processamento em lotes</h4>
-            <p>Ocorreu um erro durante o processamento dos lotes.</p>
-            <hr>
-            <p class="mb-0">Detalhes do erro: {str(e)}</p>
-        </div>
-        """
-        
-        # Atualizar o progresso com a mensagem de erro
-        processing_progress['results'] = error_html
+        # Finalizar processamento
         processing_progress['status'] = 'completed'
-        processing_progress['message'] = f'Ocorreu um erro: {str(e)}'
+        processing_progress['message'] = 'Processamento de todos os lotes concluído!'
+        logger.debug("Processamento em lotes concluído com sucesso")
         
-        # Mesmo com erro, verificar se há trabalhos na fila
+        # Verificar se há mais trabalhos na fila
         if processing_progress['job_queue']:
-            logger.debug(f"Apesar do erro, existem {len(processing_progress['job_queue'])} trabalhos na fila. Iniciando o próximo...")
-            
-            # Obter o próximo trabalho da fila
+            logger.debug(f"Há {len(processing_progress['job_queue'])} trabalhos na fila. Processando o próximo...")
             next_job = processing_progress['job_queue'].pop(0)
             
-            # Iniciar uma nova thread para processar o próximo trabalho
+            # Iniciar processamento do próximo trabalho
             thread = threading.Thread(
                 target=process_batches_background, 
                 args=(next_job['batches'], next_job['analyze_jobs'])
             )
             thread.daemon = True
             thread.start()
-            
-            logger.debug("Thread para próximo trabalho da fila iniciada após erro")
+        
+    except Exception as e:
+        logger.error(f"Erro durante o processamento em lotes: {str(e)}")
+        processing_progress['status'] = 'error'
+        processing_progress['message'] = f'Erro: {str(e)}'
 
 @app.route('/check_progress', methods=['GET'])
 def check_progress():
@@ -845,59 +727,58 @@ def check_progress():
     """
     global processing_progress
     
-    logger.debug(f"Verificação de progresso. Status atual: {processing_progress['status']}")
-    
-    # Para depuração, vamos verificar se os resultados existem quando estiver completo
-    if processing_progress['status'] == 'completed':
-        has_results = processing_progress['results'] is not None
-        results_length = len(processing_progress['results']) if has_results else 0
-        logger.debug(f"Processamento completo. Resultados disponíveis: {has_results}, Tamanho: {results_length}")
-    
-    # Calcular a porcentagem de conclusão (evitando divisão por zero)
+    # Calcular percentuais para as barras de progresso
+    current = processing_progress['current']
+    total = processing_progress['total']
     percent = 0
-    if processing_progress['total'] > 0:
-        percent = int((processing_progress['current'] / processing_progress['total']) * 100)
+    if total > 0:
+        percent = int((current / total) * 100)
     
-    # Calcular progresso total considerando todos os lotes
+    current_batch = processing_progress['current_batch']
+    total_batches = processing_progress['total_batches'] 
     batch_percent = 0
-    if processing_progress['total_batches'] > 0:
-        # Progresso do lote atual + progresso dos lotes anteriores
-        completed_batches = processing_progress['current_batch'] - 1
-        if completed_batches > 0:
-            batch_percent = (completed_batches * 100) / processing_progress['total_batches']
-        
-        # Adicionar a porcentagem do lote atual proporcional ao total
-        if processing_progress['total_batches'] > 0:
-            current_batch_weight = 1 / processing_progress['total_batches']
-            batch_percent += (percent / 100) * current_batch_weight * 100
+    if total_batches > 0:
+        batch_percent = int((current_batch / total_batches) * 100)
     
-    # Preparar a resposta com informações de lotes
+    # Preparar resposta com informações relevantes sobre o progresso
     response = {
         'status': processing_progress['status'],
-        'current': processing_progress['current'],
-        'total': processing_progress['total'],
-        'percent': percent,  # Progresso do lote atual
-        'batch_percent': int(batch_percent),  # Progresso total considerando todos os lotes
-        'current_batch': processing_progress['current_batch'],
-        'total_batches': processing_progress['total_batches'],
         'message': processing_progress['message'],
-        'results': processing_progress['results'] if processing_progress['status'] == 'completed' else None,
+        'current': current,
+        'total': total,
+        'percent': percent,
+        'current_batch': current_batch,
+        'total_batches': total_batches,
+        'batch_percent': batch_percent,
         'processed_batches': len(processing_progress['processed_batches']),
-        'batches_info': [
-            {
-                'batch_index': b.get('batch_index'),
-                'urls_count': len(b.get('urls', [])),
-                'has_error': b.get('error', False)
-            } 
-            for b in processing_progress['processed_batches']
-        ]
+        'job_queue': len(processing_progress['job_queue']),
+        'results': None
     }
     
-    logger.debug(f"Resposta de verificação de progresso: {response['status']}, " +
-                f"Lote atual: {response['percent']}% (Lote {response['current_batch']}/{response['total_batches']}), " +
-                f"Total: {response['batch_percent']}%, {response['message']}")
+    # Se o processamento estiver concluído, incluir resultados
+    if processing_progress['status'] == 'completed' and processing_progress['results']:
+        response['results'] = processing_progress['results']
+    
+    # Incluir informações detalhadas sobre lotes processados
+    response['batches'] = []
+    response['batches_info'] = []
+    for batch in processing_progress['processed_batches']:
+        # Versão simplificada para compatibilidade
+        response['batches'].append({
+            'batch_index': batch.get('batch_index'),
+            'urls_count': len(batch.get('urls', [])),
+            'has_error': batch.get('has_error', False)
+        })
+        
+        # Versão completa para a nova interface
+        response['batches_info'].append({
+            'batch_index': batch.get('batch_index'),
+            'urls_count': len(batch.get('urls', [])),
+            'has_error': batch.get('has_error', False),
+            'created_at': batch.get('created_at', '')
+        })
     
     return jsonify(response)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

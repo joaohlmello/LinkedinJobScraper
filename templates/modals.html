@@ -1,0 +1,254 @@
+<!-- Modal de seleção de lotes para exportação -->
+<div class="modal fade" id="selectBatchesModal" tabindex="-1" aria-labelledby="selectBatchesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="selectBatchesModalLabel">Selecionar Lotes para Exportação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Selecione os lotes que deseja incluir na exportação:</p>
+                <div class="list-group batch-select-list">
+                    <!-- Aqui serão inseridos os itens da lista de lotes via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" id="select-all-batches">
+                    <i class="bi bi-check-all"></i> Selecionar todos
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="export-selected-batches">
+                    <i class="bi bi-download"></i> Exportar Selecionados
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de visualização de detalhes da análise de vaga -->
+<div class="modal fade" id="jobAnalysisModal" tabindex="-1" aria-labelledby="jobAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobAnalysisModalLabel">Análise Detalhada da Vaga</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body" id="job-analysis-details">
+                <!-- O conteúdo será preenchido dinamicamente com a análise completa -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p>Carregando detalhes da análise...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para lidar com o modal de análise de vagas -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Capturar evento de abertura do modal
+        const jobAnalysisModal = document.getElementById('jobAnalysisModal');
+        if (jobAnalysisModal) {
+            jobAnalysisModal.addEventListener('show.bs.modal', function(event) {
+                // Botão que acionou o modal
+                const button = event.relatedTarget;
+                
+                // Extrair informações da análise
+                const jobTitle = button.getAttribute('data-job-title');
+                const companyName = button.getAttribute('data-company-name');
+                const analysisJson = button.getAttribute('data-analysis-json');
+                
+                // Atualizar o título do modal
+                const modalTitle = jobAnalysisModal.querySelector('.modal-title');
+                modalTitle.textContent = `${jobTitle} - ${companyName}`;
+                
+                // Preencher o conteúdo do modal
+                const modalBody = document.getElementById('job-analysis-details');
+                
+                try {
+                    // Tentar parsear o JSON da análise
+                    const analysis = JSON.parse(analysisJson);
+                    
+                    // Criar HTML para exibir a análise
+                    let analysisHtml = `
+                        <div class="analysis-container">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="mb-0">Compatibilidade Global</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1" style="height: 25px;">
+                                                    <div class="progress-bar ${getScoreColorClass(analysis.compatibilidade_global_pct)}" 
+                                                         role="progressbar" 
+                                                         style="width: ${analysis.compatibilidade_global_pct}%;" 
+                                                         aria-valuenow="${analysis.compatibilidade_global_pct}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        ${analysis.compatibilidade_global_pct}%
+                                                    </div>
+                                                </div>
+                                                <div class="ms-3">
+                                                    <span class="badge ${getScoreBadgeClass(analysis.compatibilidade_global_pct)}">
+                                                        ${getScoreLabel(analysis.compatibilidade_global_pct)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0">Qualificações Essenciais</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="progress flex-grow-1" style="height: 20px;">
+                                                    <div class="progress-bar ${getScoreColorClass(analysis.qualificacoes_essenciais_pct)}" 
+                                                         role="progressbar" 
+                                                         style="width: ${analysis.qualificacoes_essenciais_pct}%;" 
+                                                         aria-valuenow="${analysis.qualificacoes_essenciais_pct}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        ${analysis.qualificacoes_essenciais_pct}%
+                                                    </div>
+                                                </div>
+                                                <div class="ms-3">
+                                                    <span class="badge ${getScoreBadgeClass(analysis.qualificacoes_essenciais_pct)}">
+                                                        ${getScoreLabel(analysis.qualificacoes_essenciais_pct)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="analysis-detail">
+                                                ${formatTextWithBreaks(analysis.qualificacoes_essenciais_detalhe)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0">Qualificações Desejáveis</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <div class="progress flex-grow-1" style="height: 20px;">
+                                                    <div class="progress-bar ${getScoreColorClass(analysis.qualificacoes_desejaveis_pct)}" 
+                                                         role="progressbar" 
+                                                         style="width: ${analysis.qualificacoes_desejaveis_pct}%;" 
+                                                         aria-valuenow="${analysis.qualificacoes_desejaveis_pct}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="100">
+                                                        ${analysis.qualificacoes_desejaveis_pct}%
+                                                    </div>
+                                                </div>
+                                                <div class="ms-3">
+                                                    <span class="badge ${getScoreBadgeClass(analysis.qualificacoes_desejaveis_pct)}">
+                                                        ${getScoreLabel(analysis.qualificacoes_desejaveis_pct)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="analysis-detail">
+                                                ${formatTextWithBreaks(analysis.qualificacoes_desejaveis_detalhe)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0">Principais Pontos Positivos</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="analysis-detail">
+                                                ${formatTextWithBreaks(analysis.pontos_positivos)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0">Pontos de Atenção</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="analysis-detail">
+                                                ${formatTextWithBreaks(analysis.pontos_atencao)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0">Recomendações para Aplicação</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="analysis-detail">
+                                                ${formatTextWithBreaks(analysis.recomendacoes)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Atualizar o conteúdo do modal
+                    modalBody.innerHTML = analysisHtml;
+                } catch (error) {
+                    console.error("Erro ao parsear a análise:", error);
+                    modalBody.innerHTML = `<div class="alert alert-danger">Erro ao carregar os detalhes da análise: ${error.message}</div>`;
+                }
+            });
+        }
+        
+        // Funções auxiliares para formatação
+        
+        function getScoreColorClass(score) {
+            if (score >= 80) return 'bg-success';
+            if (score >= 60) return 'bg-info';
+            if (score >= 40) return 'bg-warning';
+            return 'bg-danger';
+        }
+        
+        function getScoreBadgeClass(score) {
+            if (score >= 80) return 'bg-success';
+            if (score >= 60) return 'bg-info';
+            if (score >= 40) return 'bg-warning';
+            return 'bg-danger';
+        }
+        
+        function getScoreLabel(score) {
+            if (score >= 80) return 'Excelente';
+            if (score >= 60) return 'Bom';
+            if (score >= 40) return 'Regular';
+            return 'Baixo';
+        }
+        
+        function formatTextWithBreaks(text) {
+            if (!text) return '';
+            
+            // Substituir quebras de linha por tags <br>
+            return text.replace(/\n/g, '<br>');
+        }
+    });
+</script>

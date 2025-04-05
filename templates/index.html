@@ -223,8 +223,14 @@
         </div>
     </div>
 
+    <!-- Incluir modais -->
+    {% include 'modals.html' %}
+
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Scripts customizados -->
+    <script src="{{ url_for('static', filename='js/batch_selector.js') }}"></script>
     
     <!-- Script para processar requisições assíncronas e atualizar a barra de progresso -->
     <script>
@@ -281,32 +287,10 @@
                             // Limpar a lista de lotes
                             batchesList.innerHTML = '';
                             
-                            // Adicionar cada lote processado à lista
+                            // Adicionar cada lote processado à lista usando nosso helper
                             data.batches_info.forEach(batch => {
-                                const batchItem = document.createElement('div');
-                                batchItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-                                
-                                // Verificar se o lote tem erro
-                                let statusClass = batch.has_error ? 'text-danger' : 'text-success';
-                                let statusIcon = batch.has_error ? 'bi-x-circle' : 'bi-check-circle';
-                                
-                                batchItem.innerHTML = `
-                                    <div>
-                                        <input type="checkbox" class="batch-checkbox me-2" 
-                                               data-batch-index="${batch.batch_index}" 
-                                               ${batch.has_error ? 'disabled' : ''}>
-                                        <span class="${statusClass}"><i class="bi ${statusIcon}"></i></span>
-                                        Lote ${batch.batch_index + 1} (${batch.urls_count} URLs)
-                                    </div>
-                                    <div>
-                                        <a href="/export/csv?batch_index=${batch.batch_index}" 
-                                           class="btn btn-sm btn-outline-success" 
-                                           ${batch.has_error ? 'disabled' : ''}>
-                                            <i class="bi bi-download"></i> CSV
-                                        </a>
-                                    </div>
-                                `;
-                                
+                                // Usar a função do batch_selector.js para criar um item de lote para evitar problemas de checkbox
+                                const batchItem = window.batchSelector.createBatchItem(batch);
                                 batchesList.appendChild(batchItem);
                             });
                         }
@@ -403,44 +387,25 @@
                 const exportSelectedButton = document.getElementById('export-selected-batches');
                 const selectAllButton = document.getElementById('select-all-batches');
                 
-                if (exportSelectedButton) {
-                    exportSelectedButton.addEventListener('click', function() {
-                        // Obter todos os checkboxes marcados
-                        const selectedCheckboxes = document.querySelectorAll('.batch-checkbox:checked:not(:disabled)');
-                        
-                        if (selectedCheckboxes.length === 0) {
-                            alert('Selecione pelo menos um lote para exportar.');
-                            return;
-                        }
-                        
-                        // Coletar os índices dos lotes selecionados
-                        const selectedIndices = Array.from(selectedCheckboxes).map(checkbox => 
-                            checkbox.getAttribute('data-batch-index')
-                        );
-                        
-                        // Redirecionar para a rota de exportação com os índices como parâmetros
-                        window.location.href = `/export/csv?batch_indices=${selectedIndices.join(',')}`;
-                    });
+                // Usar as funções do módulo batch_selector.js para evitar problemas
+                if (exportSelectedButton && window.batchSelector) {
+                    // Remover listeners antigos para evitar duplicação
+                    exportSelectedButton.replaceWith(exportSelectedButton.cloneNode(true));
+                    // Obter a nova referência após a clonagem
+                    const newExportButton = document.getElementById('export-selected-batches');
+                    if (newExportButton) {
+                        newExportButton.addEventListener('click', window.batchSelector.exportSelectedBatches);
+                    }
                 }
                 
-                if (selectAllButton) {
-                    selectAllButton.addEventListener('click', function() {
-                        // Obter todos os checkboxes não desabilitados
-                        const checkboxes = document.querySelectorAll('.batch-checkbox:not(:disabled)');
-                        
-                        // Verificar se todos estão marcados
-                        const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
-                        
-                        // Marcar/desmarcar todos
-                        checkboxes.forEach(checkbox => {
-                            checkbox.checked = !allChecked;
-                        });
-                        
-                        // Atualizar texto do botão
-                        selectAllButton.innerHTML = allChecked ? 
-                            '<i class="bi bi-check-all"></i> Selecionar todos' : 
-                            '<i class="bi bi-x-lg"></i> Desmarcar todos';
-                    });
+                if (selectAllButton && window.batchSelector) {
+                    // Remover listeners antigos para evitar duplicação
+                    selectAllButton.replaceWith(selectAllButton.cloneNode(true));
+                    // Obter a nova referência após a clonagem
+                    const newSelectAllButton = document.getElementById('select-all-batches');
+                    if (newSelectAllButton) {
+                        newSelectAllButton.addEventListener('click', window.batchSelector.toggleAllCheckboxes);
+                    }
                 }
             }
             
