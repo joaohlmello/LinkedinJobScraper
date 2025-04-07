@@ -41,7 +41,7 @@ processing_progress = {
     'analyze_jobs': False,  # Flag para análise com Gemini
     'df_json': None,        # DataFrame JSON do lote atual
     'urls': [],             # URLs do lote atual
-    'batch_size': 10,       # Tamanho de cada lote (padrão: 10)
+    'batch_size': 50,       # Tamanho de cada lote (padrão: 50)
     'total_batches': 0,     # Número total de lotes
     'current_batch': 0,     # Lote atual sendo processado
     'all_batches': [],      # Lista com todos os lotes
@@ -495,8 +495,8 @@ def process_async():
             batch_size = int(batch_size_text)
             processing_progress['batch_size'] = batch_size
         except ValueError:
-            logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 10")
-            batch_size = 10
+            logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 50")
+            batch_size = 50
             processing_progress['batch_size'] = batch_size
         
         # Processar URLs a serem ignoradas e salvá-las no banco de dados
