@@ -5,7 +5,7 @@ import threading
 import json
 from datetime import datetime
 from linkedin_scraper import get_results_html, export_to_csv
-from models import db, ProcessedBatch, IgnoredURL, UserInputs
+from models import db, ProcessedBatch, IgnoredURL
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -31,18 +31,6 @@ with app.app_context():
     db.create_all()
     logger.debug("Tabelas do banco de dados criadas/verificadas")
 
-# Configuração de autenticação
-APP_PASSWORD = "prefirooglide"
-
-# Decorator para verificar autenticação
-def login_required(f):
-    def decorated_function(*args, **kwargs):
-        if not session.get('authenticated'):
-            return redirect('/login')
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
-
 # Variável global para armazenar o progresso do processamento
 processing_progress = {
     'total': 0,             # Total de URLs no lote atual
@@ -53,7 +41,7 @@ processing_progress = {
     'analyze_jobs': False,  # Flag para análise com Gemini
     'df_json': None,        # DataFrame JSON do lote atual
     'urls': [],             # URLs do lote atual
-    'batch_size': 50,       # Tamanho de cada lote (padrão: 50)
+    'batch_size': 10,       # Tamanho de cada lote (padrão: 10)
     'total_batches': 0,     # Número total de lotes
     'current_batch': 0,     # Lote atual sendo processado
     'all_batches': [],      # Lista com todos os lotes
@@ -101,76 +89,17 @@ except Exception as e:
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 logger.debug(f"Gemini API Key está disponível: {GEMINI_API_KEY is not None}")
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """
-    Rota de login para autenticação do usuário.
-    """
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if password == APP_PASSWORD:
-            session['authenticated'] = True
-            flash('Login realizado com sucesso!', 'success')
-            return redirect('/')
-        else:
-            flash('Senha incorreta!', 'danger')
-    
-    return render_template('login.html')
-
 @app.route('/', methods=['GET', 'POST'])
-@login_required
 def index():
     """
     Home route for the LinkedIn Job Scraper app.
     Handles both GET and POST requests.
     """
     results_html = None
-    linkedin_urls_text = ''
-    ignore_urls_text = ''
-    batch_size = 50
-    analyze_jobs_checked = False
-    
-    # Carregar os inputs salvos do banco de dados
-    try:
-        with app.app_context():
-            user_inputs = UserInputs.get_latest()
-            if user_inputs:
-                linkedin_urls_text = user_inputs.linkedin_urls or ''
-                ignore_urls_text = user_inputs.ignore_urls or ''
-                batch_size = user_inputs.batch_size or 50
-                analyze_jobs_checked = user_inputs.analyze_jobs or False
-    except Exception as e:
-        logger.error(f"Erro ao carregar inputs salvos: {str(e)}")
     
     if request.method == 'POST':
         # Get LinkedIn URLs from the form
         linkedin_urls_text = request.form.get('linkedin_urls', '')
-        ignore_urls_text = request.form.get('ignore_urls', '')
-        batch_size_text = request.form.get('batch_size', '50')
-        
-        try:
-            batch_size = int(batch_size_text)
-        except ValueError:
-            batch_size = 50
-            
-        # Check if user wants to analyze jobs with Gemini AI
-        analyze_jobs_checked = 'analyze_jobs' in request.form
-        
-        # Salvar os inputs no banco de dados
-        try:
-            with app.app_context():
-                user_inputs = UserInputs.get_latest()
-                user_inputs.update(
-                    linkedin_urls=linkedin_urls_text,
-                    ignore_urls=ignore_urls_text,
-                    batch_size=batch_size,
-                    analyze_jobs=analyze_jobs_checked
-                )
-                logger.debug("Inputs do usuário salvos no banco de dados")
-        except Exception as e:
-            logger.error(f"Erro ao salvar inputs no banco de dados: {str(e)}")
-        
-        # Processar os URLs
         linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
         
         # Remover URLs duplicados mantendo a ordem original
@@ -185,6 +114,9 @@ def index():
         if len(linkedin_urls) < len(linkedin_urls_raw):
             duplicates_removed = len(linkedin_urls_raw) - len(linkedin_urls)
             flash(f'{duplicates_removed} URL(s) duplicado(s) foram removidos para otimizar o processamento.', 'info')
+            
+        # Check if user wants to analyze jobs with Gemini AI
+        analyze_jobs = 'analyze_jobs' in request.form
         
         if not linkedin_urls:
             flash('Please enter at least one LinkedIn job URL.', 'danger')
@@ -195,7 +127,6 @@ def index():
             # Process the URLs and get results
             try:
                 # Analisar jobs se solicitado e se a API do Gemini estiver disponível
-                analyze_jobs = analyze_jobs_checked
                 if analyze_jobs and not GEMINI_API_KEY:
                     flash('Análise com Gemini AI solicitada, mas a chave de API não está disponível.', 'warning')
                     analyze_jobs = False
@@ -250,14 +181,9 @@ def index():
                           gemini_available=gemini_available,
                           batches=batches,
                           ignored_urls=ignored_urls,
-                          processing_status=processing_progress['status'],
-                          linkedin_urls=linkedin_urls_text,
-                          ignore_urls=ignore_urls_text,
-                          batch_size=batch_size,
-                          analyze_jobs_checked=analyze_jobs_checked)
+                          processing_status=processing_progress['status'])
 
 @app.route('/export/csv', methods=['GET'])
-@login_required
 def export_csv():
     """
     Exporta os dados de vagas do LinkedIn para CSV.
@@ -494,7 +420,6 @@ def export_multiple_batches_csv(batch_indices):
         return redirect('/')
 
 @app.route('/select_batches', methods=['POST'])
-@login_required
 def select_batches():
     """
     Endpoint para selecionar lotes para exportação.
@@ -548,7 +473,6 @@ def server_error(e):
     return render_template('index.html', error="Server error occurred"), 500
 
 @app.route('/process_async', methods=['POST'])
-@login_required
 def process_async():
     """
     Processa URLs do LinkedIn de forma assíncrona e atualiza o progresso
@@ -571,26 +495,9 @@ def process_async():
             batch_size = int(batch_size_text)
             processing_progress['batch_size'] = batch_size
         except ValueError:
-            logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 50")
-            batch_size = 50
+            logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 10")
+            batch_size = 10
             processing_progress['batch_size'] = batch_size
-            
-        # Verificar se usuário quer analisar jobs com Gemini AI
-        analyze_jobs = 'analyze_jobs' in request.form
-        
-        # Salvar os inputs no banco de dados
-        try:
-            with app.app_context():
-                user_inputs = UserInputs.get_latest()
-                user_inputs.update(
-                    linkedin_urls=linkedin_urls_text,
-                    ignore_urls=ignore_urls_text,
-                    batch_size=batch_size,
-                    analyze_jobs=analyze_jobs
-                )
-                logger.debug("Inputs do usuário salvos no banco de dados")
-        except Exception as e:
-            logger.error(f"Erro ao salvar inputs no banco de dados: {str(e)}")
         
         # Processar URLs a serem ignoradas e salvá-las no banco de dados
         ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
@@ -631,6 +538,7 @@ def process_async():
             })
         
         # Verificar se usuário quer analisar jobs com Gemini AI
+        analyze_jobs = 'analyze_jobs' in request.form
         if analyze_jobs and not GEMINI_API_KEY:
             logger.warning('Análise com Gemini AI solicitada, mas a chave de API não está disponível.')
             analyze_jobs = False
@@ -836,33 +744,7 @@ def process_batches_background(batches, analyze_jobs=False):
         processing_progress['status'] = 'error'
         processing_progress['message'] = f'Erro: {str(e)}'
 
-@app.route('/reset_processing', methods=['POST'])
-@login_required
-def reset_processing():
-    """
-    Reinicia o status de processamento em caso de travamento.
-    """
-    global processing_progress
-    
-    # Salvar estado atual para logging
-    old_status = processing_progress['status']
-    job_queue_count = len(processing_progress['job_queue'])
-    
-    # Reiniciar variáveis de progresso
-    processing_progress['status'] = 'idle'
-    processing_progress['message'] = 'Processamento reiniciado'
-    processing_progress['job_queue'] = []
-    
-    logger.warning(f"Processamento reiniciado manualmente. Status anterior: {old_status}, Jobs na fila: {job_queue_count}")
-    
-    # Retornar resposta
-    return jsonify({
-        'success': True,
-        'message': 'Processamento reiniciado com sucesso. Você pode iniciar um novo processamento agora.'
-    })
-
 @app.route('/check_progress', methods=['GET'])
-@login_required
 def check_progress():
     """
     Retorna o status atual do processamento

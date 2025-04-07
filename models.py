@@ -5,46 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 # Instância SQLAlchemy para compartilhar com main.py
 db = SQLAlchemy()
 
-class UserInputs(db.Model):
-    """
-    Modelo para armazenar os inputs do usuário entre sessões.
-    """
-    id = db.Column(db.Integer, primary_key=True)
-    linkedin_urls = db.Column(db.Text, nullable=True)  # URLs para processamento
-    ignore_urls = db.Column(db.Text, nullable=True)    # URLs para ignorar
-    batch_size = db.Column(db.Integer, default=50)     # Tamanho do lote
-    analyze_jobs = db.Column(db.Boolean, default=False) # Flag para análise com Gemini
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    @staticmethod
-    def get_latest():
-        """
-        Retorna a entrada mais recente ou cria uma nova se não existir.
-        """
-        instance = UserInputs.query.order_by(UserInputs.updated_at.desc()).first()
-        if not instance:
-            instance = UserInputs()
-            db.session.add(instance)
-            db.session.commit()
-        return instance
-    
-    def update(self, linkedin_urls=None, ignore_urls=None, batch_size=None, analyze_jobs=None):
-        """
-        Atualiza os campos com novos valores, se fornecidos.
-        """
-        if linkedin_urls is not None:
-            self.linkedin_urls = linkedin_urls
-        if ignore_urls is not None:
-            self.ignore_urls = ignore_urls
-        if batch_size is not None:
-            self.batch_size = batch_size
-        if analyze_jobs is not None:
-            self.analyze_jobs = analyze_jobs
-        
-        self.updated_at = datetime.utcnow()
-        db.session.commit()
-
 class ProcessedBatch(db.Model):
     """
     Modelo para armazenar informações de lotes de URLs processados.
