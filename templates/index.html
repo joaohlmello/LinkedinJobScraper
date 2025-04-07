@@ -44,7 +44,7 @@
                         <form id="scraper-form">
                             <div class="mb-3">
                                 <label for="linkedin_urls" class="form-label">Enter LinkedIn job URLs (one per line):</label>
-                                <textarea class="form-control" id="linkedin_urls" name="linkedin_urls" rows="5" placeholder="https://www.linkedin.com/jobs/view/4197948497/..."></textarea>
+                                <textarea class="form-control" id="linkedin_urls" name="linkedin_urls" rows="5" placeholder="https://www.linkedin.com/jobs/view/4197948497/...">{{ linkedin_urls }}</textarea>
                             </div>
                             
                             <div class="mb-3">
@@ -52,7 +52,7 @@
                                     <span class="badge bg-warning text-dark"><i class="bi bi-slash-circle"></i> Ignorar</span>
                                     URLs a serem ignoradas (uma por linha):
                                 </label>
-                                <textarea class="form-control" id="ignore_urls" name="ignore_urls" rows="3" placeholder="Coloque aqui URLs que você não quer processar novamente"></textarea>
+                                <textarea class="form-control" id="ignore_urls" name="ignore_urls" rows="3" placeholder="Coloque aqui URLs que você não quer processar novamente">{{ ignore_urls }}</textarea>
                                 <div class="form-text text-light">
                                     URLs listadas aqui serão ignoradas durante o processamento. Útil para pular vagas já processadas ou irrelevantes.
                                 </div>
@@ -60,7 +60,7 @@
                             
                             {% if gemini_available %}
                             <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" id="analyze_jobs" name="analyze_jobs">
+                                <input type="checkbox" class="form-check-input" id="analyze_jobs" name="analyze_jobs" {% if analyze_jobs_checked %}checked{% endif %}>
                                 <label class="form-check-label" for="analyze_jobs">
                                     <span class="badge bg-info"><i class="bi bi-robot"></i> Gemini AI</span>
                                     Analisar compatibilidade das vagas com o currículo usando Gemini AI

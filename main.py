@@ -5,7 +5,7 @@ import threading
 import json
 from datetime import datetime
 from linkedin_scraper import get_results_html, export_to_csv
-from models import db, ProcessedBatch, IgnoredURL
+from models import db, ProcessedBatch, IgnoredURL, UserInputs
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -125,10 +125,52 @@ def index():
     Handles both GET and POST requests.
     """
     results_html = None
+    linkedin_urls_text = ''
+    ignore_urls_text = ''
+    batch_size = 50
+    analyze_jobs_checked = False
+    
+    # Carregar os inputs salvos do banco de dados
+    try:
+        with app.app_context():
+            user_inputs = UserInputs.get_latest()
+            if user_inputs:
+                linkedin_urls_text = user_inputs.linkedin_urls or ''
+                ignore_urls_text = user_inputs.ignore_urls or ''
+                batch_size = user_inputs.batch_size or 50
+                analyze_jobs_checked = user_inputs.analyze_jobs or False
+    except Exception as e:
+        logger.error(f"Erro ao carregar inputs salvos: {str(e)}")
     
     if request.method == 'POST':
         # Get LinkedIn URLs from the form
         linkedin_urls_text = request.form.get('linkedin_urls', '')
+        ignore_urls_text = request.form.get('ignore_urls', '')
+        batch_size_text = request.form.get('batch_size', '50')
+        
+        try:
+            batch_size = int(batch_size_text)
+        except ValueError:
+            batch_size = 50
+            
+        # Check if user wants to analyze jobs with Gemini AI
+        analyze_jobs_checked = 'analyze_jobs' in request.form
+        
+        # Salvar os inputs no banco de dados
+        try:
+            with app.app_context():
+                user_inputs = UserInputs.get_latest()
+                user_inputs.update(
+                    linkedin_urls=linkedin_urls_text,
+                    ignore_urls=ignore_urls_text,
+                    batch_size=batch_size,
+                    analyze_jobs=analyze_jobs_checked
+                )
+                logger.debug("Inputs do usuário salvos no banco de dados")
+        except Exception as e:
+            logger.error(f"Erro ao salvar inputs no banco de dados: {str(e)}")
+        
+        # Processar os URLs
         linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
         
         # Remover URLs duplicados mantendo a ordem original
@@ -143,9 +185,6 @@ def index():
         if len(linkedin_urls) < len(linkedin_urls_raw):
             duplicates_removed = len(linkedin_urls_raw) - len(linkedin_urls)
             flash(f'{duplicates_removed} URL(s) duplicado(s) foram removidos para otimizar o processamento.', 'info')
-            
-        # Check if user wants to analyze jobs with Gemini AI
-        analyze_jobs = 'analyze_jobs' in request.form
         
         if not linkedin_urls:
             flash('Please enter at least one LinkedIn job URL.', 'danger')
@@ -156,6 +195,7 @@ def index():
             # Process the URLs and get results
             try:
                 # Analisar jobs se solicitado e se a API do Gemini estiver disponível
+                analyze_jobs = analyze_jobs_checked
                 if analyze_jobs and not GEMINI_API_KEY:
                     flash('Análise com Gemini AI solicitada, mas a chave de API não está disponível.', 'warning')
                     analyze_jobs = False
@@ -210,7 +250,11 @@ def index():
                           gemini_available=gemini_available,
                           batches=batches,
                           ignored_urls=ignored_urls,
-                          processing_status=processing_progress['status'])
+                          processing_status=processing_progress['status'],
+                          linkedin_urls=linkedin_urls_text,
+                          ignore_urls=ignore_urls_text,
+                          batch_size=batch_size,
+                          analyze_jobs_checked=analyze_jobs_checked)
 
 @app.route('/export/csv', methods=['GET'])
 @login_required
@@ -530,6 +574,23 @@ def process_async():
             logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 50")
             batch_size = 50
             processing_progress['batch_size'] = batch_size
+            
+        # Verificar se usuário quer analisar jobs com Gemini AI
+        analyze_jobs = 'analyze_jobs' in request.form
+        
+        # Salvar os inputs no banco de dados
+        try:
+            with app.app_context():
+                user_inputs = UserInputs.get_latest()
+                user_inputs.update(
+                    linkedin_urls=linkedin_urls_text,
+                    ignore_urls=ignore_urls_text,
+                    batch_size=batch_size,
+                    analyze_jobs=analyze_jobs
+                )
+                logger.debug("Inputs do usuário salvos no banco de dados")
+        except Exception as e:
+            logger.error(f"Erro ao salvar inputs no banco de dados: {str(e)}")
         
         # Processar URLs a serem ignoradas e salvá-las no banco de dados
         ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
@@ -570,7 +631,6 @@ def process_async():
             })
         
         # Verificar se usuário quer analisar jobs com Gemini AI
-        analyze_jobs = 'analyze_jobs' in request.form
         if analyze_jobs and not GEMINI_API_KEY:
             logger.warning('Análise com Gemini AI solicitada, mas a chave de API não está disponível.')
             analyze_jobs = False
