@@ -31,6 +31,18 @@ with app.app_context():
     db.create_all()
     logger.debug("Tabelas do banco de dados criadas/verificadas")
 
+# Configuração de autenticação
+APP_PASSWORD = "prefirooglide"
+
+# Decorator para verificar autenticação
+def login_required(f):
+    def decorated_function(*args, **kwargs):
+        if not session.get('authenticated'):
+            return redirect('/login')
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
 # Variável global para armazenar o progresso do processamento
 processing_progress = {
     'total': 0,             # Total de URLs no lote atual
@@ -89,7 +101,24 @@ except Exception as e:
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 logger.debug(f"Gemini API Key está disponível: {GEMINI_API_KEY is not None}")
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """
+    Rota de login para autenticação do usuário.
+    """
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == APP_PASSWORD:
+            session['authenticated'] = True
+            flash('Login realizado com sucesso!', 'success')
+            return redirect('/')
+        else:
+            flash('Senha incorreta!', 'danger')
+    
+    return render_template('login.html')
+
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
     """
     Home route for the LinkedIn Job Scraper app.
@@ -184,6 +213,7 @@ def index():
                           processing_status=processing_progress['status'])
 
 @app.route('/export/csv', methods=['GET'])
+@login_required
 def export_csv():
     """
     Exporta os dados de vagas do LinkedIn para CSV.
@@ -420,6 +450,7 @@ def export_multiple_batches_csv(batch_indices):
         return redirect('/')
 
 @app.route('/select_batches', methods=['POST'])
+@login_required
 def select_batches():
     """
     Endpoint para selecionar lotes para exportação.
@@ -473,6 +504,7 @@ def server_error(e):
     return render_template('index.html', error="Server error occurred"), 500
 
 @app.route('/process_async', methods=['POST'])
+@login_required
 def process_async():
     """
     Processa URLs do LinkedIn de forma assíncrona e atualiza o progresso
@@ -745,6 +777,7 @@ def process_batches_background(batches, analyze_jobs=False):
         processing_progress['message'] = f'Erro: {str(e)}'
 
 @app.route('/check_progress', methods=['GET'])
+@login_required
 def check_progress():
     """
     Retorna o status atual do processamento
