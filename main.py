@@ -836,6 +836,31 @@ def process_batches_background(batches, analyze_jobs=False):
         processing_progress['status'] = 'error'
         processing_progress['message'] = f'Erro: {str(e)}'
 
+@app.route('/reset_processing', methods=['POST'])
+@login_required
+def reset_processing():
+    """
+    Reinicia o status de processamento em caso de travamento.
+    """
+    global processing_progress
+    
+    # Salvar estado atual para logging
+    old_status = processing_progress['status']
+    job_queue_count = len(processing_progress['job_queue'])
+    
+    # Reiniciar variáveis de progresso
+    processing_progress['status'] = 'idle'
+    processing_progress['message'] = 'Processamento reiniciado'
+    processing_progress['job_queue'] = []
+    
+    logger.warning(f"Processamento reiniciado manualmente. Status anterior: {old_status}, Jobs na fila: {job_queue_count}")
+    
+    # Retornar resposta
+    return jsonify({
+        'success': True,
+        'message': 'Processamento reiniciado com sucesso. Você pode iniciar um novo processamento agora.'
+    })
+
 @app.route('/check_progress', methods=['GET'])
 @login_required
 def check_progress():
