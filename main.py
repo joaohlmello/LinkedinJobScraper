@@ -744,6 +744,51 @@ def process_batches_background(batches, analyze_jobs=False):
         processing_progress['status'] = 'error'
         processing_progress['message'] = f'Erro: {str(e)}'
 
+@app.route('/clear_history', methods=['POST'])
+def clear_history():
+    """
+    Limpa o histórico de processamento, removendo todos os lotes processados do banco de dados
+    """
+    global processing_progress
+    
+    try:
+        # Verificar se há processamento em andamento
+        if processing_progress['status'] == 'processing':
+            return jsonify({
+                'success': False,
+                'message': 'Não é possível limpar o histórico enquanto há um processamento em andamento.'
+            }), 400
+            
+        # Limpar a lista de lotes processados
+        processing_progress['processed_batches'] = []
+        processing_progress['results'] = None
+        
+        # Limpar o banco de dados
+        with app.app_context():
+            # Excluir todos os lotes processados
+            ProcessedBatch.query.delete()
+            
+            # Opcionalmente, limpar URLs ignoradas se solicitado
+            clear_ignored = request.args.get('clear_ignored', 'false').lower() == 'true'
+            if clear_ignored:
+                IgnoredURL.query.delete()
+                processing_progress['ignored_urls'] = set()
+            
+            db.session.commit()
+            
+        return jsonify({
+            'success': True,
+            'message': 'Histórico limpo com sucesso!',
+            'cleared_ignored': clear_ignored
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao limpar histórico: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao limpar histórico: {str(e)}'
+        }), 500
+
 @app.route('/check_progress', methods=['GET'])
 def check_progress():
     """

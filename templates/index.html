@@ -182,6 +182,9 @@
                                 <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
                                     <i class="bi bi-file-earmark-text"></i> Export to CSV
                                 </a>
+                                <button id="clear-history-btn" class="btn btn-danger btn-sm ms-2">
+                                    <i class="bi bi-trash"></i> Limpar Histórico
+                                </button>
                             </div>
                         </div>
                         <div class="card-body">
@@ -493,6 +496,43 @@
                     submitButton.disabled = false;
                 });
             });
+
+            // Manipulador para o botão de limpar histórico
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
+            if (clearHistoryBtn) {
+                clearHistoryBtn.addEventListener('click', function() {
+                    if (confirm('Tem certeza que deseja limpar todo o histórico de processamento? Esta ação não pode ser desfeita.')) {
+                        // Verificar se o usuário também quer limpar as URLs ignoradas
+                        const clearIgnored = confirm('Deseja também limpar a lista de URLs ignoradas?');
+                        
+                        // Enviar requisição para limpar o histórico
+                        fetch(`/clear_history?clear_ignored=${clearIgnored}`, {
+                            method: 'POST'
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Exibir mensagem de sucesso
+                                alert(data.message);
+                                // Recarregar a página para atualizar a interface
+                                window.location.reload();
+                            } else {
+                                // Exibir mensagem de erro
+                                alert(`Erro: ${data.message}`);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erro ao limpar histórico:', error);
+                            alert(`Erro ao limpar histórico: ${error.message}`);
+                        });
+                    }
+                });
+            }
         });
     </script>
 </body>
