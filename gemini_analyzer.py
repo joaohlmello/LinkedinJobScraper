@@ -3,7 +3,8 @@ import json
 import logging
 import time
 import re
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -26,13 +27,13 @@ class JobAnalyzer:
         
         try:
             # Inicializar cliente Gemini
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-2.5-pro-preview-03-25")
+            self.client = genai.Client(api_key=api_key)
+            self.model = "gemini-2.5-pro-preview-03-25"
             
             # Configurar o prompt base
             self.system_prompt = self._get_system_prompt()
             
-            logger.info(f"Analisador de vagas inicializado com o modelo gemini-2.5-pro-preview-03-25")
+            logger.info(f"Analisador de vagas inicializado com o modelo {self.model}")
         except Exception as e:
             logger.error(f"Erro ao inicializar o cliente Gemini: {str(e)}")
             raise ValueError(f"Não foi possível inicializar o cliente Gemini: {str(e)}")
@@ -41,13 +42,8 @@ class JobAnalyzer:
         """
         Retorna o prompt do sistema que orienta o modelo sobre como analisar as vagas.
         """
-        return """#CONTEXTO
--Você é um ATS Aplicant Tracking System reverso, que ajudará o candidato avaliar vagas de emprego e analisar o % de aderência.
-
-#METODOLOGIA DE AVALIAÇÃO DE ADERÊNCIA
--Identificação de palavras-chave: Extraia e liste as principais palavras-chave da descrição da vaga. Considere o Contexto: Título > Descrição > Outros
--Análise de requisitos: Avalie cada requisito individualmente, atribuindo uma porcentagem de aderência
--Avaliação de experiência: Compare experiências listadas com as exigidas.
+        return """# CONTEXTO ESTRATÉGICO
+Sua função transcende um simples ATS Reverso. Você atuará como um avaliador estratégico, aplicando um olhar crítico e experiente para dissecar a aderência do perfil do João às vagas apresentadas. O objetivo não é apenas encontrar \"matches\" superficiais, mas sim realizar uma análise de fit estratégico e identificar gaps concretos que precisam ser endereçados. Pense como um COO avaliando um candidato interno para uma posição chave: queremos substância, não apenas keywords.
 -Análise de qualificações: Verifique formação acadêmica e certificações
 -Cálculo de aderência global: Média ponderada das análises anteriores (10% palavras-chave, 30% requisitos, 30% experiência, 30% qualificações)
 -Análise detalhada de forças e fraquezas (SWOT só com SW, sem OT)
@@ -180,56 +176,65 @@ Essenciais: Excel Avançado, PowerPoint."""
 Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
             """
             
-            # Configuração da geração
-            generation_config = genai.GenerationConfig(
-                temperature=0.2,
-                response_mime_type="application/json"
+            # Configurar a resposta esperada no formato JSON
+            generate_content_config = types.GenerateContentConfig(
+                temperature=0.65,
+                response_mime_type="application/json",
+                response_schema=genai.types.Schema(
+                    type=genai.types.Type.OBJECT,
+                    required=["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
+                             "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
+                    properties={
+                        "nota_palavras_chave": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_requisitos": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_experiencia": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_qualificacoes": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "nota_global": genai.types.Schema(
+                            type=genai.types.Type.INTEGER,
+                        ),
+                        "forcas": genai.types.Schema(
+                            type=genai.types.Type.STRING,
+                        ),
+                        "fraquezas": genai.types.Schema(
+                            type=genai.types.Type.STRING,
+                        ),
+                    },
+                ),
             )
-            
-            # Definição do esquema de resposta esperado
-            response_schema = {
-                "type": "object",
-                "properties": {
-                    "nota_palavras_chave": {"type": "integer"},
-                    "nota_requisitos": {"type": "integer"},
-                    "nota_experiencia": {"type": "integer"},
-                    "nota_qualificacoes": {"type": "integer"},
-                    "nota_global": {"type": "integer"},
-                    "forcas": {"type": "string"},
-                    "fraquezas": {"type": "string"}
-                },
-                "required": ["nota_palavras_chave", "nota_requisitos", "nota_experiencia", 
-                           "nota_qualificacoes", "nota_global", "forcas", "fraquezas"]
-            }
-            
-            # Configuração do sistema
-            safety_settings = [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-            ]
             
             # Fazer a chamada à API do Gemini
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Montar a mensagem do sistema e do usuário
-                prompt = f"""
-                Sistema: {self.system_prompt}
+                # Criar conteúdo para enviar ao modelo
+                contents = [
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part.from_text(text=user_prompt),
+                        ],
+                    ),
+                ]
                 
-                Usuário: {user_prompt}
-                
-                Por favor, analise a compatibilidade entre o currículo fornecido no contexto e a vaga de emprego descrita.
-                Retorne o resultado no formato JSON a seguir:
-                {json.dumps(response_schema, indent=2)}
-                """
+                # Adicionar instruções do sistema
+                system_instruction = [
+                    types.Part.from_text(text=self.system_prompt),
+                ]
                 
                 # Fazer a chamada ao modelo
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=generation_config,
-                    safety_settings=safety_settings,
+                response = self.client.generate_content(
+                    model=self.model,
+                    contents=contents,
+                    config=generate_content_config,
+                    system_instruction=system_instruction,
                 )
                 
                 # Obter a resposta
