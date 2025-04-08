@@ -214,27 +214,26 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Criar conteúdo para enviar ao modelo
+                # Criar conteúdo para enviar ao modelo com sistema instruções incorporadas no prompt
+                combined_prompt = f"""
+{self.system_prompt}
+
+{user_prompt}
+"""
                 contents = [
                     types.Content(
                         role="user",
                         parts=[
-                            types.Part.from_text(text=user_prompt),
+                            types.Part.from_text(text=combined_prompt),
                         ],
                     ),
                 ]
                 
-                # Adicionar instruções do sistema
-                system_instruction = [
-                    types.Part.from_text(text=self.system_prompt),
-                ]
-                
                 # Fazer a chamada ao modelo
-                response = self.client.generate_content(
+                response = self.client.models.generate_content(
                     model=self.model,
                     contents=contents,
                     config=generate_content_config,
-                    system_instruction=system_instruction,
                 )
                 
                 # Obter a resposta
