@@ -158,6 +158,9 @@ def index():
     # Check if we have previous results to display
     has_results = 'linkedin_urls' in session and session['linkedin_urls']
     
+    # Verificar se existem lotes processados no banco de dados
+    has_processed_batches = len(processing_progress['processed_batches']) > 0
+    
     # Verificar se o Gemini API está disponível para o template
     gemini_available = bool(GEMINI_API_KEY)
     
@@ -178,6 +181,7 @@ def index():
     return render_template('index.html', 
                           results_html=results_html, 
                           has_results=has_results,
+                          has_processed_batches=has_processed_batches,
                           gemini_available=gemini_available,
                           batches=batches,
                           ignored_urls=ignored_urls,
