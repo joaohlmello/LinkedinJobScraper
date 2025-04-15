@@ -15,9 +15,16 @@
 <body>
     <div class="container mt-4">
         <div class="row mb-4">
-            <div class="col-12">
-                <h1 class="text-center">LinkedIn Job Scraper</h1>
-                <p class="text-center">Extract company information from LinkedIn job listings</p>
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>LinkedIn Job Scraper</h1>
+                    <p>Extract company information from LinkedIn job listings</p>
+                </div>
+                <div>
+                    <button id="clear-history-btn" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Limpar Histórico
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -183,11 +190,9 @@
                                 <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
                                     <i class="bi bi-file-earmark-text"></i> Export to CSV
                                 </a>
-                                {% if has_results or has_processed_batches %}
                                 <button id="clear-history-btn" class="btn btn-danger btn-sm ms-2">
                                     <i class="bi bi-trash"></i> Limpar Histórico
                                 </button>
-                                {% endif %}
                             </div>
                         </div>
                         <div class="card-body">
