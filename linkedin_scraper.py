@@ -865,30 +865,33 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                 if job_link in url_to_index:
                     idx = url_to_index[job_link]
                     
-                    # Obter valores da análise ou usar valores padrão
-                    nota_global = analysis.get('nota_global', 0)
-                    nota_palavras = analysis.get('nota_palavras_chave', 0)
+                    # Obter valores da análise ou usar valores padrão com nova estrutura
+                    idioma = analysis.get('idioma', 'Não informado')
                     nota_requisitos = analysis.get('nota_requisitos', 0)
-                    nota_experiencia = analysis.get('nota_experiencia', 0)
-                    nota_qualificacoes = analysis.get('nota_qualificacoes', 0)
+                    nota_cargos_a = analysis.get('nota_cargos_a', 0)
+                    nota_cargos_b = analysis.get('nota_cargos_b', 0)
+                    nota_final_a = analysis.get('nota_final_a', 0)
+                    nota_final_b = analysis.get('nota_final_b', 0)
                     forcas = analysis.get('forcas', '')
                     fraquezas = analysis.get('fraquezas', '')
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
-                    df.at[idx, 'compatibilidade_global'] = f"{nota_global}%"
-                    df.at[idx, 'compatibilidade_palavras_chave'] = f"{nota_palavras}%"
-                    df.at[idx, 'compatibilidade_requisitos'] = f"{nota_requisitos}%"
-                    df.at[idx, 'compatibilidade_experiencia'] = f"{nota_experiencia}%"
-                    df.at[idx, 'compatibilidade_qualificacoes'] = f"{nota_qualificacoes}%"
+                    df.at[idx, 'idioma'] = idioma
+                    df.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
+                    df.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
+                    df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
+                    df.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
+                    df.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
                     df.at[idx, 'forcas'] = forcas
                     df.at[idx, 'fraquezas'] = fraquezas
                     
                     # Atualizar o DataFrame de exportação
-                    df_export.at[idx, 'compatibilidade_global'] = f"{nota_global}%"
-                    df_export.at[idx, 'compatibilidade_palavras_chave'] = f"{nota_palavras}%"
-                    df_export.at[idx, 'compatibilidade_requisitos'] = f"{nota_requisitos}%"
-                    df_export.at[idx, 'compatibilidade_experiencia'] = f"{nota_experiencia}%"
-                    df_export.at[idx, 'compatibilidade_qualificacoes'] = f"{nota_qualificacoes}%"
+                    df_export.at[idx, 'idioma'] = idioma
+                    df_export.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
+                    df_export.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
+                    df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
+                    df_export.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
+                    df_export.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
                     df_export.at[idx, 'forcas'] = forcas
                     df_export.at[idx, 'fraquezas'] = fraquezas
                 
@@ -1049,11 +1052,12 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th>Announced Calc</th>
             <th>City</th>
             <th>Candidates</th>
-            <th class="compatibility-header">Palavras-chave</th>
+            <th class="compatibility-header">Idioma</th>
             <th class="compatibility-header">Requisitos</th>
-            <th class="compatibility-header">Experiência</th>
-            <th class="compatibility-header">Qualificações</th>
-            <th class="compatibility-header">Compatibilidade</th>
+            <th class="compatibility-header">Cargo A</th>
+            <th class="compatibility-header">Cargo B</th>
+            <th class="compatibility-header">Comp. A</th>
+            <th class="compatibility-header">Comp. B</th>
           </tr>
         </thead>
         <tbody>
@@ -1062,7 +1066,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     # Adicionar cada linha de forma manual para ter controle total sobre o conteúdo
     for _, row in df.iterrows():
         # Verificar se temos resultados do Gemini para mostrar
-        has_compatibility = row['compatibilidade_global'] != ""
+        has_compatibility = row.get('compatibilidade_a', '') != "" or row.get('compatibilidade_b', '') != ""
         
         html_table += f"""
         <tr>
@@ -1076,11 +1080,12 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
-          <td class="compatibility-column">{row['compatibilidade_palavras_chave']}</td>
-          <td class="compatibility-column">{row['compatibilidade_requisitos']}</td>
-          <td class="compatibility-column">{row['compatibilidade_experiencia']}</td>
-          <td class="compatibility-column">{row['compatibilidade_qualificacoes']}</td>
-          <td class="compatibility-column">{row['compatibilidade_global']}</td>
+          <td class="compatibility-column">{row.get('idioma', 'N/A')}</td>
+          <td class="compatibility-column">{row.get('nota_requisitos', '')}</td>
+          <td class="compatibility-column">{row.get('nota_cargos_a', '')}</td>
+          <td class="compatibility-column">{row.get('nota_cargos_b', '')}</td>
+          <td class="compatibility-column">{row.get('compatibilidade_a', '')}</td>
+          <td class="compatibility-column">{row.get('compatibilidade_b', '')}</td>
         </tr>
         """
     
