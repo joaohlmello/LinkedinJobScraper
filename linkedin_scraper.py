@@ -776,21 +776,23 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     if progress_callback:
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
-    # Adicionar colunas para análise Gemini (inicialmente vazias)
-    df['compatibilidade_palavras_chave'] = ""
-    df['compatibilidade_requisitos'] = ""
-    df['compatibilidade_experiencia'] = ""
-    df['compatibilidade_qualificacoes'] = ""
-    df['compatibilidade_global'] = ""  # Movida para depois das qualificações
+    # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
+    df['idioma'] = "N/A"
+    df['nota_requisitos'] = ""
+    df['nota_cargos_a'] = ""
+    df['nota_cargos_b'] = ""
+    df['compatibilidade_a'] = ""
+    df['compatibilidade_b'] = ""
     df['forcas'] = ""
     df['fraquezas'] = ""
     
     # Adicionar as mesmas colunas ao DataFrame de exportação
-    df_export['compatibilidade_palavras_chave'] = ""
-    df_export['compatibilidade_requisitos'] = ""
-    df_export['compatibilidade_experiencia'] = ""
-    df_export['compatibilidade_qualificacoes'] = ""
-    df_export['compatibilidade_global'] = ""  # Movida para depois das qualificações
+    df_export['idioma'] = "N/A"
+    df_export['nota_requisitos'] = ""
+    df_export['nota_cargos_a'] = ""
+    df_export['nota_cargos_b'] = ""
+    df_export['compatibilidade_a'] = ""
+    df_export['compatibilidade_b'] = ""
     df_export['forcas'] = ""
     df_export['fraquezas'] = ""
     
@@ -1037,6 +1039,11 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     .linkedin-job-results-table td:nth-child(15) {
         width: 4%;
     }
+    
+    .linkedin-job-results-table th:nth-child(16), 
+    .linkedin-job-results-table td:nth-child(16) {
+        width: 4%;
+    }
     </style>
     <div class="table-responsive">
       <table class="table table-striped table-hover table-dark linkedin-job-results-table">
@@ -1065,8 +1072,10 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     
     # Adicionar cada linha de forma manual para ter controle total sobre o conteúdo
     for _, row in df.iterrows():
-        # Verificar se temos resultados do Gemini para mostrar
-        has_compatibility = row.get('compatibilidade_a', '') != "" or row.get('compatibilidade_b', '') != ""
+        # Verificar se temos resultados do Gemini para mostrar (verifica campo novo ou legado)
+        has_compatibility = (row.get('compatibilidade_a', '') != "" or 
+                            row.get('compatibilidade_b', '') != "" or 
+                            row.get('compatibilidade_global', '') != "")
         
         html_table += f"""
         <tr>
