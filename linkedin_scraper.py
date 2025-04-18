@@ -776,13 +776,13 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     if progress_callback:
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
-    # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
+    # Adicionar colunas para análise Gemini com os nomes exatos da API (inicialmente vazias)
     df['idioma'] = "N/A"
     df['nota_requisitos'] = ""
     df['nota_cargos_a'] = ""
     df['nota_cargos_b'] = ""
-    df['compatibilidade_a'] = ""
-    df['compatibilidade_b'] = ""
+    df['nota_final_a'] = ""
+    df['nota_final_b'] = ""
     df['forcas'] = ""
     df['fraquezas'] = ""
     
@@ -791,8 +791,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     df_export['nota_requisitos'] = ""
     df_export['nota_cargos_a'] = ""
     df_export['nota_cargos_b'] = ""
-    df_export['compatibilidade_a'] = ""
-    df_export['compatibilidade_b'] = ""
+    df_export['nota_final_a'] = ""
+    df_export['nota_final_b'] = ""
     df_export['forcas'] = ""
     df_export['fraquezas'] = ""
     
@@ -879,8 +879,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
                     df.at[idx, 'idioma'] = idioma
-                    df.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
-                    df.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
+                    df.at[idx, 'nota_final_a'] = f"{nota_final_a}%"
+                    df.at[idx, 'nota_final_b'] = f"{nota_final_b}%"
                     df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
                     df.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
@@ -889,8 +889,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     
                     # Atualizar o DataFrame de exportação
                     df_export.at[idx, 'idioma'] = idioma
-                    df_export.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
-                    df_export.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
+                    df_export.at[idx, 'nota_final_a'] = f"{nota_final_a}%"
+                    df_export.at[idx, 'nota_final_b'] = f"{nota_final_b}%"
                     df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df_export.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
                     df_export.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
@@ -1073,8 +1073,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     # Adicionar cada linha de forma manual para ter controle total sobre o conteúdo
     for _, row in df.iterrows():
         # Verificar se temos resultados do Gemini para mostrar (verifica campo novo ou legado)
-        has_compatibility = (row.get('compatibilidade_a', '') != "" or 
-                            row.get('compatibilidade_b', '') != "" or 
+        has_compatibility = (row.get('nota_final_a', '') != "" or 
+                            row.get('nota_final_b', '') != "" or 
                             row.get('compatibilidade_global', '') != "")
         
         html_table += f"""
@@ -1093,8 +1093,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td class="compatibility-column">{row.get('nota_requisitos', '')}</td>
           <td class="compatibility-column">{row.get('nota_cargos_a', '')}</td>
           <td class="compatibility-column">{row.get('nota_cargos_b', '')}</td>
-          <td class="compatibility-column">{row.get('compatibilidade_a', '')}</td>
-          <td class="compatibility-column">{row.get('compatibilidade_b', '')}</td>
+          <td class="compatibility-column">{row.get('nota_final_a', '')}</td>
+          <td class="compatibility-column">{row.get('nota_final_b', '')}</td>
         </tr>
         """
     
