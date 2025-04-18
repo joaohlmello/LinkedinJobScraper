@@ -1063,8 +1063,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th class="compatibility-header">Requisitos</th>
             <th class="compatibility-header">Cargo A</th>
             <th class="compatibility-header">Cargo B</th>
-            <th class="compatibility-header">Comp. A</th>
-            <th class="compatibility-header">Comp. B</th>
+            <th class="compatibility-header">Nota Final A</th>
+            <th class="compatibility-header">Nota Final B</th>
           </tr>
         </thead>
         <tbody>
