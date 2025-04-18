@@ -188,18 +188,19 @@ Essenciais: Excel Avançado, PowerPoint."""
 Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
             """
             
-            # Configuração do schema de resposta esperado
+            # Configuração do schema de resposta esperado com novos campos
             schema = types.Schema(
                 type=types.Type.OBJECT,
-                required=["nota_palavras_chave", "nota_requisitos", "nota_experiencia", "nota_qualificacoes", "nota_global", "forcas", "fraquezas"],
+                required=["idioma", "forcas", "fraquezas", "nota_requisitos", "nota_cargos_a", "nota_cargos_b", "nota_final_a", "nota_final_b"],
                 properties={
-                    "nota_palavras_chave": types.Schema(type=types.Type.INTEGER),
-                    "nota_requisitos": types.Schema(type=types.Type.INTEGER),
-                    "nota_experiencia": types.Schema(type=types.Type.INTEGER),
-                    "nota_qualificacoes": types.Schema(type=types.Type.INTEGER),
-                    "nota_global": types.Schema(type=types.Type.INTEGER),
+                    "idioma": types.Schema(type=types.Type.STRING),
                     "forcas": types.Schema(type=types.Type.STRING),
                     "fraquezas": types.Schema(type=types.Type.STRING),
+                    "nota_requisitos": types.Schema(type=types.Type.INTEGER),
+                    "nota_cargos_a": types.Schema(type=types.Type.INTEGER),
+                    "nota_cargos_b": types.Schema(type=types.Type.INTEGER),
+                    "nota_final_a": types.Schema(type=types.Type.INTEGER),
+                    "nota_final_b": types.Schema(type=types.Type.INTEGER),
                 }
             )
             
@@ -269,7 +270,7 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                     analysis_data['company_name'] = company_name
                     analysis_data['job_link'] = job_data.get('link', '')
                     
-                    logger.info(f"Análise concluída para vaga: {job_title} - Nota global: {analysis_data.get('nota_global', 'N/A')}")
+                    logger.info(f"Análise concluída para vaga: {job_title} - Compatibilidade A: {analysis_data.get('nota_final_a', 'N/A')}%, Compatibilidade B: {analysis_data.get('nota_final_b', 'N/A')}%")
                     return analysis_data
                     
                 except json.JSONDecodeError as e:
@@ -417,7 +418,7 @@ def format_analysis_html(analysis):
         </div>
         """
     
-    # Formatar os detalhes da análise
+    # Formatar os detalhes da análise com os novos campos
     html = f"""
     <div class="job-analysis card">
         <div class="card-header bg-dark text-white">
@@ -425,29 +426,16 @@ def format_analysis_html(analysis):
             <p><a href="{analysis.get('job_link', '#')}" target="_blank">{analysis.get('job_link', '')}</a></p>
         </div>
         <div class="card-body">
-            <div class="row mb-4">
-                <div class="col">
-                    <div class="analysis-score-container">
-                        <div class="analysis-score-circle" style="--score: {analysis.get('nota_global', 0)}%;">
-                            <span class="analysis-score-text">{analysis.get('nota_global', 0)}%</span>
-                        </div>
-                        <div class="analysis-score-label">Compatibilidade Global</div>
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="analysis-details-card">
+                        <h5>Idioma</h5>
+                        <p>{analysis.get('idioma', 'Não informado')}</p>
                     </div>
                 </div>
             </div>
             
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="analysis-details-card">
-                        <h5>Palavras-chave</h5>
-                        <div class="progress">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: {analysis.get('nota_palavras_chave', 0)}%;" 
-                                aria-valuenow="{analysis.get('nota_palavras_chave', 0)}" aria-valuemin="0" aria-valuemax="100">
-                                {analysis.get('nota_palavras_chave', 0)}%
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="row mb-4">
                 <div class="col-md-3">
                     <div class="analysis-details-card">
                         <h5>Requisitos</h5>
@@ -461,24 +449,43 @@ def format_analysis_html(analysis):
                 </div>
                 <div class="col-md-3">
                     <div class="analysis-details-card">
-                        <h5>Experiência</h5>
+                        <h5>Cargo A</h5>
                         <div class="progress">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: {analysis.get('nota_experiencia', 0)}%;" 
-                                aria-valuenow="{analysis.get('nota_experiencia', 0)}" aria-valuemin="0" aria-valuemax="100">
-                                {analysis.get('nota_experiencia', 0)}%
+                            <div class="progress-bar bg-info" role="progressbar" style="width: {analysis.get('nota_cargos_a', 0)}%;" 
+                                aria-valuenow="{analysis.get('nota_cargos_a', 0)}" aria-valuemin="0" aria-valuemax="100">
+                                {analysis.get('nota_cargos_a', 0)}%
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="analysis-details-card">
-                        <h5>Qualificações</h5>
+                        <h5>Cargo B</h5>
                         <div class="progress">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: {analysis.get('nota_qualificacoes', 0)}%;" 
-                                aria-valuenow="{analysis.get('nota_qualificacoes', 0)}" aria-valuemin="0" aria-valuemax="100">
-                                {analysis.get('nota_qualificacoes', 0)}%
+                            <div class="progress-bar bg-info" role="progressbar" style="width: {analysis.get('nota_cargos_b', 0)}%;" 
+                                aria-valuenow="{analysis.get('nota_cargos_b', 0)}" aria-valuemin="0" aria-valuemax="100">
+                                {analysis.get('nota_cargos_b', 0)}%
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="analysis-score-container">
+                        <div class="analysis-score-circle" style="--score: {analysis.get('nota_final_a', 0)}%;">
+                            <span class="analysis-score-text">{analysis.get('nota_final_a', 0)}%</span>
+                        </div>
+                        <div class="analysis-score-label">Compatibilidade A</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12 text-center">
+                    <div class="analysis-score-container" style="display: inline-block;">
+                        <div class="analysis-score-circle" style="--score: {analysis.get('nota_final_b', 0)}%;">
+                            <span class="analysis-score-text">{analysis.get('nota_final_b', 0)}%</span>
+                        </div>
+                        <div class="analysis-score-label">Compatibilidade B</div>
                     </div>
                 </div>
             </div>
