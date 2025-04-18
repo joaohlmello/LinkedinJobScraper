@@ -1,0 +1,113 @@
+<!-- First Result Display Section (Row Format) -->
+{% if first_result %}
+<div id="first-result-container" class="mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Primeiro Resultado (Primeiro Lote)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="container">
+                        <!-- Os campos serão renderizados em linhas, não colunas -->
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Link:</div>
+                            <div class="col-12 col-md-9">
+                                <a href="{{ first_result.link }}" target="_blank">{{ first_result.link }}</a>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Empresa:</div>
+                            <div class="col-12 col-md-9">{{ first_result.company_name }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Link da Empresa:</div>
+                            <div class="col-12 col-md-9">
+                                <a href="{{ first_result.company_link }}" target="_blank">{{ first_result.company_link }}</a>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Cargo:</div>
+                            <div class="col-12 col-md-9">{{ first_result.job_title }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Pesquisado em:</div>
+                            <div class="col-12 col-md-9">{{ first_result.searched_at }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Anunciado em:</div>
+                            <div class="col-12 col-md-9">{{ first_result.announced_at }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Data calculada:</div>
+                            <div class="col-12 col-md-9">{{ first_result.announced_calc }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Cidade:</div>
+                            <div class="col-12 col-md-9">{{ first_result.city }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Candidatos:</div>
+                            <div class="col-12 col-md-9">{{ first_result.candidates }}</div>
+                        </div>
+                        {% if first_result.idioma %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Idioma:</div>
+                            <div class="col-12 col-md-9">{{ first_result.idioma }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.nota_requisitos %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Nota Requisitos:</div>
+                            <div class="col-12 col-md-9">{{ first_result.nota_requisitos }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.nota_cargos_a %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Nota Cargos A:</div>
+                            <div class="col-12 col-md-9">{{ first_result.nota_cargos_a }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.nota_cargos_b %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Nota Cargos B:</div>
+                            <div class="col-12 col-md-9">{{ first_result.nota_cargos_b }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.compatibilidade_a %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Compatibilidade A:</div>
+                            <div class="col-12 col-md-9">{{ first_result.compatibilidade_a }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.compatibilidade_b %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Compatibilidade B:</div>
+                            <div class="col-12 col-md-9">{{ first_result.compatibilidade_b }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.forcas %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Forças:</div>
+                            <div class="col-12 col-md-9">{{ first_result.forcas }}</div>
+                        </div>
+                        {% endif %}
+                        {% if first_result.fraquezas %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Fraquezas:</div>
+                            <div class="col-12 col-md-9">{{ first_result.fraquezas }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="row">
+                            <div class="col-12 col-md-3 fw-bold">Descrição da Vaga:</div>
+                            <div class="col-12 col-md-9">
+                                <pre class="job-description-pre">{{ first_result.job_description }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
