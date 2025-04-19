@@ -778,23 +778,27 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     
     # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
     df['idioma'] = "N/A"
-    df['nota_requisitos'] = ""
-    df['nota_cargos_a'] = ""
-    df['nota_cargos_b'] = ""
-    df['compatibilidade_a'] = ""
-    df['compatibilidade_b'] = ""
+    df['tipo_vaga'] = "N/A"
+    df['industria_vaga'] = "N/A"
+    df['foco_vaga'] = "N/A"
     df['forcas'] = ""
     df['fraquezas'] = ""
+    df['nota_industria_contexto'] = ""
+    df['nota_cargos_anteriores'] = ""
+    df['nota_requisitos'] = ""
+    df['nota_final'] = ""
     
     # Adicionar as mesmas colunas ao DataFrame de exportação
     df_export['idioma'] = "N/A"
-    df_export['nota_requisitos'] = ""
-    df_export['nota_cargos_a'] = ""
-    df_export['nota_cargos_b'] = ""
-    df_export['compatibilidade_a'] = ""
-    df_export['compatibilidade_b'] = ""
+    df_export['tipo_vaga'] = "N/A"
+    df_export['industria_vaga'] = "N/A"
+    df_export['foco_vaga'] = "N/A"
     df_export['forcas'] = ""
     df_export['fraquezas'] = ""
+    df_export['nota_industria_contexto'] = ""
+    df_export['nota_cargos_anteriores'] = ""
+    df_export['nota_requisitos'] = ""
+    df_export['nota_final'] = ""
     
     # Analisar vagas com Gemini API se solicitado
     gemini_analyses = []
@@ -869,33 +873,39 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     
                     # Obter valores da análise ou usar valores padrão com nova estrutura
                     idioma = analysis.get('idioma', 'Não informado')
-                    nota_requisitos = analysis.get('nota_requisitos', 0)
-                    nota_cargos_a = analysis.get('nota_cargos_a', 0)
-                    nota_cargos_b = analysis.get('nota_cargos_b', 0)
-                    nota_final_a = analysis.get('nota_final_a', 0)
-                    nota_final_b = analysis.get('nota_final_b', 0)
+                    tipo_vaga = analysis.get('tipo_vaga', 'Não informado')
+                    industria_vaga = analysis.get('industria_vaga', 'Não informado')
+                    foco_vaga = analysis.get('foco_vaga', 'Não informado')
                     forcas = analysis.get('forcas', '')
                     fraquezas = analysis.get('fraquezas', '')
+                    nota_industria_contexto = analysis.get('nota_industria_contexto', 0)
+                    nota_cargos_anteriores = analysis.get('nota_cargos_anteriores', 0)
+                    nota_requisitos = analysis.get('nota_requisitos', 0)
+                    nota_final = analysis.get('nota_final', 0)
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
                     df.at[idx, 'idioma'] = idioma
-                    df.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
-                    df.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
-                    df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
-                    df.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
-                    df.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
+                    df.at[idx, 'tipo_vaga'] = tipo_vaga
+                    df.at[idx, 'industria_vaga'] = industria_vaga
+                    df.at[idx, 'foco_vaga'] = foco_vaga
                     df.at[idx, 'forcas'] = forcas
                     df.at[idx, 'fraquezas'] = fraquezas
+                    df.at[idx, 'nota_industria_contexto'] = f"{nota_industria_contexto}%"
+                    df.at[idx, 'nota_cargos_anteriores'] = f"{nota_cargos_anteriores}%"
+                    df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
+                    df.at[idx, 'nota_final'] = f"{nota_final}%"
                     
                     # Atualizar o DataFrame de exportação
                     df_export.at[idx, 'idioma'] = idioma
-                    df_export.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
-                    df_export.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
-                    df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
-                    df_export.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
-                    df_export.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
+                    df_export.at[idx, 'tipo_vaga'] = tipo_vaga
+                    df_export.at[idx, 'industria_vaga'] = industria_vaga
+                    df_export.at[idx, 'foco_vaga'] = foco_vaga
                     df_export.at[idx, 'forcas'] = forcas
                     df_export.at[idx, 'fraquezas'] = fraquezas
+                    df_export.at[idx, 'nota_industria_contexto'] = f"{nota_industria_contexto}%"
+                    df_export.at[idx, 'nota_cargos_anteriores'] = f"{nota_cargos_anteriores}%"
+                    df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
+                    df_export.at[idx, 'nota_final'] = f"{nota_final}%"
                 
                 # Salvar para HTML detalhado abaixo da tabela
                 gemini_analyses.append(analysis)
@@ -1017,7 +1027,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     /* Novas colunas de compatibilidade */
     .linkedin-job-results-table th:nth-child(11), 
     .linkedin-job-results-table td:nth-child(11) {
-        width: 5%;
+        width: 4%;
     }
     
     .linkedin-job-results-table th:nth-child(12), 
@@ -1044,6 +1054,21 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     .linkedin-job-results-table td:nth-child(16) {
         width: 4%;
     }
+    
+    .linkedin-job-results-table th:nth-child(17), 
+    .linkedin-job-results-table td:nth-child(17) {
+        width: 4%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(18), 
+    .linkedin-job-results-table td:nth-child(18) {
+        width: 4%;
+    }
+    
+    .linkedin-job-results-table th:nth-child(19), 
+    .linkedin-job-results-table td:nth-child(19) {
+        width: 4%;
+    }
     </style>
     <div class="table-responsive">
       <table class="table table-striped table-hover table-dark linkedin-job-results-table">
@@ -1060,11 +1085,14 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th>City</th>
             <th>Candidates</th>
             <th class="compatibility-header">Idioma</th>
-            <th class="compatibility-header">Requisitos</th>
-            <th class="compatibility-header">Cargo A</th>
-            <th class="compatibility-header">Cargo B</th>
-            <th class="compatibility-header">Comp. A</th>
-            <th class="compatibility-header">Comp. B</th>
+            <th class="compatibility-header">Tipo Vaga</th>
+            <th class="compatibility-header">Indústria</th>
+            <th class="compatibility-header">Foco</th>
+            <th class="compatibility-header">Nota Ind.</th>
+            <th class="compatibility-header">Nota Cargos</th>
+            <th class="compatibility-header">Nota Req.</th>
+            <th class="compatibility-header">Comp. Final</th>
+            <th class="compatibility-header">Detalhes</th>
           </tr>
         </thead>
         <tbody>
@@ -1077,6 +1105,14 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                             row.get('compatibilidade_b', '') != "" or 
                             row.get('compatibilidade_global', '') != "")
         
+        # Criar URL para detalhes da vaga
+        job_link = ''
+        if 'link' in row and row['link'] and '<a href=' in row['link']:
+            import re
+            url_match = re.search(r'href="([^"]+)"', row['link'])
+            if url_match:
+                job_link = url_match.group(1)
+                
         html_table += f"""
         <tr>
           <td>{row['link']}</td>
@@ -1090,11 +1126,18 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
           <td class="compatibility-column">{row.get('idioma', 'N/A')}</td>
+          <td class="compatibility-column">{row.get('tipo_vaga', 'N/A')}</td>
+          <td class="compatibility-column">{row.get('industria_vaga', 'N/A')}</td>
+          <td class="compatibility-column">{row.get('foco_vaga', 'N/A')}</td>
+          <td class="compatibility-column">{row.get('nota_industria_contexto', '')}</td>
+          <td class="compatibility-column">{row.get('nota_cargos_anteriores', '')}</td>
           <td class="compatibility-column">{row.get('nota_requisitos', '')}</td>
-          <td class="compatibility-column">{row.get('nota_cargos_a', '')}</td>
-          <td class="compatibility-column">{row.get('nota_cargos_b', '')}</td>
-          <td class="compatibility-column">{row.get('compatibilidade_a', '')}</td>
-          <td class="compatibility-column">{row.get('compatibilidade_b', '')}</td>
+          <td class="compatibility-column">{row.get('nota_final', '')}</td>
+          <td class="compatibility-column">
+            <a href="{job_link}" class="btn btn-sm btn-outline-primary" target="_blank">
+              Ver
+            </a>
+          </td>
         </tr>
         """
     
