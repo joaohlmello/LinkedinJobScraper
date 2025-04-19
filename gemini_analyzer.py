@@ -29,7 +29,7 @@ class JobAnalyzer:
         try:
             # Inicializar cliente Gemini
             self.client = genai.Client(api_key=api_key)
-            self.model_name = "gemini-2.5-pro-preview-03-25"
+            self.model_name = "gemini-2.5-flash-preview-04-17"
             
             # Configurar o prompt base
             self.system_prompt = self._get_system_prompt()
@@ -72,6 +72,9 @@ Exatamente nesta ordem
 - Fraquezas
 
 
+
+
+
 #CURRICULOS (A UNICA DIFERENÇA ENTRE AS VERSÕES É O TITULO DOS CARGOS) 
 JOÃO MELLO                           joaohlmello@gmail.com | Linkedin: joaohlmello | (21) 96947-1930 | São Paulo - SP
 
@@ -81,10 +84,10 @@ Gerente de Projetos, Produto e Operações com 10 anos de experiência (7 em pos
 
 EXPERIÊNCIA
 SYNERGIA CONSULTORIA (Cliente VALE) 
-Nov/22 – Dez/24: Head de Planejamento e Projetos de Tecnologia (curriculo 0) // Head de Planejamento e Projetos de Tecnologia (curriculo A) // Head de Panejamento e Produtos de Tecnologia (curriculo B)
+Nov/22 - Dez/24: Head de Planejamento e Projetos de Tecnologia (curriculo 0) // Head de Planejamento e Projetos de Tecnologia (curriculo A) // Head de Panejamento e Produtos de Tecnologia (curriculo B)
 Liderança executiva de projetos e áreas de Planejamento, Produtos Digitais, Desenvolvimento e Dados em Consultoria (600 pessoas). Equipe multifuncional de 17 pessoas, Reporte aos CEOs Brasil e do fundo de private equity (TPF - Bélgica).
 
-Estruturação da Diretoria: Definí estratégia, organograma e processos, viabilizando ~R$20MM em novos negócios.
+Estruturação da Diretoria: Defini estratégia, organograma e processos, viabilizando ~R$20MM em novos negócios.
 Gestão de Stakeholders e Crises: Liderei o turnaround do maior contrato da empresa (R$100MM), reestruturando escopo, prazo e orçamento, resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses.
 Gestão do Planejamento Estratégico: Implementei OKR para toda a empresa, integrando 90 projetos internos a 15 objetivos estratégicos, engajando a alta gestão e aumentando o atingimento de ~50% para ~85% em 1 ano.
 Gestão de Projetos de Tecnologia (Produtos): Remodelei a fábrica de software para squads ágeis com práticas de Product Management (discovery, PRDs, stories, sprints), melhorando significativamente o alinhamento das entregas com as necessidades do negócio e gerando novas linhas de faturamento. Destaco os Projetos (Produtos):
@@ -93,19 +96,19 @@ Reconstrução de Sistema Legado: Coleta e análise de dados de mercado com inte
 Gerador de Documentos com IA: Geração automatizada de laudos e pareceres com integrações com bancos de dados, APIs e inteligência artificial com human in the loop, viabilizando contrato com a redução de custo e prazo.
  
 JM GESTÃO & TECNOLOGIA (Cliente ONCOCLÍNICAS)
-Jul/21 – Out/22: Fundador (currículo 0) // Fundador, Gerente de Projetos e Consultor de PMO (currículo A) // Fundador e Product Builder (currículo B)
+Jul/21 - Out/22: Fundador (currículo 0) // Fundador, Gerente de Projetos e Consultor de PMO (currículo A) // Fundador e Product Builder (currículo B)
 Tech startup de consultoria focada em gerenciamento de projetos, comigo e 2 funcionários (PMO e Dev).
 
 Gestão de Projetos: Gerenciei portfólio de 4 projetos de CAPEX (R$18MM), coordenando equipes e aplicando metodologias para assegurar escopo, prazo e orçamento, alcançando nota máxima na avaliação de fornecedores.
-Implementação de Processos e PMO: Definí e padronizei EAPs, cronogramas, curvas S, gestão da mudança e riscos, resultando em maior previsibilidade, zero mudanças não mapeadas de escopo zero ocorrências críticas não mapeadas.
+Implementação de Processos e PMO: Defini e padronizei EAPs, cronogramas, curvas S, gestão da mudança e riscos, resultando em maior previsibilidade, zero mudanças não mapeadas de escopo zero ocorrências críticas não mapeadas.
 Transformação Digital (Produto): Liderei o desenvolvimento de sistema ERP com inteligência artificial, gerando economia direta de R$700K, reduzindo o tempo de aprovação de 7 dias para 3, e as não conformidades em ~95%.
 
 EQSEED
-Fev/20 – Jul/21: Líder de Projetos e Produtos (currículo 0) // Líder de Projetos e Operações (currículo A) // Líder de Produtos (currículo B)
+Fev/20 - Jul/21: Líder de Projetos e Produtos (currículo 0) // Líder de Projetos e Operações (currículo A) // Líder de Produtos (currículo B)
 Liderança de produto e projetos de transformação digital em startup do mercado financeiro (marketplace de venture capital, 20 funcionários), reportando ao CEO inglês e ao CSO americano. Promovido a equity partner em 8 meses.
 
 Gestão Ágil: Implementei OKRs e Kanban em toda a empresa (Tecnologia, Negócios, Marketing e Vendas), unindo o tático com o estratégico, elevando a transparência e viabilizando a priorização integrada do roadmap.
-Gestão de Projetos (Produtos): Liderei o produto e projetos de  transformação digital do discovery ao deploy. Destaco:
+Gestão de Projetos (Produtos): Liderei o produto e projetos de transformação digital do discovery ao deploy. Destaco:
 Monitoramento do CRM / funil de vendas e carrinho abandonado (aumento de 15% na conversão);
 Automação do pós-vendas (NPS elevado à Zona de Excelência >75);
 Automação do batimento financeiro (redução de ~80% no lead time);
@@ -114,17 +117,17 @@ Modelagem e sistematização do cálculo de valuation do portfólio (redução d
 Gestão de Operações: Assumi a gestão interina do time de Ops (4 pessoas) após saída do COO. Gerenciei o runway (tempo de caixa) durante a crise da COVID-19, liderando a renegociação de contratos e modelagem de cenários.
 
 CARGOS ANTERIORES
-Abr/18 – Ago/19: N&A CONSULTORES (Cliente BRMALLS) – Coordenador de Planejamento e Controle de Projetos
-Ago/17 – Mar/18: N&A CONSULTORES (Cliente BRMALLS)  – Analista de Planejamento e Controle de Projetos
-Nov/16 – Ago/17: ONCOCLÍNICAS – Estagiário de PMO
-Jul/15 – Jun/16: N&A CONSULTORES (Cliente BRMALLS) – Estagiário de Planejamento e Controle de Projetos
-Jan/14 – Jan/15: MÉTODO ENGENHARIA – Estagiário de Planejamento e Controle de Projetos
+Abr/18 - Ago/19: N&A CONSULTORES (Cliente BRMALLS) - Coordenador de Planejamento e Controle de Projetos
+Ago/17 - Mar/18: N&A CONSULTORES (Cliente BRMALLS) - Analista de Planejamento e Controle de Projetos
+Nov/16 - Ago/17: ONCOCLÍNICAS - Estagiário de PMO
+Jul/15 - Jun/16: N&A CONSULTORES (Cliente BRMALLS) - Estagiário de Planejamento e Controle de Projetos
+Jan/14 - Jan/15: MÉTODO ENGENHARIA - Estagiário de Planejamento e Controle de Projetos
 
 EDUCAÇÃO E CERTIFICAÇÕES
-MBA em Gerenciamento de Projetos  – Fundação Getúlio Vargas (FGV) – Concluído
-Bacharelado em Engenharia – Estácio – Concluído
-Certificação Project Management Professional (PMP) – Project Management Institute (PMI) – 2020
-Certificação Scrum Foundations Professional Certificate (SFPC) – Certiprof – 2020
+MBA em Gerenciamento de Projetos - Fundação Getúlio Vargas (FGV) - Concluído
+Bacharelado em Engenharia - Estácio - Concluído
+Certificação Project Management Professional (PMP) - Project Management Institute (PMI) - 2020
+Certificação Scrum Foundations Professional Certificate (SFPC) - Certiprof - 2020
 
 CONHECIMENTOS
 Idiomas: Inglês Fluente (C1).
