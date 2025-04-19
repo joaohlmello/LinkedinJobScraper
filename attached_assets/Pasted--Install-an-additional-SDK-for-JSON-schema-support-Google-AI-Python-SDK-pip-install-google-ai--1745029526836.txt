@@ -1,0 +1,65 @@
+"""
+Install an additional SDK for JSON schema support Google AI Python SDK
+
+$ pip install google.ai.generativelanguage
+"""
+
+import os
+import google.generativeai as genai
+from google.ai.generativelanguage_v1beta.types import content
+
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+# Create the model
+generation_config = {
+  "temperature": 0.1,
+  "top_p": 0.5,
+  "top_k": 64,
+  "max_output_tokens": 65536,
+  "response_schema": content.Schema(
+    type = content.Type.OBJECT,
+    required = ["idioma", "nota_requisitos", "nota_cargos_a", "nota_cargos_b", "nota_final_a", "nota_final_b", "forcas", "fraquezas"],
+    properties = {
+      "idioma": content.Schema(
+        type = content.Type.STRING,
+      ),
+      "nota_requisitos": content.Schema(
+        type = content.Type.NUMBER,
+      ),
+      "nota_cargos_a": content.Schema(
+        type = content.Type.NUMBER,
+      ),
+      "nota_cargos_b": content.Schema(
+        type = content.Type.NUMBER,
+      ),
+      "nota_final_a": content.Schema(
+        type = content.Type.NUMBER,
+      ),
+      "nota_final_b": content.Schema(
+        type = content.Type.NUMBER,
+      ),
+      "forcas": content.Schema(
+        type = content.Type.STRING,
+      ),
+      "fraquezas": content.Schema(
+        type = content.Type.STRING,
+      ),
+    },
+  ),
+  "response_mime_type": "application/json",
+}
+
+model = genai.GenerativeModel(
+  model_name="gemini-2.5-flash-preview-04-17",
+  generation_config=generation_config,
+  system_instruction="# 1. CONTEXTO ESTRATÉGICO \nPense como um Diretor de RH avaliando um candidato externo para uma posição chave e que recebe centenas de currículos. Você precisa tomar uma decisão de contratação com base em fatos e evidências, não em otimismo.\n\n# 2. METODOLOGIA DE AVALIAÇÃO\nPara o currículo A\n-Cargos Anteriores Currículo A: Avalie a trajetória profissional e compatibilidade de cargos anteriores e responsabilidades anteriores. Dê peso maior ao cargo mais recente. Seja crítico.\n-Cargos Anteriores Currículo B.\n-Requisitos (igual para Curriculum A e B: Disseque cada requisito explícito. Atribua uma nota binária de aderência (0 ou 1) justificada para cada um.\n-Cálculo de Aderência Ponderada: Separadamente para cada currículo: 40% cargos anteriores, 60%.\n-Forças: Identifique e liste as forças reais do profissional que representam um diferencial específico para esta vaga.\n-Fraquezas: Identifique e liste as fraquezas reais do profissional que representam um problema específico para esta vaga. Inclua pontos que podem gerar questionamentos ou exigirão justificativa. Sem eufemismos.\n\n# 6. ESTRUTURA DO OUTPUT\nExatamente nesta ordem\n## IDIOMA\n- Idioma da vaga (portugues OU ingles)\n## CURRICULO A\n- Notas cargos anteriores\n- Nota requisitos\n- Nota final\n## CURRICULO B\n- Notas cargos anteriores\n- Nota requisitos\n- Nota final\n## SW\n- Forças\n- Fraquezas\n\n\n\n\n\n#CURRICULOS (A UNICA DIFERENÇA ENTRE AS VERSÕES É O TITULO DOS CARGOS) \nJOÃO MELLO                           joaohlmello@gmail.com | Linkedin: joaohlmello | (21) 96947-1930 | São Paulo - SP\n\nSUMÁRIO\nGerente de Projetos, Produto e Operações com 10 anos de experiência (7 em posições de liderança).\n\n\nEXPERIÊNCIA\nSYNERGIA CONSULTORIA (Cliente VALE) \nNov/22 – Dez/24: Head de Planejamento e Projetos de Tecnologia (curriculo 0) // Head de Planejamento e Projetos de Tecnologia (curriculo A) // Head de Panejamento e Produtos de Tecnologia (curriculo B)\nLiderança executiva de projetos e áreas de Planejamento, Produtos Digitais, Desenvolvimento e Dados em Consultoria (600 pessoas). Equipe multifuncional de 17 pessoas, Reporte aos CEOs Brasil e do fundo de private equity (TPF - Bélgica).\n\nEstruturação da Diretoria: Definí estratégia, organograma e processos, viabilizando ~R$20MM em novos negócios.\nGestão de Stakeholders e Crises: Liderei o turnaround do maior contrato da empresa (R$100MM), reestruturando escopo, prazo e orçamento, resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses.\nGestão do Planejamento Estratégico: Implementei OKR para toda a empresa, integrando 90 projetos internos a 15 objetivos estratégicos, engajando a alta gestão e aumentando o atingimento de ~50% para ~85% em 1 ano.\nGestão de Projetos de Tecnologia (Produtos): Remodelei a fábrica de software para squads ágeis com práticas de Product Management (discovery, PRDs, stories, sprints), melhorando significativamente o alinhamento das entregas com as necessidades do negócio e gerando novas linhas de faturamento. Destaco os Projetos (Produtos):\nPMOs Data-driven: Sistemas de gestão para monitoramento de milhões de produtos em centenas de etapas, com regras de negócio complexas e entregas via API, reduzindo o tempo de reporte de 1 semana para em tempo real.\nReconstrução de Sistema Legado: Coleta e análise de dados de mercado com integração offline to online (O2O), corrigindo problemas de UI, UX, bugs recorrentes, extração de dados e integrações.\nGerador de Documentos com IA: Geração automatizada de laudos e pareceres com integrações com bancos de dados, APIs e inteligência artificial com human in the loop, viabilizando contrato com a redução de custo e prazo.\n \nJM GESTÃO & TECNOLOGIA (Cliente ONCOCLÍNICAS)\nJul/21 – Out/22: Fundador (currículo 0) // Fundador, Gerente de Projetos e Consultor de PMO (currículo A) // Fundador e Product Builder (currículo B)\nTech startup de consultoria focada em gerenciamento de projetos, comigo e 2 funcionários (PMO e Dev).\n\nGestão de Projetos: Gerenciei portfólio de 4 projetos de CAPEX (R$18MM), coordenando equipes e aplicando metodologias para assegurar escopo, prazo e orçamento, alcançando nota máxima na avaliação de fornecedores.\nImplementação de Processos e PMO: Definí e padronizei EAPs, cronogramas, curvas S, gestão da mudança e riscos, resultando em maior previsibilidade, zero mudanças não mapeadas de escopo zero ocorrências críticas não mapeadas.\nTransformação Digital (Produto): Liderei o desenvolvimento de sistema ERP com inteligência artificial, gerando economia direta de R$700K, reduzindo o tempo de aprovação de 7 dias para 3, e as não conformidades em ~95%.\n\nEQSEED\nFev/20 – Jul/21: Líder de Projetos e Produtos (currículo 0) // Líder de Projetos e Operações (currículo A) // Líder de Produtos (currículo B)\nLiderança de produto e projetos de transformação digital em startup do mercado financeiro (marketplace de venture capital, 20 funcionários), reportando ao CEO inglês e ao CSO americano. Promovido a equity partner em 8 meses.\n\nGestão Ágil: Implementei OKRs e Kanban em toda a empresa (Tecnologia, Negócios, Marketing e Vendas), unindo o tático com o estratégico, elevando a transparência e viabilizando a priorização integrada do roadmap.\nGestão de Projetos (Produtos): Liderei o produto e projetos de  transformação digital do discovery ao deploy. Destaco:\nMonitoramento do CRM / funil de vendas e carrinho abandonado (aumento de 15% na conversão);\nAutomação do pós-vendas (NPS elevado à Zona de Excelência >75);\nAutomação do batimento financeiro (redução de ~80% no lead time);\nModelagem e sistematização da análise de investimentos (produtividade 6x maior);\nModelagem e sistematização do cálculo de valuation do portfólio (redução de 2 dias de trabalho).\nGestão de Operações: Assumi a gestão interina do time de Ops (4 pessoas) após saída do COO. Gerenciei o runway (tempo de caixa) durante a crise da COVID-19, liderando a renegociação de contratos e modelagem de cenários.\n\nCARGOS ANTERIORES\nAbr/18 – Ago/19: N&A CONSULTORES (Cliente BRMALLS) – Coordenador de Planejamento e Controle de Projetos\nAgo/17 – Mar/18: N&A CONSULTORES (Cliente BRMALLS)  – Analista de Planejamento e Controle de Projetos\nNov/16 – Ago/17: ONCOCLÍNICAS – Estagiário de PMO\nJul/15 – Jun/16: N&A CONSULTORES (Cliente BRMALLS) – Estagiário de Planejamento e Controle de Projetos\nJan/14 – Jan/15: MÉTODO ENGENHARIA – Estagiário de Planejamento e Controle de Projetos\n\nEDUCAÇÃO E CERTIFICAÇÕES\nMBA em Gerenciamento de Projetos  – Fundação Getúlio Vargas (FGV) – Concluído\nBacharelado em Engenharia – Estácio – Concluído\nCertificação Project Management Professional (PMP) – Project Management Institute (PMI) – 2020\nCertificação Scrum Foundations Professional Certificate (SFPC) – Certiprof – 2020\n\nCONHECIMENTOS\nIdiomas: Inglês Fluente (C1).\nMetodologias e Frameworks de Projeto: PMBOK (Waterfall / Preditiva), Agile (Scrum, Kanban), Lean Six Sigma, BPMN.\nMetodologias e Frameworks de Produto: OKR, Design Thinking.\nAnálise de Dados e BI: Power BI, Metabase, SQL (consultas SELECT, JOINs, agregações).\nRPA e Low-code: Python (scripts e automações vibe code), Power Automate, Power Apps, N8N, Glide. \nInteligência Artificial: APIs OpenAI e Gemini.\nSoftwares de Gestão e CRM: MS Project, Jira, Confluence, Azure DevOps, Notion, Asana, Trello, Pipefy, Pipedrive.\nSoftwares de Design e Colaboração: Miro, Mural.\nSoftwares de Serviços e ERPs: Fluig, ServiceNow, TOTVS Protheus, Oracle EBS.\nEssenciais: Pacote Office Avançado (Excel, PowerPoint, etc.).   ",
+)
+
+chat_session = model.start_chat(
+  history=[
+  ]
+)
+
+response = chat_session.send_message("INSERT_INPUT_HERE")
+
+print(response.text)
