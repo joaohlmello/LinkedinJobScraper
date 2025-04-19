@@ -262,11 +262,11 @@ Analisar a compatibilidade entre o currículo do candidato (fornecido no seu con
                     "idioma": types.Schema(type=types.Type.STRING),
                     "forcas": types.Schema(type=types.Type.STRING),
                     "fraquezas": types.Schema(type=types.Type.STRING),
-                    "nota_requisitos": types.Schema(type=types.Type.INTEGER),
-                    "nota_cargos_a": types.Schema(type=types.Type.INTEGER),
-                    "nota_cargos_b": types.Schema(type=types.Type.INTEGER),
-                    "nota_final_a": types.Schema(type=types.Type.INTEGER),
-                    "nota_final_b": types.Schema(type=types.Type.INTEGER),
+                    "nota_requisitos": types.Schema(type=types.Type.NUMBER),
+                    "nota_cargos_a": types.Schema(type=types.Type.NUMBER),
+                    "nota_cargos_b": types.Schema(type=types.Type.NUMBER),
+                    "nota_final_a": types.Schema(type=types.Type.NUMBER),
+                    "nota_final_b": types.Schema(type=types.Type.NUMBER),
                 }
             )
             
