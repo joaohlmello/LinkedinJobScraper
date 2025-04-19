@@ -760,6 +760,124 @@ def clear_history():
             'message': f"Erro ao limpar histórico: {str(e)}"
         })
 
+@app.route('/process_async', methods=['POST'])
+def start_process_async():
+    """
+    Endpoint para iniciar processamento assíncrono via AJAX
+    Retorna JSON em vez de redirecionar
+    """
+    global processing_progress
+    
+    # Get LinkedIn URLs from the form
+    linkedin_urls_text = request.form.get('linkedin_urls', '')
+    linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
+    
+    # Validar URLs do LinkedIn
+    valid_urls = []
+    invalid_urls = []
+    
+    # Importar a função de normalização para pré-validar as URLs
+    from linkedin_scraper import normalize_linkedin_url
+    
+    for url in linkedin_urls_raw:
+        # Tenta normalizar para verificar se é uma URL válida do LinkedIn
+        normalized = normalize_linkedin_url(url)
+        if normalized is not None:
+            valid_urls.append(url)
+        else:
+            invalid_urls.append(url)
+    
+    # Remover URLs duplicados mantendo a ordem original
+    linkedin_urls = []
+    seen_urls = set()
+    for url in valid_urls:
+        if url not in seen_urls:
+            linkedin_urls.append(url)
+            seen_urls.add(url)
+    
+    # Mensagens para retornar ao cliente
+    messages = []
+    if invalid_urls:
+        messages.append(f"{len(invalid_urls)} URLs inválidas foram ignoradas.")
+        
+    if len(linkedin_urls) < len(valid_urls):
+        duplicates_removed = len(valid_urls) - len(linkedin_urls)
+        messages.append(f"{duplicates_removed} URLs duplicados foram removidos.")
+    
+    # Get ignore URLs from the form
+    ignore_urls_text = request.form.get('ignore_urls', '')
+    ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
+    
+    # Adicionar URLs ignoradas ao banco de dados
+    if ignore_urls:
+        try:
+            with app.app_context():
+                for url in ignore_urls:
+                    # Verificar se já existe
+                    existing = IgnoredURL.query.filter_by(url=url).first()
+                    if not existing:
+                        ignored_url = IgnoredURL(url=url)
+                        db.session.add(ignored_url)
+                db.session.commit()
+                # Recarregar a lista atual
+                load_ignored_urls()
+        except Exception as e:
+            logger.error(f"Erro ao adicionar URLs ignoradas: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f"Erro ao adicionar URLs ignoradas: {str(e)}"
+            })
+    
+    # Process the URLs if any are provided
+    if linkedin_urls:
+        # Verificar se já há processamento em andamento
+        is_processing = processing_progress['status'] == 'processing'
+        if is_processing:
+            # Adicionar à fila de trabalhos pendentes
+            batch_size = int(request.form.get('batch_size', '10'))
+            analyze_jobs = 'analyze_jobs' in request.form
+            
+            # Adicionar trabalhos à fila
+            processing_progress['job_queue'].append({
+                'urls': linkedin_urls,
+                'batch_size': batch_size,
+                'analyze_jobs': analyze_jobs
+            })
+            
+            messages.append("Solicitação adicionada à fila. Será processada após a conclusão do trabalho atual.")
+            logger.info(f"Nova solicitação adicionada à fila. Total na fila: {len(processing_progress['job_queue'])}")
+            
+            return jsonify({
+                'success': True, 
+                'message': "<br>".join(messages),
+                'queued': True
+            })
+        else:
+            # Iniciar processamento assíncrono
+            batch_size = int(request.form.get('batch_size', '10'))
+            analyze_jobs = 'analyze_jobs' in request.form
+            logger.debug(f"Solicitação de processamento assíncrono recebida")
+            
+            # Limpar resultados anteriores somente se não houver trabalhos na fila
+            if not processing_progress['job_queue']:
+                processing_progress['results'] = None
+                
+            from threading import Thread
+            thread = Thread(target=process_async, args=(linkedin_urls, batch_size, analyze_jobs))
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True, 
+                'message': "<br>".join(messages) + "<br>Processamento iniciado com sucesso!",
+                'queued': False
+            })
+    else:
+        return jsonify({
+            'success': False,
+            'message': "Por favor, insira ao menos uma URL do LinkedIn válida."
+        })
+
 @app.route('/check_progress', methods=['GET'])
 def check_progress():
     """
