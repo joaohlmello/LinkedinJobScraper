@@ -706,19 +706,33 @@ def process_batches_background(batches, analyze_jobs=False):
 def clear_history():
     """
     Limpa o histórico de processamento, removendo todos os lotes processados do banco de dados
+    Retorna JSON em vez de redirecionar, para ser usado com AJAX
     """
     global processing_progress
     
     # Verificar se o processamento está em andamento
     if processing_progress['status'] == 'processing':
-        flash("Não é possível limpar o histórico enquanto há processamento em andamento.", "warning")
-        return redirect(url_for('index'))
+        return jsonify({
+            'success': False,
+            'message': "Não é possível limpar o histórico enquanto há processamento em andamento."
+        })
+    
+    # Verificar se deve limpar também as URLs ignoradas
+    clear_ignored = request.args.get('clear_ignored', 'false').lower() == 'true'
     
     try:
         with app.app_context():
             # Remover todos os registros da tabela ProcessedBatch
             count = ProcessedBatch.query.count()
             ProcessedBatch.query.delete()
+            
+            # Se solicitado, limpar também as URLs ignoradas
+            ignored_count = 0
+            if clear_ignored:
+                ignored_count = IgnoredURL.query.count()
+                IgnoredURL.query.delete()
+                processing_progress['ignored_urls'] = set()
+                
             db.session.commit()
             
             # Limpar a lista de lotes processados no objeto de progresso
@@ -729,13 +743,22 @@ def clear_history():
             # Reiniciar o índice de lotes
             processing_progress['current_batch'] = 0
             
-            flash(f"Histórico de processamento limpo com sucesso! ({count} lotes removidos)", "success")
-            logger.info(f"Histórico limpo: {count} lotes removidos")
+            message = f"Histórico de processamento limpo com sucesso! ({count} lotes removidos)"
+            if clear_ignored and ignored_count > 0:
+                message += f" e {ignored_count} URLs ignoradas removidas"
+                
+            logger.info(message)
+            
+            return jsonify({
+                'success': True,
+                'message': message
+            })
     except Exception as e:
         logger.error(f"Erro ao limpar histórico: {str(e)}")
-        flash(f"Erro ao limpar histórico: {str(e)}", "danger")
-    
-    return redirect(url_for('index'))
+        return jsonify({
+            'success': False,
+            'message': f"Erro ao limpar histórico: {str(e)}"
+        })
 
 @app.route('/check_progress', methods=['GET'])
 def check_progress():
