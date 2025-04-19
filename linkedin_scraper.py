@@ -565,45 +565,28 @@ def normalize_linkedin_url(url):
         
     Returns:
         str: URL normalizado no formato https://www.linkedin.com/jobs/view/XXXXXXXXXX
-        None: Se o URL não for um link válido do LinkedIn
     """
     # Verificar se o URL é válido
     if not url or not isinstance(url, str):
-        logger.warning(f"URL inválido (vazio ou não é string): {url}")
-        return None
-    
-    # Verificar se é um URL do LinkedIn
-    if 'linkedin.com' not in url:
-        logger.warning(f"URL não é do LinkedIn: {url}")
-        return None
-    
-    # Verificar se é um URL de vaga
-    if '/jobs/view/' not in url and '/jobs/search/' not in url:
-        logger.warning(f"URL não é de uma vaga de emprego: {url}")
-        return None
+        return url
     
     # Usar regex para extrair o ID de 10 dígitos
     import re
-    
-    # Padrão 1: ID numérico de 10 dígitos
     match = re.search(r'linkedin\.com/jobs/view/(\d{10})', url)
     if match:
         job_id = match.group(1)
         return f"https://www.linkedin.com/jobs/view/{job_id}"
     
-    # Padrão 2: Qualquer ID após /jobs/view/
-    match = re.search(r'/jobs/view/([^/?&]+)', url)
+    # Tentar outro padrão se o primeiro não funcionar
+    match = re.search(r'/jobs/view/([^/?]+)', url)
     if match:
         job_id = match.group(1)
-        # Se for numérico (de qualquer tamanho)
-        if job_id.isdigit():
-            return f"https://www.linkedin.com/jobs/view/{job_id}"
-        # Se for alfanumérico, provavelmente é um ID válido
-        elif re.match(r'^[a-zA-Z0-9-]+$', job_id):
+        # Se for numérico e tiver 10 dígitos, usar esse ID
+        if job_id.isdigit() and len(job_id) == 10:
             return f"https://www.linkedin.com/jobs/view/{job_id}"
     
-    # Se não conseguir extrair o ID, retornar o URL original mas alertar
-    logger.debug(f"Não foi possível normalizar o URL, usando original: {url}")
+    # Se não conseguir extrair o ID, retornar o URL original
+    logger.debug(f"Não foi possível normalizar o URL: {url}")
     return url
 
 def calculate_announced_date(searched_at, announced_at):
@@ -722,25 +705,13 @@ def process_linkedin_urls(urls, progress_callback=None):
             
             # Normalizar o URL para o formato reduzido
             normalized_url = normalize_linkedin_url(url)
-            
-            # Verificar se a URL foi normalizada com sucesso
-            if normalized_url is None:
-                logger.warning(f"URL inválida ignorada: {url}")
-                # Pular para a próxima URL
-                continue
-                
             logger.debug(f"Processando URL {i+1}/{len(random_urls)}: {normalized_url}")
             
-            try:
-                # Usar o URL normalizado para extração com IP rotativo
-                result = extract_company_info(normalized_url)
-                
-                # Substituir o link original pelo normalizado
-                result['link'] = normalized_url
-            except Exception as e:
-                logger.error(f"Erro ao extrair informações da URL {normalized_url}: {str(e)}")
-                # Pular para a próxima URL
-                continue
+            # Usar o URL normalizado para extração com IP rotativo
+            result = extract_company_info(normalized_url)
+            
+            # Substituir o link original pelo normalizado
+            result['link'] = normalized_url
             
             # Calcular a data de anúncio com base nas informações disponíveis
             result['announced_calc'] = calculate_announced_date(
@@ -805,13 +776,13 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     if progress_callback:
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
-    # Adicionar colunas para análise Gemini com os nomes exatos da API (inicialmente vazias)
+    # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
     df['idioma'] = "N/A"
     df['nota_requisitos'] = ""
     df['nota_cargos_a'] = ""
     df['nota_cargos_b'] = ""
-    df['nota_final_a'] = ""
-    df['nota_final_b'] = ""
+    df['compatibilidade_a'] = ""
+    df['compatibilidade_b'] = ""
     df['forcas'] = ""
     df['fraquezas'] = ""
     
@@ -820,8 +791,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     df_export['nota_requisitos'] = ""
     df_export['nota_cargos_a'] = ""
     df_export['nota_cargos_b'] = ""
-    df_export['nota_final_a'] = ""
-    df_export['nota_final_b'] = ""
+    df_export['compatibilidade_a'] = ""
+    df_export['compatibilidade_b'] = ""
     df_export['forcas'] = ""
     df_export['fraquezas'] = ""
     
@@ -908,8 +879,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
                     df.at[idx, 'idioma'] = idioma
-                    df.at[idx, 'nota_final_a'] = f"{nota_final_a}%"
-                    df.at[idx, 'nota_final_b'] = f"{nota_final_b}%"
+                    df.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
+                    df.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
                     df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
                     df.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
@@ -918,8 +889,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     
                     # Atualizar o DataFrame de exportação
                     df_export.at[idx, 'idioma'] = idioma
-                    df_export.at[idx, 'nota_final_a'] = f"{nota_final_a}%"
-                    df_export.at[idx, 'nota_final_b'] = f"{nota_final_b}%"
+                    df_export.at[idx, 'compatibilidade_a'] = f"{nota_final_a}%"
+                    df_export.at[idx, 'compatibilidade_b'] = f"{nota_final_b}%"
                     df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df_export.at[idx, 'nota_cargos_a'] = f"{nota_cargos_a}%"
                     df_export.at[idx, 'nota_cargos_b'] = f"{nota_cargos_b}%"
@@ -1092,8 +1063,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th class="compatibility-header">Requisitos</th>
             <th class="compatibility-header">Cargo A</th>
             <th class="compatibility-header">Cargo B</th>
-            <th class="compatibility-header">Nota Final A</th>
-            <th class="compatibility-header">Nota Final B</th>
+            <th class="compatibility-header">Comp. A</th>
+            <th class="compatibility-header">Comp. B</th>
           </tr>
         </thead>
         <tbody>
@@ -1102,8 +1073,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     # Adicionar cada linha de forma manual para ter controle total sobre o conteúdo
     for _, row in df.iterrows():
         # Verificar se temos resultados do Gemini para mostrar (verifica campo novo ou legado)
-        has_compatibility = (row.get('nota_final_a', '') != "" or 
-                            row.get('nota_final_b', '') != "" or 
+        has_compatibility = (row.get('compatibilidade_a', '') != "" or 
+                            row.get('compatibilidade_b', '') != "" or 
                             row.get('compatibilidade_global', '') != "")
         
         html_table += f"""
@@ -1122,8 +1093,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td class="compatibility-column">{row.get('nota_requisitos', '')}</td>
           <td class="compatibility-column">{row.get('nota_cargos_a', '')}</td>
           <td class="compatibility-column">{row.get('nota_cargos_b', '')}</td>
-          <td class="compatibility-column">{row.get('nota_final_a', '')}</td>
-          <td class="compatibility-column">{row.get('nota_final_b', '')}</td>
+          <td class="compatibility-column">{row.get('compatibilidade_a', '')}</td>
+          <td class="compatibility-column">{row.get('compatibilidade_b', '')}</td>
         </tr>
         """
     
