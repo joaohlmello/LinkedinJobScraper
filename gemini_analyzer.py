@@ -144,8 +144,8 @@ Essenciais: Pacote Office Avançado (Excel, PowerPoint, etc.)."""[Truncated]
 
 EXPERIÊNCIA
 SYNERGIA CONSULTORIA SOCIOAMBIENTAL (Cliente Vale)
-Nov 22 – Dez 24: Diretor de Projetos de Tecnologia e Planejamento
-Ago 22 – Out 22: Consultor Estratégico
+Nov 22 - Dez 24: Diretor de Projetos de Tecnologia e Planejamento
+Ago 22 - Out 22: Consultor Estratégico
 Liderança executiva de projetos estratégicos e de equipe multifuncional de 20 pessoas, responsável por tecnologia, planejamento e qualidade, em uma consultoria de São Paulo com 500 funcionários e clientes como Vale e Brasken. Experiência global, no sentido de reportar trimestralmente ao CEO do fundo de private equity na Bélgica (TPF).
 
 Gestão de Stakeholders e Crises: Liderança do turnaround do maior projeto da empresa (R$100MM, 300 pessoas), com gestão da mudança, incluindo: comunicação proativa com o cliente, alinhando expectativas e realizando entregas menores, e o replanejamento de escopo, prazo, orçamento e estrutura organizacional.
@@ -163,7 +163,7 @@ Gestão de Produtos Digitais: Implementação de uma cultura de produto, utiliza
 Commercial Support: Supported commercial initiatives, through implementing a detailed CRM system, and helping improve the commercial processes along the way. Also supported in proposals and bids.
  
 JM GESTÃO & TECNOLOGIA (Cliente Oncoclínicas)
-Fev 21 – Out 22: Consultor de Processos e Projetos & Fundador
+Fev 21 - Out 22: Consultor de Processos e Projetos & Fundador
 Empreendendo em consultoria de gerenciamento de projetos e processos de PMO, e tendo Oncoclínicas como cliente. Gerenciamento de R$18MM em 4 projetos de CAPEX, e desenvolvimento de sistemas de gestão de PMO.
 
 Gestão de Projetos Complexos: Coordenação de equipes multidisciplinares (internas, cliente e terceiros)) em projetos complexos, que envolvem engenharia, tecnologia, suprimentos, operações e regulatório, aplicando metodologias estruturadas, como: estrutura analítica do projeto (EAP) - work breakdown structure (WBS), caminho crítico - critical path method (CPM) e valor agregado -  earned value management (EVM). 
@@ -177,8 +177,8 @@ Gestão de Stakeholders: Estratégia de comunicação adaptada a cada interlocut
 Operação assistida: Desenvolvimento e execução de planos de treinamento e transição para operação. Documentação de data book completo, assegurando histórico e capacitação da equipe.
 
 EQSEED
-Out 20 – Jul 21: Head de Projetos e Operações & Sócio
-Fev 20 – Set 20: Especialista em Gestão de Projetos e Processos
+Out 20 - Jul 21: Head de Projetos e Operações & Sócio
+Fev 20 - Set 20: Especialista em Gestão de Projetos e Processos
 Respondendo ao CEO inglês, e responsável por projetos de transformação digital e operações em uma startup fintech com 20 funcionários. Marketplace de investimentos em  venture capital para o mercado financeiro.
 Liderança Multifuncional: Promoção de especialista para head em oito meses. Gestão do time de Operações após a saída do COO (4 pessoas), responsável pelas áreas funcionais de  finanças, contabilidade, TI e RH.
 
@@ -189,18 +189,18 @@ Transformação Digital de Processos: Automação do batimento financeiro, reduz
 Gestão Financeira: Gerenciamento do Runway (tempo até a falência por falta de caixa) durante o COVID-19, incluindo a renegociação de todos os contratos e fluxo de caixa descontado por cenários.
 
 CARGOS ANTERIORES
-Abr 18 – Ago 19: N&A CONSULTORES (brMalls) – Coordenador de Planejamento e Controle de Projetos
-Ago 17 – Mar 18: N&A CONSULTORES (brMalls) – Analista de Planejamento e Controle de Projetos
-Nov 16 – Ago 17: ONCOCLÍNICAS – Estagiário de PMO
-Jul 15 – Jun 16: N&A CONSULTORES (brMalls) – Estagiário de Planejamento e Controle de Projetos
-Jan 14 – Jan 15: MÉTODO ENGENHARIA – Estagiário de Planejamento e Controle de Projetos
+Abr 18 - Ago 19: N&A CONSULTORES (brMalls) - Coordenador de Planejamento e Controle de Projetos
+Ago 17 - Mar 18: N&A CONSULTORES (brMalls) - Analista de Planejamento e Controle de Projetos
+Nov 16 - Ago 17: ONCOCLÍNICAS - Estagiário de PMO
+Jul 15 - Jun 16: N&A CONSULTORES (brMalls) - Estagiário de Planejamento e Controle de Projetos
+Jan 14 - Jan 15: MÉTODO ENGENHARIA - Estagiário de Planejamento e Controle de Projetos
 
 EDUCAÇÃO E CERTIFICAÇÕES
-MBA em Gerenciamento de Projetos  – Fundação Getúlio Vargas (FGV) – Concluído
-Graduação em Engenharia – Estácio – Concluído
-Certificação Project Management Professional (PMP) – Project Management Institute (PMI) – 2020
-Certificação Scrum Foundations Professional Certificate (SFPC) – Certiprof – 2020
-Certificação Lean Six Sigma Green Belt – Advanced Innovation Group Pro Excellence (AIGPE) – 2020
+MBA em Gerenciamento de Projetos  - Fundação Getúlio Vargas (FGV) - Concluído
+Graduação em Engenharia - Estácio - Concluído
+Certificação Project Management Professional (PMP) - Project Management Institute (PMI) - 2020
+Certificação Scrum Foundations Professional Certificate (SFPC) - Certiprof - 2020
+Certificação Lean Six Sigma Green Belt - Advanced Innovation Group Pro Excellence (AIGPE) - 2020
 
 CONHECIMENTOS
 Idiomas: Inglês fluente;
