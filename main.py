@@ -139,17 +139,35 @@ def index():
         linkedin_urls_text = request.form.get('linkedin_urls', '')
         linkedin_urls_raw = [url.strip() for url in linkedin_urls_text.split('\n') if url.strip()]
         
+        # Validar URLs do LinkedIn
+        valid_urls = []
+        invalid_urls = []
+        
+        # Importar a função de normalização para pré-validar as URLs
+        from linkedin_scraper import normalize_linkedin_url
+        
+        for url in linkedin_urls_raw:
+            # Tenta normalizar para verificar se é uma URL válida do LinkedIn
+            normalized = normalize_linkedin_url(url)
+            if normalized is not None:
+                valid_urls.append(url)
+            else:
+                invalid_urls.append(url)
+        
         # Remover URLs duplicados mantendo a ordem original
         linkedin_urls = []
         seen_urls = set()
-        for url in linkedin_urls_raw:
+        for url in valid_urls:
             if url not in seen_urls:
                 linkedin_urls.append(url)
                 seen_urls.add(url)
         
-        # Verificar se há duplicatas e notificar o usuário
-        if len(linkedin_urls) < len(linkedin_urls_raw):
-            duplicates_removed = len(linkedin_urls_raw) - len(linkedin_urls)
+        # Notificar o usuário sobre URLs inválidas ou duplicadas
+        if invalid_urls:
+            flash(f"{len(invalid_urls)} URLs inválidas foram ignoradas. As URLs devem ser do formato LinkedIn Jobs (ex: linkedin.com/jobs/view/...).", "warning")
+            
+        if len(linkedin_urls) < len(valid_urls):
+            duplicates_removed = len(valid_urls) - len(linkedin_urls)
             flash(f"{duplicates_removed} URLs duplicados foram removidos.", "info")
         
         # Get ignore URLs from the form
@@ -691,9 +709,15 @@ def clear_history():
     """
     global processing_progress
     
+    # Verificar se o processamento está em andamento
+    if processing_progress['status'] == 'processing':
+        flash("Não é possível limpar o histórico enquanto há processamento em andamento.", "warning")
+        return redirect(url_for('index'))
+    
     try:
         with app.app_context():
             # Remover todos os registros da tabela ProcessedBatch
+            count = ProcessedBatch.query.count()
             ProcessedBatch.query.delete()
             db.session.commit()
             
@@ -702,7 +726,11 @@ def clear_history():
             processing_progress['first_result'] = None
             processing_progress['results'] = None
             
-            flash("Histórico de processamento limpo com sucesso!", "success")
+            # Reiniciar o índice de lotes
+            processing_progress['current_batch'] = 0
+            
+            flash(f"Histórico de processamento limpo com sucesso! ({count} lotes removidos)", "success")
+            logger.info(f"Histórico limpo: {count} lotes removidos")
     except Exception as e:
         logger.error(f"Erro ao limpar histórico: {str(e)}")
         flash(f"Erro ao limpar histórico: {str(e)}", "danger")

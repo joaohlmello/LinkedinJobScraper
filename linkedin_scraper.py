@@ -565,28 +565,45 @@ def normalize_linkedin_url(url):
         
     Returns:
         str: URL normalizado no formato https://www.linkedin.com/jobs/view/XXXXXXXXXX
+        None: Se o URL não for um link válido do LinkedIn
     """
     # Verificar se o URL é válido
     if not url or not isinstance(url, str):
-        return url
+        logger.warning(f"URL inválido (vazio ou não é string): {url}")
+        return None
+    
+    # Verificar se é um URL do LinkedIn
+    if 'linkedin.com' not in url:
+        logger.warning(f"URL não é do LinkedIn: {url}")
+        return None
+    
+    # Verificar se é um URL de vaga
+    if '/jobs/view/' not in url and '/jobs/search/' not in url:
+        logger.warning(f"URL não é de uma vaga de emprego: {url}")
+        return None
     
     # Usar regex para extrair o ID de 10 dígitos
     import re
+    
+    # Padrão 1: ID numérico de 10 dígitos
     match = re.search(r'linkedin\.com/jobs/view/(\d{10})', url)
     if match:
         job_id = match.group(1)
         return f"https://www.linkedin.com/jobs/view/{job_id}"
     
-    # Tentar outro padrão se o primeiro não funcionar
-    match = re.search(r'/jobs/view/([^/?]+)', url)
+    # Padrão 2: Qualquer ID após /jobs/view/
+    match = re.search(r'/jobs/view/([^/?&]+)', url)
     if match:
         job_id = match.group(1)
-        # Se for numérico e tiver 10 dígitos, usar esse ID
-        if job_id.isdigit() and len(job_id) == 10:
+        # Se for numérico (de qualquer tamanho)
+        if job_id.isdigit():
+            return f"https://www.linkedin.com/jobs/view/{job_id}"
+        # Se for alfanumérico, provavelmente é um ID válido
+        elif re.match(r'^[a-zA-Z0-9-]+$', job_id):
             return f"https://www.linkedin.com/jobs/view/{job_id}"
     
-    # Se não conseguir extrair o ID, retornar o URL original
-    logger.debug(f"Não foi possível normalizar o URL: {url}")
+    # Se não conseguir extrair o ID, retornar o URL original mas alertar
+    logger.debug(f"Não foi possível normalizar o URL, usando original: {url}")
     return url
 
 def calculate_announced_date(searched_at, announced_at):
@@ -705,13 +722,25 @@ def process_linkedin_urls(urls, progress_callback=None):
             
             # Normalizar o URL para o formato reduzido
             normalized_url = normalize_linkedin_url(url)
+            
+            # Verificar se a URL foi normalizada com sucesso
+            if normalized_url is None:
+                logger.warning(f"URL inválida ignorada: {url}")
+                # Pular para a próxima URL
+                continue
+                
             logger.debug(f"Processando URL {i+1}/{len(random_urls)}: {normalized_url}")
             
-            # Usar o URL normalizado para extração com IP rotativo
-            result = extract_company_info(normalized_url)
-            
-            # Substituir o link original pelo normalizado
-            result['link'] = normalized_url
+            try:
+                # Usar o URL normalizado para extração com IP rotativo
+                result = extract_company_info(normalized_url)
+                
+                # Substituir o link original pelo normalizado
+                result['link'] = normalized_url
+            except Exception as e:
+                logger.error(f"Erro ao extrair informações da URL {normalized_url}: {str(e)}")
+                # Pular para a próxima URL
+                continue
             
             # Calcular a data de anúncio com base nas informações disponíveis
             result['announced_calc'] = calculate_announced_date(
