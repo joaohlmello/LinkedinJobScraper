@@ -4,8 +4,8 @@ import logging
 import time
 import re
 import base64
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.ai.generativelanguage_v1beta.types import content
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -28,11 +28,57 @@ class JobAnalyzer:
         
         try:
             # Inicializar cliente Gemini
-            self.client = genai.Client(api_key=api_key)
-            self.model_name = "gemini-2.5-pro-preview-03-25"
+            genai.configure(api_key=api_key)
+            self.model_name = "gemini-2.5-flash-preview-04-17"
+            
+            # Configuração de geração
+            self.generation_config = {
+                "temperature": 0,
+                "top_p": 0.5,
+                "top_k": 64,
+                "max_output_tokens": 65536,
+                "response_schema": content.Schema(
+                    type = content.Type.OBJECT,
+                    required = ["idioma", "nota_requisitos", "nota_cargos_a", "nota_cargos_b", "nota_final_a", "nota_final_b", "forcas", "fraquezas"],
+                    properties = {
+                        "idioma": content.Schema(
+                            type = content.Type.STRING,
+                        ),
+                        "nota_requisitos": content.Schema(
+                            type = content.Type.NUMBER,
+                        ),
+                        "nota_cargos_a": content.Schema(
+                            type = content.Type.NUMBER,
+                        ),
+                        "nota_cargos_b": content.Schema(
+                            type = content.Type.NUMBER,
+                        ),
+                        "nota_final_a": content.Schema(
+                            type = content.Type.NUMBER,
+                        ),
+                        "nota_final_b": content.Schema(
+                            type = content.Type.NUMBER,
+                        ),
+                        "forcas": content.Schema(
+                            type = content.Type.STRING,
+                        ),
+                        "fraquezas": content.Schema(
+                            type = content.Type.STRING,
+                        ),
+                    },
+                ),
+                "response_mime_type": "application/json",
+            }
             
             # Configurar o prompt base
             self.system_prompt = self._get_system_prompt()
+            
+            # Criar o modelo
+            self.model = genai.GenerativeModel(
+                model_name=self.model_name,
+                generation_config=self.generation_config,
+                system_instruction=self.system_prompt
+            )
             
             logger.info(f"Analisador de vagas inicializado com o modelo {self.model_name}")
         except Exception as e:
@@ -251,52 +297,15 @@ Essenciais: Excel Avançado, PowerPoint."""
 Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
             """
             
-            # Configuração do schema de resposta esperado com novos campos
-            schema = types.Schema(
-                type=types.Type.OBJECT,
-                required=["idioma", "forcas", "fraquezas", "nota_requisitos", "nota_cargos_a", "nota_cargos_b", "nota_final_a", "nota_final_b"],
-                properties={
-                    "idioma": types.Schema(type=types.Type.STRING),
-                    "forcas": types.Schema(type=types.Type.STRING),
-                    "fraquezas": types.Schema(type=types.Type.STRING),
-                    "nota_requisitos": types.Schema(type=types.Type.INTEGER),
-                    "nota_cargos_a": types.Schema(type=types.Type.INTEGER),
-                    "nota_cargos_b": types.Schema(type=types.Type.INTEGER),
-                    "nota_final_a": types.Schema(type=types.Type.INTEGER),
-                    "nota_final_b": types.Schema(type=types.Type.INTEGER),
-                }
-            )
-            
-            # Configuração da geração
-            generate_content_config = types.GenerateContentConfig(
-                temperature=0.65,
-                response_mime_type="application/json",
-                response_schema=schema,
-                system_instruction=[
-                    types.Part.from_text(text=self.system_prompt)
-                ]
-            )
-            
-            # Conteúdo para a requisição
-            contents = [
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part.from_text(text=input_text),
-                    ],
-                ),
-            ]
-            
             # Fazer a chamada à API do Gemini
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Fazer a chamada ao modelo
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=contents,
-                    config=generate_content_config,
-                )
+                # Iniciando uma sessão de chat
+                chat_session = self.model.start_chat(history=[])
+                
+                # Enviar a mensagem e obter a resposta
+                response = chat_session.send_message(input_text)
                 
                 # Obter a resposta como JSON
                 result_json = response.text
