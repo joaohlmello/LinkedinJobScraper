@@ -92,12 +92,14 @@
                             <div class="col-12 col-md-3 fw-bold">Fraquezas:</div>
                             <div class="col-12 col-md-9">{{ first_result.fraquezas }}</div>
                         </div>
+                        {% if system_instructions %}
                         <div class="row mb-3">
                             <div class="col-12 col-md-3 fw-bold">Instruções do Sistema (Gemini):</div>
                             <div class="col-12 col-md-9">
                                 <pre class="system-instructions-pre">{{ system_instructions }}</pre>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
