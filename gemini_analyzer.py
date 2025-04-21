@@ -95,14 +95,17 @@ class JobAnalyzer:
         Retorna o prompt do sistema que orienta o modelo sobre como analisar as vagas.
         """
         return """#CONTEXTO  
-Responda sempre em Português. Avalie o "CURRICULO", como um Diretor de RH faria para avaliar um candidato externo para uma vaga estratégica, sem otimismo em relação ao candidato
+Responda sempre em Português. Avalie a vaga em relação ao currículo de um candidato modelo, como um Diretor de RH faria analisando uma posição estratégica.
+
+#CURRÍCULO DO CANDIDATO MODELO
+Profissional com 8 anos de experiência em gestão de projetos e produtos digitais. Formação em Engenharia e MBA em Gestão Empresarial. Experiência em transformação digital, liderança de equipes multidisciplinares e implementação de metodologias ágeis. Competências: Gestão de Projetos, Product Management, Scrum, Kanban, Data Analysis, Stakeholder Management, e fluência em inglês e português.
 
 #METODOLOGIA DE AVALIAÇÃO
--Requisitos: Disseque cada requisito explícito. Atribua uma nota binária de aderência (0 ou 1) justificada para cada um
--Cargos Anteriores: Avalie a trajetória profissional e compatibilidade de cargos e responsabilidades anteriores. Dê peso maior aos cargos mais recentes. Seja crítico.
--Indústria e Contexto da Vaga: Avalie a indústria/setor da vaga e o contexto específico de negócio/área. Classifique e busque entender qual a posição dentro da organização (posição hierárquica, localização na estrutura organizacional, relações de reporte). Identifique quais produtos está gerenciando, quais as entregas esperadas.
+-Requisitos: Disseque cada requisito explícito da vaga. Atribua uma nota de aderência para cada um considerando o currículo modelo.
+-Cargos Anteriores: Avalie a compatibilidade entre as experiências tipicamente necessárias para a vaga e o perfil do candidato modelo. Seja crítico.
+-Indústria e Contexto da Vaga: Avalie a indústria/setor da vaga e o contexto específico de negócio/área. Identifique a posição na estrutura organizacional, responsabilidades e entregas esperadas.
 -Cálculo de Aderência Ponderada: (20% indústria / contexto) + (40% cargos anteriores) + (40% requisitos) = Nota Final
--Fraquezas: Identifique e liste as fraquezas reais do profissional que representam um problema específico para esta vaga. Inclua pontos que podem gerar questionamentos ou exigirão justificativa. Sem eufemismos.
+-Fraquezas: Identifique as fraquezas potenciais que o candidato modelo teria em relação a esta vaga. Seja direto e sem eufemismos.
 
 # ESTRUTURA DO OUTPUT
 Exatamente nesta ordem:
@@ -110,7 +113,7 @@ Exatamente nesta ordem:
 2. tipo_vaga: (projeto, programa, portfolio, pmo, planejamento, produto, dados_tecnico, dados_bi, inteligencia_mercado, operacoes, processo, gestao_mudanca, outro). Escolha a melhor opção.
 3. industria_vaga: descritivo da indústria/setor da vaga
 4. foco_vaga: descrição do foco principal da posição
-5. fraquezas: lista de fraquezas do candidato em relação à vaga
+5. fraquezas: lista de fraquezas do candidato modelo em relação à vaga
 6. nota_industria_contexto: valor numérico de 0 a 100
 7. nota_cargos_anteriores: valor numérico de 0 a 100
 8. nota_requisitos: valor numérico de 0 a 100
@@ -155,7 +158,7 @@ Exatamente nesta ordem:
 # DESCRIÇÃO DA VAGA:
 {clean_description}
 
-Analisar a compatibilidade entre o currículo do candidato (fornecido no seu contexto) e esta vaga de emprego.
+Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no seu contexto) e esta vaga de emprego.
             """
             
             # Fazer a chamada à API do Gemini
