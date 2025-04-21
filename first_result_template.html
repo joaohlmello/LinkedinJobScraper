@@ -31,6 +31,12 @@
                             <div class="col-12 col-md-9">{{ first_result.job_title }}</div>
                         </div>
                         <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Descrição da Vaga:</div>
+                            <div class="col-12 col-md-9">
+                                <pre class="job-description-pre">{{ first_result.job_description }}</pre>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
                             <div class="col-12 col-md-3 fw-bold">Pesquisado em:</div>
                             <div class="col-12 col-md-9">{{ first_result.searched_at }}</div>
                         </div>
@@ -50,58 +56,46 @@
                             <div class="col-12 col-md-3 fw-bold">Candidatos:</div>
                             <div class="col-12 col-md-9">{{ first_result.candidates }}</div>
                         </div>
-                        {% if first_result.idioma %}
                         <div class="row mb-3">
                             <div class="col-12 col-md-3 fw-bold">Idioma:</div>
-                            <div class="col-12 col-md-9">{{ first_result.idioma }}</div>
+                            <div class="col-12 col-md-9">{{ first_result.idioma_descricao }}</div>
                         </div>
-                        {% endif %}
-                        {% if first_result.nota_requisitos %}
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Tipo de Vaga:</div>
+                            <div class="col-12 col-md-9">{{ first_result.tipo_vaga }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Indústria/Contexto:</div>
+                            <div class="col-12 col-md-9">{{ first_result.industria_vaga }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Foco da Vaga:</div>
+                            <div class="col-12 col-md-9">{{ first_result.foco_vaga }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Nota Indústria/Contexto:</div>
+                            <div class="col-12 col-md-9">{{ first_result.nota_industria_contexto }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Nota Cargos Anteriores:</div>
+                            <div class="col-12 col-md-9">{{ first_result.nota_cargos_anteriores }}</div>
+                        </div>
                         <div class="row mb-3">
                             <div class="col-12 col-md-3 fw-bold">Nota Requisitos:</div>
                             <div class="col-12 col-md-9">{{ first_result.nota_requisitos }}</div>
                         </div>
-                        {% endif %}
-                        {% if first_result.nota_cargos_a %}
                         <div class="row mb-3">
-                            <div class="col-12 col-md-3 fw-bold">Nota Cargos A:</div>
-                            <div class="col-12 col-md-9">{{ first_result.nota_cargos_a }}</div>
+                            <div class="col-12 col-md-3 fw-bold">Nota Final:</div>
+                            <div class="col-12 col-md-9">{{ first_result.nota_final }}</div>
                         </div>
-                        {% endif %}
-                        {% if first_result.nota_cargos_b %}
-                        <div class="row mb-3">
-                            <div class="col-12 col-md-3 fw-bold">Nota Cargos B:</div>
-                            <div class="col-12 col-md-9">{{ first_result.nota_cargos_b }}</div>
-                        </div>
-                        {% endif %}
-                        {% if first_result.compatibilidade_a %}
-                        <div class="row mb-3">
-                            <div class="col-12 col-md-3 fw-bold">Compatibilidade A:</div>
-                            <div class="col-12 col-md-9">{{ first_result.compatibilidade_a }}</div>
-                        </div>
-                        {% endif %}
-                        {% if first_result.compatibilidade_b %}
-                        <div class="row mb-3">
-                            <div class="col-12 col-md-3 fw-bold">Compatibilidade B:</div>
-                            <div class="col-12 col-md-9">{{ first_result.compatibilidade_b }}</div>
-                        </div>
-                        {% endif %}
-                        {% if first_result.forcas %}
-                        <div class="row mb-3">
-                            <div class="col-12 col-md-3 fw-bold">Forças:</div>
-                            <div class="col-12 col-md-9">{{ first_result.forcas }}</div>
-                        </div>
-                        {% endif %}
-                        {% if first_result.fraquezas %}
                         <div class="row mb-3">
                             <div class="col-12 col-md-3 fw-bold">Fraquezas:</div>
                             <div class="col-12 col-md-9">{{ first_result.fraquezas }}</div>
                         </div>
-                        {% endif %}
-                        <div class="row">
-                            <div class="col-12 col-md-3 fw-bold">Descrição da Vaga:</div>
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-3 fw-bold">Instruções do Sistema (Gemini):</div>
                             <div class="col-12 col-md-9">
-                                <pre class="job-description-pre">{{ first_result.job_description }}</pre>
+                                <pre class="system-instructions-pre">{{ system_instructions }}</pre>
                             </div>
                         </div>
                     </div>

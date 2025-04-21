@@ -216,6 +216,16 @@ def index():
     # Passar o primeiro resultado para o template
     first_result = processing_progress.get('first_result')
     
+    # Obter as instruções do sistema do Gemini se disponível
+    system_instructions = None
+    if gemini_available:
+        try:
+            from gemini_analyzer import JobAnalyzer
+            analyzer = JobAnalyzer()
+            system_instructions = analyzer._get_system_prompt()
+        except Exception as e:
+            logger.error(f"Erro ao obter instruções do sistema Gemini: {str(e)}")
+    
     return render_template('index.html', 
                           results_html=results_html, 
                           has_results=has_results,
@@ -224,7 +234,8 @@ def index():
                           batches=batches,
                           ignored_urls=ignored_urls,
                           processing_status=processing_progress['status'],
-                          first_result=first_result)
+                          first_result=first_result,
+                          system_instructions=system_instructions)
 
 @app.route('/export/csv', methods=['GET'])
 def export_csv():

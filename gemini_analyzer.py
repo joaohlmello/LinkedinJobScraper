@@ -95,29 +95,99 @@ class JobAnalyzer:
         Retorna o prompt do sistema que orienta o modelo sobre como analisar as vagas.
         """
         return """#CONTEXTO  
-Responda sempre em Português. Avalie a vaga em relação ao currículo de um candidato modelo, como um Diretor de RH faria analisando uma posição estratégica.
-
-#CURRÍCULO DO CANDIDATO MODELO
-Profissional com 8 anos de experiência em gestão de projetos e produtos digitais. Formação em Engenharia e MBA em Gestão Empresarial. Experiência em transformação digital, liderança de equipes multidisciplinares e implementação de metodologias ágeis. Competências: Gestão de Projetos, Product Management, Scrum, Kanban, Data Analysis, Stakeholder Management, e fluência em inglês e português.
+Responda sempre em Português. Avalie o “CURRICULO”, como um Diretor de RH faria para avaliar um candidato externo para uma vaga estratégica, sem otimismo em relação ao candidato
 
 #METODOLOGIA DE AVALIAÇÃO
--Requisitos: Disseque cada requisito explícito da vaga. Atribua uma nota de aderência para cada um considerando o currículo modelo.
--Cargos Anteriores: Avalie a compatibilidade entre as experiências tipicamente necessárias para a vaga e o perfil do candidato modelo. Seja crítico.
--Indústria e Contexto da Vaga: Avalie a indústria/setor da vaga e o contexto específico de negócio/área. Identifique a posição na estrutura organizacional, responsabilidades e entregas esperadas.
--Cálculo de Aderência Ponderada: (20% indústria / contexto) + (40% cargos anteriores) + (40% requisitos) = Nota Final
--Fraquezas: Identifique as fraquezas potenciais que o candidato modelo teria em relação a esta vaga. Seja direto e sem eufemismos.
+-Requisitos: Disseque cada requisito explícito. Atribua uma nota binária de aderência (0 ou 1) justificada para cada um
+-Cargos Anteriores: Avalie a trajetória profissional e compatibilidade de cargos e responsabilidades anteriores. Dê peso maior ao cargo mais recente. Seja crítico
+-Indústria e Contexto: Avalie a trajetória profissional em empresas de indústria e contexto de negócio similar ao que a vaga pede
+-Cálculo de Aderência Ponderada: Separadamente para cada currículo: 50% requisitos, 30% cargos anteriores, 20% indústria e contexto
 
-# ESTRUTURA DO OUTPUT
-Exatamente nesta ordem:
-1. idioma_descricao: "ingles" ou "portugues" 
-2. tipo_vaga: (projeto, programa, portfolio, pmo, planejamento, produto, dados_tecnico, dados_bi, inteligencia_mercado, operacoes, processo, gestao_mudanca, outro). Escolha a melhor opção.
-3. industria_vaga: descritivo da indústria/setor da vaga
-4. foco_vaga: descrição do foco principal da posição
-5. fraquezas: lista de fraquezas do candidato modelo em relação à vaga
-6. nota_industria_contexto: valor numérico de 0 a 100
-7. nota_cargos_anteriores: valor numérico de 0 a 100
-8. nota_requisitos: valor numérico de 0 a 100
-9. nota_final: valor numérico de 0 a 100"""
+#ESTRUTURA DO OUTPUT
+EXATAMENTE NESTA ORDEM
+###Idioma da descrição da vaga (enum: portugues OU ingles): Informe qual idioma a descrição da vaga foi descrito. Observe que não tem nada haver com idiomas dos requisitos
+###Tipo de vaga (enum: projeto OU programa OU portfolio OU pmo OU planejamento OU produto OU dados_tecnico OU dados_bi OU inteligencia_mercado OU operacoes OU processo OU gestao_mudanca OU outro)
+###Indústria que a empresa atua (exemplo: farmacêutica, construção civil, mineração, etc.)
+###Foco da vaga (exemplo: sistemas erp, serviços financeiros, processos industriais etc.) (pode ser de 1 a 3 opções)
+###Fraquezas do Currículo para a Vaga
+###Nota industria e contexto
+###Nota cargos anteriores
+###Nota requisitos
+###Nota final
+
+#CURRICULO
+JOÃO MELLO                           joaohlmello@gmail.com | Linkedin: joaohlmello | (21) 96947-1930 | São Paulo - SP
+
+SUMÁRIO
+Gerente de projetos sênior com 10 anos de experiência, 7 em posições de liderança de equipes de até 17 pessoas.
+
+
+
+EXPERIÊNCIA
+SYNERGIA CONSULTORIA (Cliente VALE) 
+Nov/22 – Dez/24: Head de Projetos, Programas, Portfólio, Planejamento, Controle, PMO, Processos, Produto, Operações, Dados, Analytics e BI
+Liderança executiva de projetos e áreas de Planejamento, Produtos Digitais, Desenvolvimento e Dados em Consultoria (600 pessoas). Equipe multifuncional de 17 pessoas, reporte aos CEOs Brasil e do fundo de private equity (TPF - Bélgica).
+
+Estruturação da Diretoria: Defini estratégia, organograma e processos, viabilizando R$20MM em novos negócios.
+Gestão de Stakeholders e Crises: Liderei o turnaround do maior contrato da empresa (R$100MM), reestruturando escopo, prazo e orçamento, resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses.
+Gestão do Planejamento Estratégico: Implementei OKR para toda a empresa, integrando 90 projetos internos a 15 objetivos estratégicos, engajando a alta gestão e aumentando o atingimento de 50% para 85% em 1 ano. Destaco:
+Comercial: Estruturação e implantação do CRM.
+Marketing: Atingimento da zona de excelência no NPS de atendimento à clientes internos.
+RH: Definição e aplicação do modelo de avaliação de desempenho por competências.
+Operações: Implantação do controle de ativos via ERP em 100% dos contratos.
+Jurídico: Implementação de metodologia de avaliação de riscos jurídicos e trabalhistas em 100% dos contratos.
+Implantar plataforma de planejamento e apontamento de horas para análise e gestão de capacidade ociosa, garantindo ao final do ano uma redução de 20% da ociosidade detectada
+Sistematizar as informações de 100% dos/as colaboradores/as em  sistema de Gepes para atender as necessidades de controle de prazos de contratos dos projetos 2º trimestre de 2024
+Gestão de Projetos de Tecnologia (Produtos): Remodelei a fábrica de software para squads ágeis com práticas de Product Management (discovery, PRDs, stories, sprints), melhorando significativamente o alinhamento das entregas com as necessidades do negócio e gerando novas linhas de faturamento. Destaco:
+PMO Data-driven: Sistemas de gestão para monitoramento de milhões de produtos em centenas de etapas, com regras de negócio complexas e entregas via API, reduzindo o tempo de reporte de 1 semana para em tempo real.
+Gerador de Documentos com IA: Geração automatizada de laudos e pareceres com integrações com bancos de dados, APIs e inteligência artificial com human in the loop, viabilizando o contrato com a redução de custo e prazo.
+Reconstrução de Sistema Legado: Coleta e análise de dados de mercado com integração offline to online (O2O), corrigindo problemas de UI, UX, bugs recorrentes, extração de dados e integrações.
+Gestão da Qualidade do Portfólio: Sistema de gestão da qualidade para acompanhamento dos critérios de qualidade de projetos externos, garantindo a manutenção da certificação ISO 9001.
+ 
+JM GESTÃO & TECNOLOGIA (Cliente ONCOCLÍNICAS)
+Jul/21 – Out/22: Fundador e Gerente de Projetos, Programas, Portfólio, Planejamento, Controle, PMO, Processos, Produto, Dados, Analytics e BI
+Tech startup de consultoria focada em gerenciamento de projetos, com equipe formada por mim e 2 colaboradores.
+
+Gestão de Projetos: Gerenciei portfólio de 4 projetos de CAPEX (R$18MM), coordenando equipes e aplicando metodologias para assegurar escopo, prazo e orçamento, alcançando nota máxima na avaliação de fornecedores.
+Implementação de Processos e PMO: Defini e padronizei EAPs, cronogramas, curvas S, gestão da mudança e riscos, resultando em maior previsibilidade, e zero mudanças escopo e ocorrências críticas não mapeadas.
+Transformação Digital (Produto): Liderei o desenvolvimento de sistema ERP com inteligência artificial, gerando economia direta de R$700K, reduzindo o tempo de aprovação de 7 para 3 dias, e reduzindo as não conformidades em 95%.
+
+EQSEED
+Fev/20 – Jul/21: Líder de Projetos, Programas, Portfólio, Planejamento, Controle, PMO, Processos, Produto, Operações, Dados, Analytics e BI
+Liderança de produto e projetos de transformação digital em startup do mercado financeiro (marketplace de venture capital, 20 funcionários), reportando ao CEO inglês e ao CSO americano. Promovido em apenas 8 meses.
+
+Gestão Ágil: Implementei OKRs e Kanban em toda a empresa (Tecnologia, Negócios, Marketing e Vendas), unindo o tático com o estratégico, elevando a transparência e viabilizando a priorização integrada do roadmap.
+Gestão de Projetos: Liderei produtos e projetos de transformação digital do discovery ao deploy. Destaco:
+Monitoramento do CRM / funil de vendas e carrinho abandonado (aumento de 15% na conversão);
+Automação do pós-vendas (NPS elevado à Zona de Excelência >75);
+Automação do batimento financeiro (redução de 80% no lead time);
+Modelagem e sistematização da análise de investimentos (produtividade 6x maior);
+Modelagem e sistematização do cálculo de valuation do portfólio (redução de 2 dias de trabalho).
+Gestão de Operações: Assumi a gestão do time de Operações (4 pessoas) após saída do COO. Gerenciei o fluxo de caixa durante a crise da COVID-19, liderando a renegociação de contratos e modelagem de cenários.
+
+CARGOS ANTERIORES
+Abr/18 – Ago/19: N&A CONSULTORES (Cliente BRMALLS) – Coordenador de Planejamento e Controle de Projetos
+Ago/17 – Mar/18: N&A CONSULTORES (Cliente BRMALLS)  – Analista de Planejamento e Controle de Projetos
+Nov/16 – Ago/17: ONCOCLÍNICAS – Estagiário de PMO
+Jul/15 – Jun/16: N&A CONSULTORES (Cliente BRMALLS) – Estagiário de Planejamento e Controle de Projetos
+Jan/14 – Jan/15: MÉTODO ENGENHARIA – Estagiário de Planejamento e Controle de Projetos
+
+EDUCAÇÃO E CERTIFICAÇÕES
+MBA em Gerenciamento de Projetos  – Fundação Getúlio Vargas (FGV) – Concluído
+Bacharelado em Engenharia – Estácio – Concluído
+Certificação Project Management Professional (PMP) – Project Management Institute (PMI) – 2020
+Certificação Scrum Foundations Professional Certificate (SFPC) – Certiprof – 2020
+
+CONHECIMENTOS
+Idiomas: Inglês Fluente (C1).
+Metodologias e Frameworks: PMBOK (Waterfall / Preditiva), Agile (Scrum, Kanban), Lean Six Sigma, BPMN, OKR.
+Análise de Dados e BI: Power BI, Metabase, SQL (consultas SELECT, JOINs, agregações).
+RPA e Low-code: Python (scripts e automações), Power Automate, Power Apps, N8N, Glide. 
+Inteligência Artificial: APIs OpenAI e Gemini.
+Softwares de Gestão e CRM: MS Project, Jira, Confluence, Azure DevOps, Notion, Asana, Trello, Pipefy, Pipedrive.
+Softwares de Design e Colaboração: Miro, Mural.
+Softwares de Serviços e ERPs: Fluig, ServiceNow, TOTVS, SAP.
+Essenciais: Pacote Office Avançado (Excel, PowerPoint, etc.)."""
 
     def analyze_job(self, job_data):
         """
