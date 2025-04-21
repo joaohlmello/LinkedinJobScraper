@@ -777,11 +777,10 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
     # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
-    df['idioma'] = "N/A"
+    df['idioma_descricao'] = "N/A"
     df['tipo_vaga'] = "N/A"
     df['industria_vaga'] = "N/A"
     df['foco_vaga'] = "N/A"
-    df['forcas'] = ""
     df['fraquezas'] = ""
     df['nota_industria_contexto'] = ""
     df['nota_cargos_anteriores'] = ""
@@ -789,11 +788,10 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     df['nota_final'] = ""
     
     # Adicionar as mesmas colunas ao DataFrame de exportação
-    df_export['idioma'] = "N/A"
+    df_export['idioma_descricao'] = "N/A"
     df_export['tipo_vaga'] = "N/A"
     df_export['industria_vaga'] = "N/A"
     df_export['foco_vaga'] = "N/A"
-    df_export['forcas'] = ""
     df_export['fraquezas'] = ""
     df_export['nota_industria_contexto'] = ""
     df_export['nota_cargos_anteriores'] = ""
@@ -872,11 +870,10 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     idx = url_to_index[job_link]
                     
                     # Obter valores da análise ou usar valores padrão com nova estrutura
-                    idioma = analysis.get('idioma', 'Não informado')
+                    idioma_descricao = analysis.get('idioma_descricao', 'Não informado')
                     tipo_vaga = analysis.get('tipo_vaga', 'Não informado')
                     industria_vaga = analysis.get('industria_vaga', 'Não informado')
                     foco_vaga = analysis.get('foco_vaga', 'Não informado')
-                    forcas = analysis.get('forcas', '')
                     fraquezas = analysis.get('fraquezas', '')
                     nota_industria_contexto = analysis.get('nota_industria_contexto', 0)
                     nota_cargos_anteriores = analysis.get('nota_cargos_anteriores', 0)
@@ -884,11 +881,10 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     nota_final = analysis.get('nota_final', 0)
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
-                    df.at[idx, 'idioma'] = idioma
+                    df.at[idx, 'idioma_descricao'] = idioma_descricao
                     df.at[idx, 'tipo_vaga'] = tipo_vaga
                     df.at[idx, 'industria_vaga'] = industria_vaga
                     df.at[idx, 'foco_vaga'] = foco_vaga
-                    df.at[idx, 'forcas'] = forcas
                     df.at[idx, 'fraquezas'] = fraquezas
                     df.at[idx, 'nota_industria_contexto'] = f"{nota_industria_contexto}%"
                     df.at[idx, 'nota_cargos_anteriores'] = f"{nota_cargos_anteriores}%"
@@ -896,11 +892,10 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     df.at[idx, 'nota_final'] = f"{nota_final}%"
                     
                     # Atualizar o DataFrame de exportação
-                    df_export.at[idx, 'idioma'] = idioma
+                    df_export.at[idx, 'idioma_descricao'] = idioma_descricao
                     df_export.at[idx, 'tipo_vaga'] = tipo_vaga
                     df_export.at[idx, 'industria_vaga'] = industria_vaga
                     df_export.at[idx, 'foco_vaga'] = foco_vaga
-                    df_export.at[idx, 'forcas'] = forcas
                     df_export.at[idx, 'fraquezas'] = fraquezas
                     df_export.at[idx, 'nota_industria_contexto'] = f"{nota_industria_contexto}%"
                     df_export.at[idx, 'nota_cargos_anteriores'] = f"{nota_cargos_anteriores}%"
@@ -1125,7 +1120,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
-          <td class="compatibility-column">{row.get('idioma', 'N/A')}</td>
+          <td class="compatibility-column">{row.get('idioma_descricao', 'N/A')}</td>
           <td class="compatibility-column">{row.get('tipo_vaga', 'N/A')}</td>
           <td class="compatibility-column">{row.get('industria_vaga', 'N/A')}</td>
           <td class="compatibility-column">{row.get('foco_vaga', 'N/A')}</td>
