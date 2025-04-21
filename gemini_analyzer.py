@@ -39,26 +39,28 @@ class JobAnalyzer:
                 "max_output_tokens": 65536,
                 "response_schema": content.Schema(
                     type = content.Type.OBJECT,
-                    required = ["nota_industria_contexto", "nota_cargos_anteriores", "nota_requisitos", "nota_final", "fraquezas", "idioma_descricao", "tipo_vaga", "industria_vaga", "foco_vaga"],
+                    required = ["nota_industria_contexto", "nota_cargos_anteriores", "nota_requisitos", "nota_final", "forcas", "fraquezas", "idioma", "tipo_vaga", "industria_vaga", "foco_vaga"],
                     properties = {
                         "nota_industria_contexto": content.Schema(
-                            type = content.Type.INTEGER,
+                            type = content.Type.NUMBER,
                         ),
                         "nota_cargos_anteriores": content.Schema(
-                            type = content.Type.INTEGER,
+                            type = content.Type.NUMBER,
                         ),
                         "nota_requisitos": content.Schema(
-                            type = content.Type.INTEGER,
+                            type = content.Type.NUMBER,
                         ),
                         "nota_final": content.Schema(
-                            type = content.Type.INTEGER,
+                            type = content.Type.NUMBER,
+                        ),
+                        "forcas": content.Schema(
+                            type = content.Type.STRING,
                         ),
                         "fraquezas": content.Schema(
                             type = content.Type.STRING,
                         ),
-                        "idioma_descricao": content.Schema(
+                        "idioma": content.Schema(
                             type = content.Type.STRING,
-                            enum = ["ingles", "portugues"],
                         ),
                         "tipo_vaga": content.Schema(
                             type = content.Type.STRING,
@@ -94,26 +96,29 @@ class JobAnalyzer:
         """
         Retorna o prompt do sistema que orienta o modelo sobre como analisar as vagas.
         """
-        return """#CONTEXTO  
-Avalie o "CURRICULO", como um Diretor de RH faria para avaliar um candidato externo para uma vaga estratégica, sem otimismo em relação ao candidato
+        return """# 1. CONTEXTO ESTRATÉGICO  
+Pense como um Diretor de RH que recebe milhares de currículos, avaliando um candidato externo para uma posição-chave. Você precisa tomar uma decisão de contratação com base em fatos e evidências, não em otimismo.
 
-#METODOLOGIA DE AVALIAÇÃO
--Requisitos: Disseque cada requisito explícito. Atribua uma nota binária de aderência (0 ou 1) justificada para cada um
--Cargos Anteriores: Avalie a trajetória profissional e compatibilidade de cargos e responsabilidades anteriores. Dê peso maior ao cargo mais recente. Seja crítico e direto.
--Indústria e Contexto da Vaga: Avalie a indústria/setor da vaga e o contexto específico de negócio/área. Identifique: posição hierárquica, localização na estrutura, relações de reporte, produtos gerenciados, entregas esperadas, fase do ciclo de vida. 
+# 2. METODOLOGIA DE AVALIAÇÃO
+-Cargos Anteriores: Avalie a trajetória profissional e compatibilidade de cargos anteriores e responsabilidades anteriores. Dê peso maior ao cargo mais recente. Seja crítico.
+-Requisitos: Disseque cada requisito explícito. Atribua uma nota binária de aderência (0 ou 1) justificada para cada um.
+-Indústria e Contexto da Vaga: Avalie a indústria/setor da vaga e o contexto específico de negócio/área. Classifique e busque entender qual a posição dentro da organização (posição hierárquica, localização na estrutura, relações de reporte). Identifique quais produtos está gerenciando, quais as entregas esperadas, qual a fase do ciclo de vida.
 -Cálculo de Aderência Ponderada: (20% indústria / contexto) + (40% cargos anteriores) + (40% requisitos).
--Fraquezas: Liste fraquezas reais e concretas que representam um problema específico para esta vaga. Inclua pontos que poderiam barrar a contratação ou gerar questionamentos durante um processo seletivo.
+-Forças: Identifique e liste as forças reais do profissional que representam um diferencial específico para esta vaga.
+-Fraquezas: Identifique e liste as fraquezas reais do profissional que representam um problema específico para esta vaga. Inclua pontos que podem gerar questionamentos ou exigirão justificativa. Sem eufemismos.
 
-#ESTRUTURA DO RETORNO
-1. idioma_descricao: "ingles" ou "portugues"
-2. tipo_vaga: "projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"
-3. industria_vaga: string com descrição
-4. foco_vaga: string com descrição
-5. fraquezas: string com descrição
-6. nota_industria_contexto: inteiro de 0 a 100
-7. nota_cargos_anteriores: inteiro de 0 a 100
-8. nota_requisitos: inteiro de 0 a 100
-9. nota_final: inteiro de 0 a 100"""
+# 3. ESTRUTURA DO OUTPUT
+Exatamente nesta ordem:
+1. Idioma da vaga
+2. Tipo da vaga (projeto, programa, portfólio, PMO, planejamento, produto, dados_tecnico, dados_bi, inteligencia_mercado, operacoes, processo, gestao_mudanca, outro). Escolha a melhor opção. É um campo de seleção.
+3. Indústria/Contexto da vaga
+4. Foco da vaga
+5. Forças
+6. Fraquezas
+7. Nota indústria/contexto
+8. Nota cargos anteriores
+9. Nota requisitos
+10. Nota final"""
 
     def analyze_job(self, job_data):
         """
@@ -362,7 +367,7 @@ def format_analysis_html(analysis):
                 <div class="col-md-6">
                     <div class="analysis-details-card">
                         <h5>Idioma</h5>
-                        <p>{analysis.get('idioma_descricao', 'Não informado')}</p>
+                        <p>{analysis.get('idioma', 'Não informado')}</p>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -433,7 +438,13 @@ def format_analysis_html(analysis):
             </div>
             
             <div class="row mb-3">
-                <div class="col-md-12">
+                <div class="col-md-6">
+                    <div class="analysis-details-card">
+                        <h5>Forças</h5>
+                        <p>{format_text_with_breaks(analysis.get('forcas', 'Não informado'))}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
                     <div class="analysis-details-card">
                         <h5>Fraquezas</h5>
                         <p>{format_text_with_breaks(analysis.get('fraquezas', 'Não informado'))}</p>
@@ -482,6 +493,7 @@ def format_jobs_table_html(job_analyses):
                     <th>Nota Cargos</th>
                     <th>Nota Requisitos</th>
                     <th>Compatibilidade</th>
+                    <th>Forças</th>
                     <th>Fraquezas</th>
                     <th>Detalhes</th>
                 </tr>
@@ -496,7 +508,7 @@ def format_jobs_table_html(job_analyses):
             <tr class="table-danger">
                 <td>{analysis.get('company_name', 'N/A')}</td>
                 <td>{analysis.get('job_title', 'N/A')}</td>
-                <td colspan="8">{analysis.get('error', 'Erro na análise')}</td>
+                <td colspan="9">{analysis.get('error', 'Erro na análise')}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-danger" disabled>Erro</button>
                 </td>
@@ -508,7 +520,7 @@ def format_jobs_table_html(job_analyses):
             <tr>
                 <td>{analysis.get('company_name', 'N/A')}</td>
                 <td>{analysis.get('job_title', 'N/A')}</td>
-                <td>{analysis.get('idioma_descricao', 'N/A')}</td>
+                <td>{analysis.get('idioma', 'N/A')}</td>
                 <td>{analysis.get('tipo_vaga', 'N/A')}</td>
                 <td>{analysis.get('industria_vaga', 'N/A')}</td>
                 <td>{analysis.get('foco_vaga', 'N/A')}</td>
@@ -520,6 +532,7 @@ def format_jobs_table_html(job_analyses):
                         <span class="small-score-text">{analysis.get('nota_final', 0)}%</span>
                     </div>
                 </td>
+                <td>{analysis.get('forcas', 'N/A')[:100]}...</td>
                 <td>{analysis.get('fraquezas', 'N/A')[:100]}...</td>
                 <td>
                     <a href="{analysis.get('job_link', '#')}" target="_blank" class="btn btn-sm btn-outline-primary">Ver Vaga</a>
