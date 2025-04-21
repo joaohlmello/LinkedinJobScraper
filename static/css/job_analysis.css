@@ -76,6 +76,31 @@
     animation: fadeIn 0.3s ease-in-out;
 }
 
+/* Estilo para exibir instruções do sistema */
+.system-instructions-pre {
+    background-color: #2d2d2d;
+    color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #444;
+}
+
+/* Box de descrição da vaga */
+.job-description-pre {
+    background-color: #2d2d2d;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #444;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     #jobAnalysisModal .modal-dialog {
