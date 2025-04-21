@@ -158,234 +158,6 @@
             </div>
         </div>
 
-        <!-- First Result Display Section (Row Format) -->
-        {% if has_processed_batches %}
-        <div id="first-result-container" class="mt-4">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5>Primeiro Resultado (Primeiro Lote)</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="container">
-                                <!-- Os campos serão renderizados em linhas, não colunas -->
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Link:</div>
-                                    <div class="col-12 col-md-9">
-                                        <a href="{{ first_result.link }}" target="_blank">{{ first_result.link }}</a>
-                                    </div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Empresa:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.company_name }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Link da Empresa:</div>
-                                    <div class="col-12 col-md-9">
-                                        <a href="{{ first_result.company_link }}" target="_blank">{{ first_result.company_link }}</a>
-                                    </div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Cargo:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.job_title }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Pesquisado em:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.searched_at }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Anunciado em:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.announced_at }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Data calculada:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.announced_calc }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Cidade:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.city }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Candidatos:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.candidates }}</div>
-                                </div>
-                                {% if first_result.idioma %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Idioma:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.idioma }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.nota_requisitos %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Nota Requisitos:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.nota_requisitos }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.nota_cargos_a %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Nota Cargos A:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.nota_cargos_a }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.nota_cargos_b %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Nota Cargos B:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.nota_cargos_b }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.compatibilidade_a %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Compatibilidade A:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.compatibilidade_a }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.compatibilidade_b %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Compatibilidade B:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.compatibilidade_b }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.forcas %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Forças:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.forcas }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.fraquezas %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Fraquezas:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.fraquezas }}</div>
-                                </div>
-                                {% endif %}
-                                <div class="row">
-                                    <div class="col-12 col-md-3 fw-bold">Descrição da Vaga:</div>
-                                    <div class="col-12 col-md-9">
-                                        <pre class="job-description-pre">{{ first_result.job_description }}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- First Result Display Section (Row Format) -->
-        {% if first_result %}
-        <div id="first-result-container" class="mt-4">
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5>Primeiro Resultado (Primeiro Lote)</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="container">
-                                <!-- Os campos serão renderizados em linhas, não colunas -->
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Link:</div>
-                                    <div class="col-12 col-md-9">
-                                        <a href="{{ first_result.link }}" target="_blank">{{ first_result.link }}</a>
-                                    </div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Empresa:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.company_name }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Link da Empresa:</div>
-                                    <div class="col-12 col-md-9">
-                                        <a href="{{ first_result.company_link }}" target="_blank">{{ first_result.company_link }}</a>
-                                    </div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Cargo:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.job_title }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Pesquisado em:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.searched_at }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Anunciado em:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.announced_at }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Data calculada:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.announced_calc }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Cidade:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.city }}</div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Candidatos:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.candidates }}</div>
-                                </div>
-                                {% if first_result.idioma %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Idioma:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.idioma }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.nota_requisitos %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Nota Requisitos:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.nota_requisitos }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.nota_cargos_a %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Nota Cargos A:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.nota_cargos_a }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.nota_cargos_b %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Nota Cargos B:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.nota_cargos_b }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.compatibilidade_a %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Compatibilidade A:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.compatibilidade_a }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.compatibilidade_b %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Compatibilidade B:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.compatibilidade_b }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.forcas %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Forças:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.forcas }}</div>
-                                </div>
-                                {% endif %}
-                                {% if first_result.fraquezas %}
-                                <div class="row mb-3">
-                                    <div class="col-12 col-md-3 fw-bold">Fraquezas:</div>
-                                    <div class="col-12 col-md-9">{{ first_result.fraquezas }}</div>
-                                </div>
-                                {% endif %}
-                                <div class="row">
-                                    <div class="col-12 col-md-3 fw-bold">Descrição da Vaga:</div>
-                                    <div class="col-12 col-md-9">
-                                        <pre class="job-description-pre">{{ first_result.job_description }}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
         <!-- Results Section -->
         <div id="results-container" class="mt-4 {% if results_html or has_results %}show{% endif %}">
             {% if results_html %}
@@ -393,382 +165,279 @@
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5>Results</h5>
-                            <div class="export-buttons">
-                                <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
-                                    <i class="bi bi-file-earmark-text"></i> Export to CSV
+                            <h5>Results Table</h5>
+                            
+                            <div class="btn-group">
+                                <a href="{{ url_for('export_csv') }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-file-earmark-arrow-down"></i> Download CSV
+                                </a>
+                                <a href="{{ url_for('export_all_csv') }}" class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="bi bi-file-earmark-zip"></i> Download All CSV
                                 </a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div class="table-responsive">
-                                {{ results_html|safe }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% elif has_results %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5>Export Options</h5>
-                            <div class="export-buttons">
-                                <a href="{{ url_for('export_csv') }}" class="btn btn-success btn-sm">
-                                    <i class="bi bi-file-earmark-text"></i> Export to CSV
-                                </a>
-                                <button id="clear-history-btn" class="btn btn-danger btn-sm ms-2">
-                                    <i class="bi bi-trash"></i> Limpar Histórico
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <p>You can export your previously processed data using the buttons above.</p>
+                            {{ results_html|safe }}
                         </div>
                     </div>
                 </div>
             </div>
             {% endif %}
         </div>
-
-        <!-- Instructions -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Instructions</h5>
-                    </div>
-                    <div class="card-body">
-                        <ol>
-                            <li>Paste one or more LinkedIn job listing URLs into the text area above.</li>
-                            {% if gemini_available %}
-                            <li>Opcionalmente, marque a caixa "Analisar compatibilidade" para avaliar as vagas com Gemini AI.</li>
-                            {% endif %}
-                            <li>Selecione o tamanho do lote para processamento mais eficiente.</li>
-                            <li>Click the "Extract Information" button.</li>
-                            <li>The script will extract job title and company information from each URL.</li>
-                            <li>Results will be displayed in a table with the original link, company name, company link, job title, and job description.</li>
-                            {% if gemini_available %}
-                            <li>Se selecionada a opção de análise, o Gemini AI avaliará a compatibilidade com seu currículo.</li>
-                            {% endif %}
-                            <li>You can export the results to CSV format using the button above the results table.</li>
-                        </ol>
-                        <p>Example URL format:</p>
-                        <pre class="bg-dark text-light p-2">https://www.linkedin.com/jobs/view/4197948497/?eBP=NON_CHARGEABLE_CHANNEL&refId=bkHAVjq057sZNx6xA%2BnKig%3D%3D&trackingId=hSdg4bhpEUyduU4ScMhsgg%3D%3D&trk=flagship3_search_srp_jobs</pre>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
+        {% include 'modals.html' %}
     </div>
 
-    <!-- Incluir modais -->
-    {% include 'modals.html' %}
-
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Scripts customizados -->
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/batch_selector.js') }}"></script>
     
-    <!-- Script para processar requisições assíncronas e atualizar a barra de progresso -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const scraperForm = document.getElementById('scraper-form');
-            const submitButton = document.getElementById('submit-button');
-            const progressContainer = document.getElementById('progress-container');
-            const progressBar = document.getElementById('progress-bar');
-            const totalProgressBar = document.getElementById('total-progress-bar');
-            const progressMessage = document.getElementById('progress-message');
-            const progressStatus = document.getElementById('progress-status');
-            const currentBatchSpan = document.getElementById('current-batch');
-            const totalBatchesSpan = document.getElementById('total-batches');
-            const processedBatchesSpan = document.getElementById('processed-batches');
-            const batchesContainer = document.getElementById('batches-container');
-            const batchesList = document.getElementById('batches-list');
-            
-            // Intervalo para o polling
-            let progressInterval;
-            
-            // Último status verificado
-            let lastStatus = '';
-            
-            // Função para verificar o progresso
-            function checkProgress() {
-                fetch('/check_progress')
-                    .then(response => response.json())
-                    .then(data => {
-                        // Atualizar a barra de progresso do lote atual
-                        let percent = data.percent || 0;
-                        progressBar.style.width = `${percent}%`;
-                        progressBar.textContent = `${percent}%`;
-                        progressBar.setAttribute('aria-valuenow', percent);
-                        
-                        // Atualizar a barra de progresso total
-                        let batchPercent = data.batch_percent || 0;
-                        totalProgressBar.style.width = `${batchPercent}%`;
-                        totalProgressBar.textContent = `${batchPercent}%`;
-                        totalProgressBar.setAttribute('aria-valuenow', batchPercent);
-                        
-                        // Atualizar informações dos lotes
-                        currentBatchSpan.textContent = data.current_batch || 0;
-                        totalBatchesSpan.textContent = data.total_batches || 0;
-                        processedBatchesSpan.textContent = data.processed_batches || 0;
-                        
-                        // Atualizar a mensagem de progresso
-                        progressMessage.textContent = data.message || 'Processando...';
-                        
-                        // Verificar se há lotes processados
-                        if (data.processed_batches > 0 && data.batches_info && data.batches_info.length > 0) {
-                            // Exibir o contêiner de lotes
-                            batchesContainer.classList.remove('d-none');
-                            
-                            // Limpar a lista de lotes
-                            batchesList.innerHTML = '';
-                            
-                            // Adicionar cada lote processado à lista usando nosso helper
-                            data.batches_info.forEach(batch => {
-                                // Usar a função do batch_selector.js para criar um item de lote para evitar problemas de checkbox
-                                const batchItem = window.batchSelector.createBatchItem(batch);
-                                batchesList.appendChild(batchItem);
-                            });
-                        }
-                        
-                        // Verificar o status
-                        if (data.status === 'completed') {
-                            // Processo concluído com sucesso
-                            if (lastStatus !== 'completed') {
-                                progressStatus.textContent = 'Processamento concluído com sucesso!';
-                                progressBar.classList.remove('progress-bar-animated');
-                                progressBar.classList.remove('bg-primary');
-                                progressBar.classList.add('bg-success');
-                                
-                                totalProgressBar.classList.remove('progress-bar-animated');
-                                totalProgressBar.classList.remove('bg-info');
-                                totalProgressBar.classList.add('bg-success');
-                                
-                                // Mostrar os resultados
-                                if (data.results) {
-                                    // Atualizar a div de resultados diretamente
-                                    const resultsContainer = document.getElementById('results-container');
-                                    
-                                    // Criar HTML para os resultados
-                                    let resultsHTML = `
-                                    <div class="row">
-                                        <div class="col-12">
-                                            <div class="card">
-                                                <div class="card-header d-flex justify-content-between align-items-center">
-                                                    <h5>Results</h5>
-                                                    <div class="export-buttons">
-                                                        <a href="/export/csv" class="btn btn-success btn-sm">
-                                                            <i class="bi bi-file-earmark-text"></i> Export to CSV
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="table-responsive">
-                                                        ${data.results}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>`;
-                                    
-                                    // Atualizar o conteúdo
-                                    resultsContainer.innerHTML = resultsHTML;
-                                    
-                                    // Mostrar o contêiner de resultados
-                                    resultsContainer.classList.add('show');
-                                    
-                                    // Reativar o botão submit
-                                    submitButton.disabled = false;
-                                    
-                                    // Rolar para os resultados
-                                    resultsContainer.scrollIntoView({ behavior: 'smooth' });
-                                }
-                                
-                                // Limpar o intervalo
-                                clearInterval(progressInterval);
-                            }
-                        } else if (data.status === 'error') {
-                            // Erro no processamento
-                            if (lastStatus !== 'error') {
-                                progressStatus.textContent = 'Ocorreu um erro durante o processamento';
-                                progressBar.classList.remove('progress-bar-animated');
-                                progressBar.classList.remove('bg-primary');
-                                progressBar.classList.add('bg-danger');
-                                
-                                totalProgressBar.classList.remove('progress-bar-animated');
-                                totalProgressBar.classList.remove('bg-info');
-                                totalProgressBar.classList.add('bg-danger');
-                                
-                                // Exibir mensagem de erro
-                                progressMessage.innerHTML = `<strong class="text-danger">Erro:</strong> ${data.message}`;
-                                
-                                // Reativar o formulário
-                                submitButton.disabled = false;
-                                
-                                // Limpar o intervalo
-                                clearInterval(progressInterval);
-                            }
-                        }
-                        
-                        // Atualizar o último status
-                        lastStatus = data.status;
-                    })
-                    .catch(error => {
-                        console.error('Erro ao verificar progresso:', error);
-                    });
-            }
-            
-            // Função para lidar com a exportação de múltiplos lotes
-            function setupBatchExportHandlers() {
-                const exportSelectedButton = document.getElementById('export-selected-batches');
-                const selectAllButton = document.getElementById('select-all-batches');
-                
-                // Usar as funções do módulo batch_selector.js para evitar problemas
-                if (exportSelectedButton && window.batchSelector) {
-                    // Remover listeners antigos para evitar duplicação
-                    exportSelectedButton.replaceWith(exportSelectedButton.cloneNode(true));
-                    // Obter a nova referência após a clonagem
-                    const newExportButton = document.getElementById('export-selected-batches');
-                    if (newExportButton) {
-                        newExportButton.addEventListener('click', window.batchSelector.exportSelectedBatches);
-                    }
-                }
-                
-                if (selectAllButton && window.batchSelector) {
-                    // Remover listeners antigos para evitar duplicação
-                    selectAllButton.replaceWith(selectAllButton.cloneNode(true));
-                    // Obter a nova referência após a clonagem
-                    const newSelectAllButton = document.getElementById('select-all-batches');
-                    if (newSelectAllButton) {
-                        newSelectAllButton.addEventListener('click', window.batchSelector.toggleAllCheckboxes);
-                    }
-                }
-            }
-            
-            // Configurar manipuladores de eventos após cada atualização da lista de lotes
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'childList' && mutation.target.id === 'batches-list') {
-                        setupBatchExportHandlers();
-                    }
-                });
-            });
-            
-            // Observar mudanças na lista de lotes
-            observer.observe(batchesList, { childList: true });
-            
-            // Configurar manipuladores iniciais
-            setupBatchExportHandlers();
-            
-            // Submissão do formulário
-            scraperForm.addEventListener('submit', function(event) {
+            // Form submission
+            document.getElementById('scraper-form').addEventListener('submit', async function(event) {
                 event.preventDefault();
                 
-                // Desativar o botão submit
-                submitButton.disabled = true;
+                // Get form data
+                const formData = new FormData(this);
+                const urls = formData.get('linkedin_urls').trim();
+                const ignoreUrls = formData.get('ignore_urls').trim();
+                const analyzeJobs = formData.get('analyze_jobs') === 'on';
+                const batchSize = formData.get('batch_size');
                 
-                // Exibir o contêiner de progresso
-                progressContainer.classList.remove('d-none');
-                batchesContainer.classList.add('d-none');
+                if (!urls) {
+                    alert('Please enter at least one LinkedIn job URL.');
+                    return;
+                }
                 
-                // Resetar as barras de progresso
-                progressBar.style.width = '0%';
-                progressBar.textContent = '0%';
-                progressBar.setAttribute('aria-valuenow', 0);
-                progressBar.classList.remove('bg-success', 'bg-danger');
-                progressBar.classList.add('bg-primary', 'progress-bar-animated');
-                
-                totalProgressBar.style.width = '0%';
-                totalProgressBar.textContent = '0%';
-                totalProgressBar.setAttribute('aria-valuenow', 0);
-                totalProgressBar.classList.remove('bg-success', 'bg-danger');
-                totalProgressBar.classList.add('bg-info', 'progress-bar-animated');
-                
-                // Resetar informações dos lotes
-                currentBatchSpan.textContent = '0';
-                totalBatchesSpan.textContent = '0';
-                processedBatchesSpan.textContent = '0';
-                
-                // Inicializar a mensagem de status
-                progressStatus.textContent = 'Processando...';
-                progressMessage.textContent = 'Iniciando processamento em lotes...';
-                
-                // Obter os dados do formulário
-                const formData = new FormData(scraperForm);
-                
-                // Enviar a requisição
-                fetch('/process_async', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Iniciar a verificação de progresso
-                        progressInterval = setInterval(checkProgress, 1000);
-                    } else {
-                        // Exibir mensagem de erro
-                        progressStatus.textContent = 'Erro ao iniciar processamento';
-                        progressMessage.textContent = data.message || 'Ocorreu um erro.';
-                        
-                        // Reativar o botão submit
-                        submitButton.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao enviar formulário:', error);
-                    progressStatus.textContent = 'Erro ao enviar formulário';
-                    progressMessage.textContent = 'Verifique se as URLs são válidas.';
-                    
-                    // Reativar o botão submit
-                    submitButton.disabled = false;
+                // Disable form elements
+                document.getElementById('submit-button').disabled = true;
+                document.querySelectorAll('#scraper-form textarea, #scraper-form select, #scraper-form input').forEach(el => {
+                    el.disabled = true;
                 });
-            });
-
-            // Manipulador para o botão de limpar histórico
-            const clearHistoryBtn = document.getElementById('clear-history-btn');
-            if (clearHistoryBtn) {
-                clearHistoryBtn.addEventListener('click', function() {
-                    if (confirm('Tem certeza que deseja limpar todo o histórico de processamento? Esta ação não pode ser desfeita.')) {
-                        // Verificar se o usuário também quer limpar as URLs ignoradas
-                        const clearIgnored = confirm('Deseja também limpar a lista de URLs ignoradas?');
-                        
-                        // Enviar requisição para limpar o histórico
-                        fetch(`/clear_history?clear_ignored=${clearIgnored}`, {
-                            method: 'POST'
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            if (data.success) {
-                                // Exibir mensagem de sucesso
-                                alert(data.message);
-                                // Recarregar a página para atualizar a interface
-                                window.location.reload();
-                            } else {
-                                // Exibir mensagem de erro
-                                alert(`Erro: ${data.message}`);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erro ao limpar histórico:', error);
-                            alert(`Erro ao limpar histórico: ${error.message}`);
-                        });
+                
+                // Show progress container
+                const progressContainer = document.getElementById('progress-container');
+                progressContainer.classList.remove('d-none');
+                document.getElementById('progress-status').textContent = 'Processando URLs...';
+                
+                // Send request to process async
+                try {
+                    const response = await fetch('/process_async', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
                     }
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        // Set up progress checking interval
+                        checkProgressInterval = setInterval(checkProgress, 2000);
+                    } else {
+                        alert('Error: ' + data.message);
+                        resetFormState();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error processing URLs: ' + error.message);
+                    resetFormState();
+                }
+            });
+            
+            // Clear history button
+            document.getElementById('clear-history-btn').addEventListener('click', async function() {
+                if (!confirm('Tem certeza que deseja limpar todo o histórico de processamento?\nEsta ação não pode ser desfeita.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/clear_history', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        // Reload the page
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error clearing history: ' + error.message);
+                }
+            });
+            
+            // Function to check progress
+            let checkProgressInterval;
+            async function checkProgress() {
+                try {
+                    const response = await fetch('/check_progress', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update the progress bar and status message
+                    document.getElementById('progress-bar').style.width = data.progress + '%';
+                    document.getElementById('progress-bar').setAttribute('aria-valuenow', data.progress);
+                    document.getElementById('progress-bar').textContent = data.progress + '%';
+                    document.getElementById('progress-message').textContent = data.message;
+                    
+                    // Update batches info
+                    document.getElementById('current-batch').textContent = data.current_batch;
+                    document.getElementById('total-batches').textContent = data.total_batches;
+                    document.getElementById('processed-batches').textContent = data.processed_batches;
+                    
+                    // Update total progress
+                    const totalProgressPercent = Math.round((data.processed_batches / data.total_batches) * 100) || 0;
+                    document.getElementById('total-progress-bar').style.width = totalProgressPercent + '%';
+                    document.getElementById('total-progress-bar').setAttribute('aria-valuenow', totalProgressPercent);
+                    document.getElementById('total-progress-bar').textContent = totalProgressPercent + '%';
+                    
+                    // If processing is complete
+                    if (data.status === 'complete') {
+                        clearInterval(checkProgressInterval);
+                        
+                        // If there was a result, show it
+                        if (data.has_result) {
+                            // Give some time to see the 100% progress
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            resetFormState();
+                        }
+                    }
+                    
+                    // Update processed batches list
+                    if (data.processed_batches > 0 && data.batches.length > 0) {
+                        const batchesContainer = document.getElementById('batches-container');
+                        batchesContainer.classList.remove('d-none');
+                        
+                        const batchesList = document.getElementById('batches-list');
+                        updateBatchesList(batchesList, data.batches);
+                    }
+                } catch (error) {
+                    console.error('Error checking progress:', error);
+                }
+            }
+            
+            // Function to update the batches list
+            function updateBatchesList(batchesList, batches) {
+                // Don't rebuild the entire list if elements already exist
+                // This avoids deselecting checkboxes when the list is updated
+                
+                // Create a map of existing items for quick lookup
+                const existingItems = {};
+                Array.from(batchesList.querySelectorAll('.list-group-item')).forEach(item => {
+                    const batchIndex = item.getAttribute('data-batch-index');
+                    existingItems[batchIndex] = item;
+                });
+                
+                // Clear the list but keep track of which checkboxes were checked
+                const checkedBatches = Array.from(batchesList.querySelectorAll('input[type="checkbox"]:checked'))
+                    .map(checkbox => checkbox.getAttribute('data-batch-index'));
+                
+                // Empty the list
+                batchesList.innerHTML = '';
+                
+                // Add each batch to the list
+                batches.forEach(batch => {
+                    const batchIndex = batch.index;
+                    
+                    // Check if this item already existed
+                    if (existingItems[batchIndex]) {
+                        batchesList.appendChild(existingItems[batchIndex]);
+                        return;
+                    }
+                    
+                    // Create a new item
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.setAttribute('data-batch-index', batchIndex);
+                    
+                    // Create checkbox
+                    const checkboxId = `batch-${batchIndex}`;
+                    const checkboxLabel = document.createElement('label');
+                    checkboxLabel.className = 'd-flex align-items-center gap-2';
+                    checkboxLabel.htmlFor = checkboxId;
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input batch-checkbox';
+                    checkbox.id = checkboxId;
+                    checkbox.setAttribute('data-batch-index', batchIndex);
+                    
+                    // Restore checkbox state if it was checked before
+                    if (checkedBatches.includes(batchIndex.toString())) {
+                        checkbox.checked = true;
+                    }
+                    
+                    // Create batch info text
+                    const batchInfo = document.createElement('span');
+                    const createdDate = new Date(batch.created_at);
+                    const formattedDate = createdDate.toLocaleString();
+                    
+                    batchInfo.innerHTML = `
+                        Lote ${batchIndex} 
+                        <span class="badge bg-primary rounded-pill ms-1">${batch.count} URLs</span>
+                        <small class="text-muted ms-2">${formattedDate}</small>
+                    `;
+                    
+                    if (batch.has_error) {
+                        batchInfo.innerHTML += ' <span class="badge bg-danger">Erro</span>';
+                    }
+                    
+                    checkboxLabel.appendChild(checkbox);
+                    checkboxLabel.appendChild(batchInfo);
+                    
+                    // Create download button
+                    const downloadButton = document.createElement('a');
+                    downloadButton.href = `/export_batch_csv/${batchIndex}`;
+                    downloadButton.className = 'btn btn-sm btn-outline-primary';
+                    downloadButton.innerHTML = '<i class="bi bi-file-earmark-arrow-down"></i> CSV';
+                    
+                    item.appendChild(checkboxLabel);
+                    item.appendChild(downloadButton);
+                    
+                    batchesList.appendChild(item);
                 });
             }
+            
+            // Reset form state
+            function resetFormState() {
+                // Re-enable form elements
+                document.getElementById('submit-button').disabled = false;
+                document.querySelectorAll('#scraper-form textarea, #scraper-form select, #scraper-form input').forEach(el => {
+                    el.disabled = false;
+                });
+            }
+            
+            // Initial check for progress if the page reloads during processing
+            checkProgress();
         });
     </script>
 </body>

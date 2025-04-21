@@ -73,42 +73,11 @@ def load_processed_batches():
             if processing_progress['processed_batches']:
                 processing_progress['current_batch'] = max(batch['batch_index'] for batch in processing_progress['processed_batches']) + 1
             
-            # Extrair primeiro resultado do primeiro lote se disponível
-            if batches and batches[0].df_json:
-                try:
-                    import pandas as pd
-                    import json
-                    import re
-                    
-                    # Tentar carregar o DataFrame do primeiro lote
-                    df_json = batches[0].df_json
-                    df = pd.read_json(df_json)
-                    
-                    if not df.empty:
-                        # Converter a primeira linha para um dicionário
-                        first_result = df.iloc[0].to_dict()
-                        # Remover formatação HTML da descrição
-                        if 'job_description' in first_result:
-                            first_result['job_description'] = first_result['job_description'].replace('<br><br>', '\n\n').replace('<br>', '\n')
-                        # Remover HTML dos links
-                        for field in ['link', 'company_link']:
-                            if field in first_result and isinstance(first_result[field], str) and '<a href=' in first_result[field]:
-                                url_match = re.search(r'href="([^"]+)"', first_result[field])
-                                if url_match:
-                                    first_result[field] = url_match.group(1)
-                        
-                        # Armazenar o primeiro resultado para exibição
-                        processing_progress['first_result'] = first_result
-                except Exception as e:
-                    logger.error(f"Erro ao extrair primeiro resultado: {str(e)}")
-                    processing_progress['first_result'] = None
-            else:
-                processing_progress['first_result'] = None
+            # Removemos a lógica para extrair o primeiro resultado, já que a seção foi removida do frontend
                 
             logger.debug(f"Carregados {len(processing_progress['processed_batches'])} lotes processados do banco de dados")
     except Exception as e:
         logger.error(f"Erro ao carregar lotes processados: {str(e)}")
-        processing_progress['first_result'] = None
 
 # Verificar se o banco de dados está inicializado antes de carregar os dados
 try:
@@ -130,7 +99,6 @@ def index():
     Handles both GET and POST requests.
     """
     results_html = None
-    first_result = processing_progress.get('first_result')
     
     if request.method == 'POST':
         # Get LinkedIn URLs from the form
@@ -213,9 +181,6 @@ def index():
     # Obter lista de URLs ignoradas
     ignored_urls = list(processing_progress['ignored_urls'])
     
-    # Passar o primeiro resultado para o template
-    first_result = processing_progress.get('first_result')
-    
     return render_template('index.html', 
                           results_html=results_html, 
                           has_results=has_results,
@@ -223,8 +188,7 @@ def index():
                           gemini_available=gemini_available,
                           batches=batches,
                           ignored_urls=ignored_urls,
-                          processing_status=processing_progress['status'],
-                          first_result=first_result)
+                          processing_status=processing_progress['status'])
 
 @app.route('/export/csv', methods=['GET'])
 def export_csv():
