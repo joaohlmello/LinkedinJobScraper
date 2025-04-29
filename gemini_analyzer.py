@@ -27,8 +27,11 @@ class JobAnalyzer:
             raise ValueError("GEMINI_API_KEY não está definida nas variáveis de ambiente")
         
         try:
-            # Inicializar cliente Gemini
-            self.client = genai.Client(api_key=api_key)
+            # Inicializar cliente Gemini (usando vertexai=False para usar API key direta)
+            self.client = genai.Client(
+                api_key=api_key,
+                vertexai=False
+            )
             self.model_name = "gemini-2.5-flash-preview-04-17"
             
             # Configuração de geração
@@ -36,26 +39,22 @@ class JobAnalyzer:
                 temperature=0,
                 top_p=0.65,
                 response_mime_type="application/json",
-                response_schema=genai.types.Schema(
-                    type = genai.types.Type.OBJECT,
-                    required = ["nota_requisitos", "nota_responsabilidades", "pontos_fracos", "tipo_vaga"],
-                    properties = {
-                        "nota_requisitos": genai.types.Schema(
-                            type = genai.types.Type.INTEGER,
+                response_schema=types.Schema(
+                    type=types.Type.OBJECT,
+                    required=["nota_requisitos", "nota_responsabilidades", "pontos_fracos", "tipo_vaga"],
+                    properties={
+                        "nota_requisitos": types.Schema(
+                            type=types.Type.INTEGER,
                         ),
-                        "nota_responsabilidades": genai.types.Schema(
-                            type = genai.types.Type.INTEGER,
+                        "nota_responsabilidades": types.Schema(
+                            type=types.Type.INTEGER,
                         ),
-                        "pontos_fracos": genai.types.Schema(
-                            type = genai.types.Type.STRING,
+                        "pontos_fracos": types.Schema(
+                            type=types.Type.STRING,
                         ),
-                        "idioma_descricao": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            enum = ["ingles", "portugues"],
-                        ),
-                        "tipo_vaga": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                            enum = ["projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"],
+                        "tipo_vaga": types.Schema(
+                            type=types.Type.STRING,
+                            enum=["projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"],
                         ),
                     },
                 ),
@@ -233,19 +232,18 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     ),
                 ]
                 
-                # Preparar a instrução do sistema
-                system_instruction = [types.Part.from_text(text=self.system_prompt)]
-                
-                # Gerar conteúdo
-                response = self.client.models.generate_content(
+                # Gerar conteúdo - seguindo exatamente o exemplo fornecido
+                response_stream = self.client.models.generate_content_stream(
                     model=self.model_name,
                     contents=contents,
                     config=self.generation_config,
-                    system_instruction=system_instruction
                 )
                 
-                # Obter a resposta como JSON
-                result_json = response.text
+                # Coletar todo o texto da resposta
+                result_json = ""
+                for chunk in response_stream:
+                    if chunk.text:
+                        result_json += chunk.text
                 
             except Exception as e:
                 logger.error(f"Erro na chamada à API do Gemini: {str(e)}")
@@ -273,6 +271,10 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     
                     # Processar o resultado como JSON
                     analysis_data = json.loads(json_content)
+                    
+                    # Garantir que temos os campos necessários
+                    if "idioma_descricao" not in analysis_data:
+                        analysis_data["idioma_descricao"] = "portugues"
                     
                     # Adicionar informações de sistema às análises para exibição
                     analysis_data["system_instructions"] = self.system_prompt
