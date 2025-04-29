@@ -1,0 +1,92 @@
+# To run this code you need to install the following dependencies:
+# pip install google-genai
+
+import base64
+from google import genai
+from google.genai import types
+
+
+def generate():
+    client = genai.Client(
+        vertexai=True,
+        project="",
+        location="",
+    )
+
+    model = "gemini-2.5-flash-preview-04-17"
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text="""INSERT_INPUT_HERE"""),
+            ],
+        ),
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        temperature=0,
+        top_p=0.65,
+        response_mime_type="application/json",
+        response_schema=genai.types.Schema(
+            type = genai.types.Type.OBJECT,
+            required = ["nota_requisitos", "nota_responsabilidades", "pontos_fracos", "tipo_vaga"],
+            properties = {
+                "nota_requisitos": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "nota_responsabilidades": genai.types.Schema(
+                    type = genai.types.Type.INTEGER,
+                ),
+                "pontos_fracos": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                ),
+                "tipo_vaga": genai.types.Schema(
+                    type = genai.types.Type.STRING,
+                    enum = ["projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"],
+                ),
+            },
+        ),
+        system_instruction=[
+            types.Part.from_text(text="""#INSTRUÇÕES
+-Execute as tarefas abaixo de forma direta e objetiva.
+-Responda sempre em portugues.
+-Apresente os resultados estritamente no formato especificado no Passo 4, sem introduções, saudações, explicações adicionais ou qualquer texto não solicitado.
+
+
+
+#ENTRADAS
+-Descrição da Vaga (JD)
+-Currículo (CV)
+
+
+
+#Passos 1 e 2: Extrair Requisitos da JD
+Identifique e liste os requisitos da JD, agrupando nas categorias abaixo. Considere sinônimos e alternativas (\"OU\"). Se algum deles não for informado, será \"N/A\"
+-Requisitos Obrigatórios e Desejáveis
+-Responsabilidades e Atividades: (Obs: Excluir itens já listados anteriormente)
+
+
+
+#Passo 2: Analisar CVs e Pontuar Categorias
+Calcule a pontuação (0-100) para cada categoria.
+
+
+
+#Passo 4: Apresentar Resultados (Formato Estrito)
+Para cada candidato, apresente a informação abaixo, sem nenhuma informação a mais.
+-nota_requisitos (0-100)
+-nota_responsabilidades (0-100)
+-pontos_fracos
+-idioma_descricao
+-tipo_vaga"""),
+        ],
+    )
+
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    ):
+        print(chunk.text, end="")
+
+if __name__ == "__main__":
+    generate()

@@ -39,21 +39,15 @@ class JobAnalyzer:
                 "max_output_tokens": 65536,
                 "response_schema": content.Schema(
                     type = content.Type.OBJECT,
-                    required = ["nota_industria_contexto", "nota_cargos_anteriores", "nota_requisitos", "nota_final", "fraquezas", "idioma_descricao", "tipo_vaga", "industria_vaga", "foco_vaga"],
+                    required = ["nota_requisitos", "nota_responsabilidades", "pontos_fracos", "tipo_vaga"],
                     properties = {
-                        "nota_industria_contexto": content.Schema(
-                            type = content.Type.INTEGER,
-                        ),
-                        "nota_cargos_anteriores": content.Schema(
-                            type = content.Type.INTEGER,
-                        ),
                         "nota_requisitos": content.Schema(
                             type = content.Type.INTEGER,
                         ),
-                        "nota_final": content.Schema(
+                        "nota_responsabilidades": content.Schema(
                             type = content.Type.INTEGER,
                         ),
-                        "fraquezas": content.Schema(
+                        "pontos_fracos": content.Schema(
                             type = content.Type.STRING,
                         ),
                         "idioma_descricao": content.Schema(
@@ -63,12 +57,6 @@ class JobAnalyzer:
                         "tipo_vaga": content.Schema(
                             type = content.Type.STRING,
                             enum = ["projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"],
-                        ),
-                        "industria_vaga": content.Schema(
-                            type = content.Type.STRING,
-                        ),
-                        "foco_vaga": content.Schema(
-                            type = content.Type.STRING,
                         ),
                     },
                 ),
