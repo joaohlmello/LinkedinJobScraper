@@ -105,7 +105,85 @@ Para cada candidato, apresente a informação abaixo, sem nenhuma informação a
 -nota_responsabilidades (0-100)
 -pontos_fracos
 -idioma_descricao
--tipo_vaga"""
+-tipo_vaga
+
+#CURRICULO
+EXPERIÊNCIA PROFISSIONAL
+VALE (via Synergia Consultoria)
+10/2022 - 12/2024: Head de Projetos
+RESPONSABILIDADES:
+Estruturar a diretoria, definindo estratégia, processos de governança e implantar o PMO corporativo. Reporte ao cliente VALE, à CEO da consultoria (Synergia) e ao CEO do fundo de private equity (TPF - Bélgica).
+Gerenciar o portfólio de projetos de tecnologia, acompanhando o ciclo de vida completo e garantindo alinhamento estratégico.
+Liderar equipe multidisciplinar de 10 colaboradores diretos (Product Manager, Dev, Dados, BI e PMO) e gerenciar 7 fornecedores, desenvolvendo habilidades técnicas e comportamentais do time.
+Atuar como ponto focal na comunicação com cliente e stakeholders, negociando trade offs e gerenciando expectativas.
+Definir, acompanhar e gerenciar escopo, cronograma, custos e qualidade dos projetos, Implantar e garantir a aderência às melhores práticas e metodologias de gestão de projetos ágeis (Scrum, Kanban) e tradicionais (PMBOK).
+Realizar o controle de processos, orçamento e indicadores de desempenho (KPIs) do portfólio. Gerenciar contratos e o desempenho de fornecedores estratégicos.
+Implantar metodologia de mapeamento e mitigação de riscos dos projetos, e acompanhamento dos planos de ação.
+Atuar na priorização do portfólio, negociando tradeoffs com base em critérios data-driven.
+Ser referencia em conhecimento de metodologias e boas práticas de gerenciamento de Projetos.
+RESULTADOS:
+Gestão de Stakeholders e Crise: Liderança do turnaround de um contrato estratégico (BRL100MM), reestruturando escopo, prazo e orçamento, resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses.
+Planejamento Estratégico: Implementação de OKRs, integrando 90 projetos corporativos a 15 objetivos estratégicos, monitorando KPIs e engajando a alta gestão, resultando no aumento do atingimento de 50% para 85% em 1 ano.
+Gestão Ágil de Projetos de Tecnologia: Reestruturação da fábrica de software para squads com práticas e ferramentas ágeis (discovery, sprints, JIRA, etc.), melhorando o alinhamento das entregas com as necessidades do negócio.
+Implantação de PMO Data-driven com IA e RPA: Monitoramento de milhões de produtos em centenas de etapas, com regras de negócio complexas e entregas via API, reduzindo o tempo de reporte de 1 semana para tempo real, automatizando tarefas com RPA e geração de documentos com inteligência artificial  - GenAI.
+Sistema de Gestão do Portfólio: Desenvolvimento de ferramenta copiloto para apoio aos Gerentes de Projetos em processos de: escopo, mudanças, riscos, prazos e documentos. Agregação de dados para geração de BIs, dashboards e status reports, aumentando a previsibilidade dos projetos e resultando em zero não conformidades em auditoria.
+Reconstrução de Sistema Legado: Desenvolvimento de sistema de coleta e análise de dados de mercado com integração offline to online (O2O), corrigindo problemas de UI, UX, bugs recorrentes, e viabilizando extração de dados e integrações, resultando em redução de 80% nas ocorrências, e percepção de UX mais intuitiva pelos usuários.
+
+ONCOCLÍNICAS
+07/2021 - 10/2022: Gerente de Projetos
+RESPONSABILIDADES:
+Gerenciar projetos corporativos e de tecnologia no setor de saúde, coordenando equipes internas e contratadas durante todo o ciclo de vida dos projetos.
+Implantar processos estruturados, baseados no PMBOK, para assegurar escopo, prazo, orçamento e qualidade.
+Facilitar a comunicação com stakeholders, conduzir reuniões de status, garantir o alinhamento e gerenciar conflitos.
+Elaborar e apresentar relatórios gerenciais e executivos (BI, dashboards, status reports) para tomada de decisão.
+Mapear e gerenciar riscos e não conformidades dos projetos, executando ações corretivas e preventivas.
+Monitorar e controlar custos dos projetos, garantindo a aderência ao orçamento baseline.
+Conduzir reuniões de status, comitês e cerimônias ágeis.
+RESULTADOS:
+Gestão de Projetos: Portfólio de 4 projetos de CAPEX (BRL 18MM) com controle eficaz de custos e cronograma. Nota máxima na avaliação de resultados, entregas no prazo, BRL700K em savings e 90% de assertividade no fluxo de caixa.
+Transformação Digital: Desenvolvimento de sistema de gestão data-driven com dashboards, BI e integração com ERP, resultando em redução do tempo de aprovação de 7 para 3 dias e melhor visibilidade para tomada de decisão.
+Melhoria de Processos Operacionais: Implementação de sistema de checklist de transição para a operação, resultando na redução de não conformidades em 95% e aumento da satisfação do cliente, garantindo qualidade e conformidade.
+Melhoria de Processos de Governança: Implementação de gestão de mudanças de escopo, com fluxo de aprovação, mitigando riscos, evitando custos não apropriados e resolvendo problemas históricos de falta de controle.
+
+EQSEED (Top 100 Startups to Watch, Fintech, Marketplace de Investimentos)
+02/2020 - 07/2021: Gerente de Projetos
+RESPONSABILIDADES:
+Liderar a transformação digital em startup do mercado financeiro. Reporte direto ao CEO inglês.
+Gerenciar equipe de operações e backoffice de 4 colaboradores após promoção em 8 meses.
+Implementar metodologias ágeis (Kanban) e OKRs em toda a empresa (Tecnologia, Negócios, Marketing e Vendas, conectando estratégia e tática, e viabilizando a priorização de demandas do backlog.
+Mapear oportunidades de melhoria através de discovery com clientes e áreas de negócio.
+Analisar dados (perfil data-driven) e construir dashboards e BIs para guiar a tomada de decisão.
+Redesenhar e melhorar processos operacionais e de gestão com proatividade e autonomia.
+RESULTADOS:
+Reestruturação do CRM: Redesenho de processos e automações analíticas. Aumento de 15% na conversão de leads.
+Automação do Pós-vendas: Automação de processos e comunicação, reduzindo o tempo de assinatura de contratos e melhorando a comunicação com os clientes. NPS elevado a zona de excelência, acima de 75.
+Automação do Batimento Financeiro e Reconciliação, reduzindo em 80% o lead time e eliminando erros operacionais.
+Sistematização da Análise de Investimentos e do Valuation do Portfólio, aumentando a eficiência operacional.
+
+CARGOS ANTERIORES
+03/2018 - 08/2019: BRMALLS (via N&A Consultores) - Coordenador de Planejamento e Controle de Projetos
+08/2017 - 03/2018: BRMALLS (via N&A Consultores) - Analista de Planejamento e Controle de Projetos
+11/2016 - 08/2017: ONCOCLÍNICAS - Estagiário de PMO
+07/2015 - 06/2016: BRMALLS (via N&A Consultores) - Estagiário de Planejamento e Controle de Projetos
+01/2014 - 01/2015: MÉTODO ENGENHARIA - Estagiário de Planejamento e Controle de Projetos
+
+EDUCAÇÃO ACADÊMICA
+08/2021 - 10/2022: MBA em Gestão de Projetos  - Fundação Getúlio Vargas (FGV) - Concluído
+07/2012 - 06/2018: Bacharelado em Engenharia - Concluído
+
+CERTIFICAÇÕES
+Certificação PMP - Project Management Professional - Project Management Institute (PMI) - 12/2020
+Certificação 	SFPC - Scrum Professional Certificate - Certiprof - 06/2020
+
+COMPETÊNCIAS
+Idiomas: Inglês fluente. Experiência na condução de reuniões e comunicação internacional.
+Metodologias e Frameworks: Gestão de Projetos Tradicional (PMBOK, Waterfall, Preditiva), Metodologias Ágeis (Scrum, Kanban), PMO (Implantação e Operação), OKR, BPM/BPMN, Lean Six Sigma, Design Thinking, ITIL.
+Ferramentas de Gestão e Colaboração: MS Project, Azure DevOps, JIRA, Confluence, Asana, Trello, Miro, Mural, Notion.
+Análise de Dados e Business Intelligence: Power BI, Metabase, Google Data Studio - GDS, SQL.
+Automação e Transformação Digital: Python (scripts), Airflow, Inteligência Artificial Generativa - GenAI (APIs OpenAI e Gemini), Power Apps, Power Automate. RPA - Robotic Process Automation, Low-code, No-code.
+CRM: Pipefy, Pipedrive.
+ERP e Gestão de Serviços: TOTVS, SAP, Fluig, ServiceNow.
+Soft Skills: Excelente comunicação oral e escrita, Negociação, Relacionamento Interpersonal com stakeholders, Visão estratégica e de negócios, Liderança de equipes, Proatividade, Autonomia, Organização, Disciplina, Capacidade de execução, Pensamento crítico."""
 
     def analyze_job(self, job_data):
         """

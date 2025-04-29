@@ -779,24 +779,16 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
     df['idioma_descricao'] = "N/A"
     df['tipo_vaga'] = "N/A"
-    df['industria_vaga'] = "N/A"
-    df['foco_vaga'] = "N/A"
-    df['fraquezas'] = ""
-    df['nota_industria_contexto'] = ""
-    df['nota_cargos_anteriores'] = ""
     df['nota_requisitos'] = ""
-    df['nota_final'] = ""
+    df['nota_responsabilidades'] = ""
+    df['pontos_fracos'] = ""
     
     # Adicionar as mesmas colunas ao DataFrame de exportação
     df_export['idioma_descricao'] = "N/A"
     df_export['tipo_vaga'] = "N/A"
-    df_export['industria_vaga'] = "N/A"
-    df_export['foco_vaga'] = "N/A"
-    df_export['fraquezas'] = ""
-    df_export['nota_industria_contexto'] = ""
-    df_export['nota_cargos_anteriores'] = ""
     df_export['nota_requisitos'] = ""
-    df_export['nota_final'] = ""
+    df_export['nota_responsabilidades'] = ""
+    df_export['pontos_fracos'] = ""
     
     # Analisar vagas com Gemini API se solicitado
     gemini_analyses = []
