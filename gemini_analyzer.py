@@ -4,8 +4,8 @@ import logging
 import time
 import re
 import base64
-import google.generativeai as genai
-from google.ai.generativelanguage_v1beta.types import content
+from google import genai
+from google.genai import types
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -28,50 +28,41 @@ class JobAnalyzer:
         
         try:
             # Inicializar cliente Gemini
-            genai.configure(api_key=api_key)
+            self.client = genai.Client(api_key=api_key)
             self.model_name = "gemini-2.5-flash-preview-04-17"
             
             # Configuração de geração
-            self.generation_config = {
-                "temperature": 0,
-                "top_p": 0.65,
-                "top_k": 64,
-                "max_output_tokens": 65536,
-                "response_schema": content.Schema(
-                    type = content.Type.OBJECT,
+            self.generation_config = types.GenerateContentConfig(
+                temperature=0,
+                top_p=0.65,
+                response_mime_type="application/json",
+                response_schema=genai.types.Schema(
+                    type = genai.types.Type.OBJECT,
                     required = ["nota_requisitos", "nota_responsabilidades", "pontos_fracos", "tipo_vaga"],
                     properties = {
-                        "nota_requisitos": content.Schema(
-                            type = content.Type.INTEGER,
+                        "nota_requisitos": genai.types.Schema(
+                            type = genai.types.Type.INTEGER,
                         ),
-                        "nota_responsabilidades": content.Schema(
-                            type = content.Type.INTEGER,
+                        "nota_responsabilidades": genai.types.Schema(
+                            type = genai.types.Type.INTEGER,
                         ),
-                        "pontos_fracos": content.Schema(
-                            type = content.Type.STRING,
+                        "pontos_fracos": genai.types.Schema(
+                            type = genai.types.Type.STRING,
                         ),
-                        "idioma_descricao": content.Schema(
-                            type = content.Type.STRING,
+                        "idioma_descricao": genai.types.Schema(
+                            type = genai.types.Type.STRING,
                             enum = ["ingles", "portugues"],
                         ),
-                        "tipo_vaga": content.Schema(
-                            type = content.Type.STRING,
+                        "tipo_vaga": genai.types.Schema(
+                            type = genai.types.Type.STRING,
                             enum = ["projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"],
                         ),
                     },
                 ),
-                "response_mime_type": "application/json",
-            }
+            )
             
             # Configurar o prompt base
             self.system_prompt = self._get_system_prompt()
-            
-            # Criar o modelo
-            self.model = genai.GenerativeModel(
-                model_name=self.model_name,
-                generation_config=self.generation_config,
-                system_instruction=self.system_prompt
-            )
             
             logger.info(f"Analisador de vagas inicializado com o modelo {self.model_name}")
         except Exception as e:
@@ -110,7 +101,7 @@ Para cada candidato, apresente a informação abaixo, sem nenhuma informação a
 #CURRICULO
 EXPERIÊNCIA PROFISSIONAL
 VALE (via Synergia Consultoria)
-10/2022 - 12/2024: Head de Projetos
+10/2022 - 12/2024: Gerente de Projetos - Head de Planejamento e Tecnologia
 RESPONSABILIDADES:
 Estruturar a diretoria, definindo estratégia, processos de governança e implantar o PMO corporativo. Reporte ao cliente VALE, à CEO da consultoria (Synergia) e ao CEO do fundo de private equity (TPF - Bélgica).
 Gerenciar o portfólio de projetos de tecnologia, acompanhando o ciclo de vida completo e garantindo alinhamento estratégico.
@@ -173,7 +164,7 @@ EDUCAÇÃO ACADÊMICA
 
 CERTIFICAÇÕES
 Certificação PMP - Project Management Professional - Project Management Institute (PMI) - 12/2020
-Certificação 	SFPC - Scrum Professional Certificate - Certiprof - 06/2020
+Certificação    SFPC - Scrum Professional Certificate - Certiprof - 06/2020
 
 COMPETÊNCIAS
 Idiomas: Inglês fluente. Experiência na condução de reuniões e comunicação internacional.
@@ -212,6 +203,7 @@ Soft Skills: Excelente comunicação oral e escrita, Negociação, Relacionament
             job_title = job_data.get('job_title', 'Não informado')
             company_name = job_data.get('company_name', 'Não informado') 
             job_description = job_data.get('job_description', '')
+            job_link = job_data.get('link', 'Não informado')
             
             # Limpar a descrição da vaga para remover tags HTML
             clean_description = job_description.replace('<br><br>', '\n\n').replace('<br>', '\n')
@@ -231,11 +223,26 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
             logger.info(f"Enviando solicitação de análise para vaga: {job_title}")
             
             try:
-                # Iniciando uma sessão de chat
-                chat_session = self.model.start_chat(history=[])
+                # Preparar o conteúdo como Content struct
+                contents = [
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part.from_text(text=input_text),
+                        ],
+                    ),
+                ]
                 
-                # Enviar a mensagem e obter a resposta
-                response = chat_session.send_message(input_text)
+                # Preparar a instrução do sistema
+                system_instruction = [types.Part.from_text(text=self.system_prompt)]
+                
+                # Gerar conteúdo
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=self.generation_config,
+                    system_instruction=system_instruction
+                )
                 
                 # Obter a resposta como JSON
                 result_json = response.text
@@ -269,6 +276,7 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     
                     # Adicionar informações de sistema às análises para exibição
                     analysis_data["system_instructions"] = self.system_prompt
+                    analysis_data["job_link"] = job_link
                     
                     # Retornar o resultado processado
                     return analysis_data
