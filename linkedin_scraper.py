@@ -864,35 +864,23 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     # Obter valores da análise ou usar valores padrão com nova estrutura
                     idioma_descricao = analysis.get('idioma_descricao', 'Não informado')
                     tipo_vaga = analysis.get('tipo_vaga', 'Não informado')
-                    industria_vaga = analysis.get('industria_vaga', 'Não informado')
-                    foco_vaga = analysis.get('foco_vaga', 'Não informado')
-                    fraquezas = analysis.get('fraquezas', '')
-                    nota_industria_contexto = analysis.get('nota_industria_contexto', 0)
-                    nota_cargos_anteriores = analysis.get('nota_cargos_anteriores', 0)
                     nota_requisitos = analysis.get('nota_requisitos', 0)
-                    nota_final = analysis.get('nota_final', 0)
+                    nota_responsabilidades = analysis.get('nota_responsabilidades', 0)
+                    pontos_fracos = analysis.get('pontos_fracos', '')
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
                     df.at[idx, 'idioma_descricao'] = idioma_descricao
                     df.at[idx, 'tipo_vaga'] = tipo_vaga
-                    df.at[idx, 'industria_vaga'] = industria_vaga
-                    df.at[idx, 'foco_vaga'] = foco_vaga
-                    df.at[idx, 'fraquezas'] = fraquezas
-                    df.at[idx, 'nota_industria_contexto'] = f"{nota_industria_contexto}%"
-                    df.at[idx, 'nota_cargos_anteriores'] = f"{nota_cargos_anteriores}%"
                     df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
-                    df.at[idx, 'nota_final'] = f"{nota_final}%"
+                    df.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
+                    df.at[idx, 'pontos_fracos'] = pontos_fracos
                     
                     # Atualizar o DataFrame de exportação
                     df_export.at[idx, 'idioma_descricao'] = idioma_descricao
                     df_export.at[idx, 'tipo_vaga'] = tipo_vaga
-                    df_export.at[idx, 'industria_vaga'] = industria_vaga
-                    df_export.at[idx, 'foco_vaga'] = foco_vaga
-                    df_export.at[idx, 'fraquezas'] = fraquezas
-                    df_export.at[idx, 'nota_industria_contexto'] = f"{nota_industria_contexto}%"
-                    df_export.at[idx, 'nota_cargos_anteriores'] = f"{nota_cargos_anteriores}%"
                     df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
-                    df_export.at[idx, 'nota_final'] = f"{nota_final}%"
+                    df_export.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
+                    df_export.at[idx, 'pontos_fracos'] = pontos_fracos
                 
                 # Salvar para HTML detalhado abaixo da tabela
                 gemini_analyses.append(analysis)
@@ -1073,12 +1061,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             <th>Candidates</th>
             <th class="compatibility-header">Idioma</th>
             <th class="compatibility-header">Tipo Vaga</th>
-            <th class="compatibility-header">Indústria</th>
-            <th class="compatibility-header">Foco</th>
-            <th class="compatibility-header">Nota Ind.</th>
-            <th class="compatibility-header">Nota Cargos</th>
             <th class="compatibility-header">Nota Req.</th>
-            <th class="compatibility-header">Comp. Final</th>
+            <th class="compatibility-header">Nota Resp.</th>
             <th class="compatibility-header">Detalhes</th>
           </tr>
         </thead>
@@ -1114,12 +1098,8 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <td>{row['candidates']}</td>
           <td class="compatibility-column">{row.get('idioma_descricao', 'N/A')}</td>
           <td class="compatibility-column">{row.get('tipo_vaga', 'N/A')}</td>
-          <td class="compatibility-column">{row.get('industria_vaga', 'N/A')}</td>
-          <td class="compatibility-column">{row.get('foco_vaga', 'N/A')}</td>
-          <td class="compatibility-column">{row.get('nota_industria_contexto', '')}</td>
-          <td class="compatibility-column">{row.get('nota_cargos_anteriores', '')}</td>
           <td class="compatibility-column">{row.get('nota_requisitos', '')}</td>
-          <td class="compatibility-column">{row.get('nota_final', '')}</td>
+          <td class="compatibility-column">{row.get('nota_responsabilidades', '')}</td>
           <td class="compatibility-column">
             <a href="{job_link}" class="btn btn-sm btn-outline-primary" target="_blank">
               Ver
