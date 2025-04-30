@@ -36,25 +36,21 @@ class JobAnalyzer:
             
             # Configuração de geração
             self.generation_config = types.GenerateContentConfig(
-                temperature=0,
-                top_p=0.65,
+                temperature=0.95,
+                top_p=0.6,
                 response_mime_type="application/json",
                 response_schema=types.Schema(
                     type=types.Type.OBJECT,
-                    required=["nota_requisitos", "nota_responsabilidades", "pontos_fracos", "tipo_vaga"],
+                    required=["pontuacao_requisitos", "pontuacao_responsabilidades", "pontos_fracos"],
                     properties={
-                        "nota_requisitos": types.Schema(
+                        "pontuacao_requisitos": types.Schema(
                             type=types.Type.INTEGER,
                         ),
-                        "nota_responsabilidades": types.Schema(
+                        "pontuacao_responsabilidades": types.Schema(
                             type=types.Type.INTEGER,
                         ),
                         "pontos_fracos": types.Schema(
                             type=types.Type.STRING,
-                        ),
-                        "tipo_vaga": types.Schema(
-                            type=types.Type.STRING,
-                            enum=["projeto", "programa", "portfolio", "pmo", "planejamento", "produto", "dados_tecnico", "dados_bi", "inteligencia_mercado", "operacoes", "processo", "gestao_mudanca", "outro"],
                         ),
                     },
                 ),
@@ -75,80 +71,91 @@ class JobAnalyzer:
         return """#INSTRUÇÕES
 -Execute as tarefas abaixo de forma direta e objetiva.
 -Responda sempre em portugues.
--Apresente os resultados estritamente no formato especificado no Passo 4, sem introduções, saudações, explicações adicionais ou qualquer texto não solicitado.
+-Apresente os resultados estritamente no formato especificado
+-Seja rigoroso, como um Recrutador experiente e com centenas de candidatos bons seria. Você quer encontrar o candidato perfeito para a vaga.
 
 #ENTRADAS
--Descrição da Vaga (JD)
--Currículo (CV)
+-DESCRIÇÃO DA VAGA (JD)
+-CURRÍCULO (CV)
 
-#Passos 1 e 2: Extrair Requisitos da JD
-Identifique e liste os requisitos da JD, agrupando nas categorias abaixo. Considere sinônimos e alternativas ("OU"). Se algum deles não for informado, será "N/A"
--Requisitos Obrigatórios e Desejáveis
+#Passo 1: Extrair TERMOS da JD
+Identifique e liste os TERMOS da JD, agrupando nas categorias abaixo. Considere sinônimos e alternativas ("OU"). Se algum deles não for informado, será "N/A"
+-Educação Formal e Certificações.
+-Anos de Experiência no Cargo.
+-Requisitos Obrigatórios e Desejáveis (Obs: Excluir itens já listados anteriormente)
 -Responsabilidades e Atividades: (Obs: Excluir itens já listados anteriormente)
 
-#Passo 2: Analisar CVs e Pontuar Categorias
-Calcule a pontuação (0-100) para cada categoria.
+#Passo 2: Analise objetiva dos TERMOS (binário, atende completamente / não atende completamente)
 
-#Passo 4: Apresentar Resultados (Formato Estrito)
-Para cada candidato, apresente a informação abaixo, sem nenhuma informação a mais.
--nota_requisitos (0-100)
--nota_responsabilidades (0-100)
--pontos_fracos
--idioma_descricao
--tipo_vaga
+#Passo 3: Apresentar Resultados (Formato Estrito)
+Apresente a informação abaixo, sem nenhuma informação a mais. Utilize Rich text e Emojis (check verde, X vermelho, ! amarela) para facilitar a leitura.
+##Pontuação por Categoria de TERMOS  (divida o total de TERMOS atendidos completamente pelo total de termos geral)
+-Requisitos Obrigatórios e Desejáveis
+-Responsabilidades e Atividades
+##Lista de Pontos Fracos
 
-#CURRICULO
+
+#CV
+SUMÁRIO
+Gerente de Projetos de Estratégicos e de Tecnologia com 8 anos de experiência. Formação superior em Engenharia, MBA em Gestão e Projetos, Certificação PMP e Scrum. Inglês fluente.
+Experiência na gestão de projetos, programas e portfólios complexos (até BRL 100MM), liderança de equipes multidisciplinares (até 10 diretos + fornecedores) e gestão do relacionamento e expectativas de clientes e stakeholders.
+Perfil hands-on, data-driven e analítico, utilizando dados e IA para tomada de decisão, priorização e otimização de processos. Capaz de traduzir a visão estratégica em execução tática eficaz, com aprofundamento técnico.
+
 EXPERIÊNCIA PROFISSIONAL
 VALE (via Synergia Consultoria)
 10/2022 - 12/2024: Gerente de Projetos - Head de Planejamento e Tecnologia
 RESPONSABILIDADES:
-Estruturar a diretoria, definindo estratégia, processos de governança e implantar o PMO corporativo. Reporte ao cliente VALE, à CEO da consultoria (Synergia) e ao CEO do fundo de private equity (TPF - Bélgica).
-Gerenciar o portfólio de projetos de tecnologia, acompanhando o ciclo de vida completo e garantindo alinhamento estratégico.
-Liderar equipe multidisciplinar de 10 colaboradores diretos (Product Manager, Dev, Dados, BI e PMO) e gerenciar 7 fornecedores, desenvolvendo habilidades técnicas e comportamentais do time.
-Atuar como ponto focal na comunicação com cliente e stakeholders, negociando trade offs e gerenciando expectativas.
-Definir, acompanhar e gerenciar escopo, cronograma, custos e qualidade dos projetos, Implantar e garantir a aderência às melhores práticas e metodologias de gestão de projetos ágeis (Scrum, Kanban) e tradicionais (PMBOK).
-Realizar o controle de processos, orçamento e indicadores de desempenho (KPIs) do portfólio. Gerenciar contratos e o desempenho de fornecedores estratégicos.
-Implantar metodologia de mapeamento e mitigação de riscos dos projetos, e acompanhamento dos planos de ação.
-Atuar na priorização do portfólio, negociando tradeoffs com base em critérios data-driven.
-Ser referencia em conhecimento de metodologias e boas práticas de gerenciamento de Projetos.
+Estruturei a diretoria de Planejamento e Tecnologia, definindo estratégia, processos de governança e implantação do PMO corporativo. Reportando ao cliente (VALE), à CEO da consultoria e ao CEO do private equity (TPF - Bélgica).
+Gerenciei o portfólio de projetos, acompanhando o ciclo de vida completo e garantindo o alinhamento estratégico.
+Liderei uma equipe multidisciplinar de 10 colaboradores diretos (Product Manager, Dev, Dados, BI e PMO), desenvolvendo habilidades técnicas e comportamentais do time através de 1:1s e feedbacks.
+Atuei como ponto focal na comunicação com cliente e stakeholders, negociando trade-offs e gerenciando expectativas.
+Defini e gerenciei escopo, cronograma, custos e qualidade dos projetos, garantindo a aderência às melhores práticas, utilizando metodologias ágeis (Scrum, Kanban) e tradicionais (PMBOK, Cascata/Waterfall).
+Realizei o controle de processos, orçamentos e indicadores de desempenho (KPIs) do portfólio. Gerenciei contratos e desempenho de fornecedores estratégicos.
+Implementei metodologia de mapeamento e mitigação de riscos dos projetos, com monitoramento dos planos de ação.
+Defini a priorização do portfólio, negociando trade-offs com stakeholders com base em critérios data-driven.
 RESULTADOS:
-Gestão de Stakeholders e Crise: Liderança do turnaround de um contrato estratégico (BRL100MM), reestruturando escopo, prazo e orçamento, resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses.
-Planejamento Estratégico: Implementação de OKRs, integrando 90 projetos corporativos a 15 objetivos estratégicos, monitorando KPIs e engajando a alta gestão, resultando no aumento do atingimento de 50% para 85% em 1 ano.
+Gestão de Projetos e Stakeholders: Liderança do turnaround de um contrato estratégico (BRL100MM), reestruturando escopo, prazo e orçamento, resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses.
 Gestão Ágil de Projetos de Tecnologia: Reestruturação da fábrica de software para squads com práticas e ferramentas ágeis (discovery, sprints, JIRA, etc.), melhorando o alinhamento das entregas com as necessidades do negócio.
-Implantação de PMO Data-driven com IA e RPA: Monitoramento de milhões de produtos em centenas de etapas, com regras de negócio complexas e entregas via API, reduzindo o tempo de reporte de 1 semana para tempo real, automatizando tarefas com RPA e geração de documentos com inteligência artificial  - GenAI.
+Planejamento Estratégico: Implementação de OKRs, integrando 90 projetos corporativos a 15 objetivos estratégicos, monitorando KPIs e engajando a alta gestão, resultando no aumento do atingimento de 50% para 85% em 1 ano.
+Implantação de PMO Data-driven com IA, RPA e BI: Monitoramento de milhões de produtos em centenas de etapas, com regras de negócio complexas e entregas via API, reduzindo o tempo de reporte de 1 semana para tempo real, automatizando tarefas com RPA, gerando documentos com inteligência artificial  - GenAI e dashboards com Power BI.
 Sistema de Gestão do Portfólio: Desenvolvimento de ferramenta copiloto para apoio aos Gerentes de Projetos em processos de: escopo, mudanças, riscos, prazos e documentos. Agregação de dados para geração de BIs, dashboards e status reports, aumentando a previsibilidade dos projetos e resultando em zero não conformidades em auditoria.
-Reconstrução de Sistema Legado: Desenvolvimento de sistema de coleta e análise de dados de mercado com integração offline to online (O2O), corrigindo problemas de UI, UX, bugs recorrentes, e viabilizando extração de dados e integrações, resultando em redução de 80% nas ocorrências, e percepção de UX mais intuitiva pelos usuários.
+Reconstrução de Sistema Legado: Desenvolvimento de sistema de coleta e análise de dados com integração offline to online (O2O), corrigindo problemas de UI, UX, bugs recorrentes, e viabilizando extração de dados e integrações, resultando em redução de 80% nas ocorrências, e melhorando a percepção de uma UI/UX mais intuitiva pelos usuários.
+
+
 
 ONCOCLÍNICAS
 07/2021 - 10/2022: Gerente de Projetos
 RESPONSABILIDADES:
-Gerenciar projetos corporativos e de tecnologia no setor de saúde, coordenando equipes internas e contratadas durante todo o ciclo de vida dos projetos.
-Implantar processos estruturados, baseados no PMBOK, para assegurar escopo, prazo, orçamento e qualidade.
-Facilitar a comunicação com stakeholders, conduzir reuniões de status, garantir o alinhamento e gerenciar conflitos.
-Elaborar e apresentar relatórios gerenciais e executivos (BI, dashboards, status reports) para tomada de decisão.
-Mapear e gerenciar riscos e não conformidades dos projetos, executando ações corretivas e preventivas.
-Monitorar e controlar custos dos projetos, garantindo a aderência ao orçamento baseline.
-Conduzir reuniões de status, comitês e cerimônias ágeis.
+Gerenciei projetos corporativos e de tecnologia no setor de saúde, coordenando equipes internas e contratadas durante todo o ciclo de vida dos projetos.
+Implementei processos estruturados, baseados no PMBOK, para assegurar escopo, prazo, orçamento e qualidade.
+Facilitei a comunicação com stakeholders e conduzi reuniões de status, garantindo alinhamento e gerenciando conflitos.
+Elaborei e apresentei relatórios gerenciais e executivos (BI, dashboards, status reports) para tomada de decisão.
+Mapeei e gerenciei riscos e não conformidades dos projetos, executando ações corretivas e preventivas.
+Monitorei e controlei custos dos projetos, garantindo a aderência ao orçamento baseline.
+Desenvolvi e acompanhei cronogramas utilizando MS Project e metodologia de caminho crítico - PERT/CPM.
 RESULTADOS:
 Gestão de Projetos: Portfólio de 4 projetos de CAPEX (BRL 18MM) com controle eficaz de custos e cronograma. Nota máxima na avaliação de resultados, entregas no prazo, BRL700K em savings e 90% de assertividade no fluxo de caixa.
-Transformação Digital: Desenvolvimento de sistema de gestão data-driven com dashboards, BI e integração com ERP, resultando em redução do tempo de aprovação de 7 para 3 dias e melhor visibilidade para tomada de decisão.
-Melhoria de Processos Operacionais: Implementação de sistema de checklist de transição para a operação, resultando na redução de não conformidades em 95% e aumento da satisfação do cliente, garantindo qualidade e conformidade.
-Melhoria de Processos de Governança: Implementação de gestão de mudanças de escopo, com fluxo de aprovação, mitigando riscos, evitando custos não apropriados e resolvendo problemas históricos de falta de controle.
+Transformação Digital: Desenvolvimento de sistema de gestão financeira com BI e integração com ERP, resultando em redução do tempo de aprovação de 7 para 3 dias e proporcionando melhor visibilidade para tomada de decisão.
+Melhoria de Processos Operacionais: Implementação de sistema de checklist de transição para a operação, reduzindo não conformidades em 95%, aumentando a satisfação do cliente e garantindo a qualidade.
+Melhoria de Processos de Governança: Implementação de gestão de mudanças de escopo com fluxo de aprovação, mitigando riscos, evitando custos não apropriados e resolvendo problemas históricos de falta de controle.
 
-EQSEED (Top 100 Startups to Watch, Fintech, Marketplace de Investimentos)
+EQSEED (Top 100 Startups to Watch, Fintech Marketplace)
 02/2020 - 07/2021: Gerente de Projetos
 RESPONSABILIDADES:
-Liderar a transformação digital em startup do mercado financeiro. Reporte direto ao CEO inglês.
-Gerenciar equipe de operações e backoffice de 4 colaboradores após promoção em 8 meses.
-Implementar metodologias ágeis (Kanban) e OKRs em toda a empresa (Tecnologia, Negócios, Marketing e Vendas, conectando estratégia e tática, e viabilizando a priorização de demandas do backlog.
-Mapear oportunidades de melhoria através de discovery com clientes e áreas de negócio.
-Analisar dados (perfil data-driven) e construir dashboards e BIs para guiar a tomada de decisão.
-Redesenhar e melhorar processos operacionais e de gestão com proatividade e autonomia.
+Lidei a transformação digital em startup do mercado financeiro e liderei a equipe de operações de 4 colaboradores após promoção em 8 meses, com reporte direto ao CEO inglês.
+Implementei metodologias ágeis (Kanban) e OKRs em toda a empresa (Tecnologia, Negócios, Marketing e Vendas, conectando estratégia e tática, e viabilizando a priorização de demandas do backlog.
+Mapeei oportunidades de melhoria através de discovery com clientes e áreas de negócio.
+Analisei dados e construí dashboards e BIs para guiar a tomada de decisão.
+Resenhei processos operacionais e de gestão com foco em eficiência operacional.
 RESULTADOS:
-Reestruturação do CRM: Redesenho de processos e automações analíticas. Aumento de 15% na conversão de leads.
-Automação do Pós-vendas: Automação de processos e comunicação, reduzindo o tempo de assinatura de contratos e melhorando a comunicação com os clientes. NPS elevado a zona de excelência, acima de 75.
-Automação do Batimento Financeiro e Reconciliação, reduzindo em 80% o lead time e eliminando erros operacionais.
-Sistematização da Análise de Investimentos e do Valuation do Portfólio, aumentando a eficiência operacional.
+Reestruturação do CRM: Redesenho de processos e automações. Aumento de 15% na conversão de leads.
+Automação do Pós-vendas: Automação de processos e melhorias de UI/UX, reduzindo o tempo de assinatura de contratos e melhorando a comunicação com os clientes. NPS elevado a zona de excelência, acima de 75.
+Automação da Reconciliação Financeira: Reduzindo em 80% o lead time e eliminando erros operacionais.
+Sistematização da Análise de Investimentos e do Valuation do Portfólio: Aumentando a eficiência operacional.
+
+
+
+
 
 CARGOS ANTERIORES
 03/2018 - 08/2019: BRMALLS (via N&A Consultores) - Coordenador de Planejamento e Controle de Projetos
@@ -162,8 +169,8 @@ EDUCAÇÃO ACADÊMICA
 07/2012 - 06/2018: Bacharelado em Engenharia - Concluído
 
 CERTIFICAÇÕES
-Certificação PMP - Project Management Professional - Project Management Institute (PMI) - 12/2020
-Certificação    SFPC - Scrum Professional Certificate - Certiprof - 06/2020
+PMP - Project Management Professional - Project Management Institute (PMI) - 12/2020
+SFPC - Scrum Professional Certificate - Certiprof - 06/2020
 
 COMPETÊNCIAS
 Idiomas: Inglês fluente. Experiência na condução de reuniões e comunicação internacional.
@@ -173,7 +180,7 @@ Análise de Dados e Business Intelligence: Power BI, Metabase, Google Data Studi
 Automação e Transformação Digital: Python (scripts), Airflow, Inteligência Artificial Generativa - GenAI (APIs OpenAI e Gemini), Power Apps, Power Automate. RPA - Robotic Process Automation, Low-code, No-code.
 CRM: Pipefy, Pipedrive.
 ERP e Gestão de Serviços: TOTVS, SAP, Fluig, ServiceNow.
-Soft Skills: Excelente comunicação oral e escrita, Negociação, Relacionamento Interpersonal com stakeholders, Visão estratégica e de negócios, Liderança de equipes, Proatividade, Autonomia, Organização, Disciplina, Capacidade de execução, Pensamento crítico."""
+Soft Skills: Excelente comunicação oral e escrita, Negociação, Relacionamento interpersonal com stakeholders, Visão estratégica e de negócios, Liderança de equipes, Pró-atividade, Autonomia, Organização, Disciplina, Capacidade de execução, Pensamento crítico."""
 
     def analyze_job(self, job_data):
         """
@@ -232,6 +239,9 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     ),
                 ]
                 
+                # System prompt para o Gemini
+                system_instruction = [types.Part.from_text(text=self.system_prompt)]
+                
                 # Gerar conteúdo - seguindo exatamente o exemplo fornecido
                 response_stream = self.client.models.generate_content_stream(
                     model=self.model_name,
@@ -272,9 +282,12 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     # Processar o resultado como JSON
                     analysis_data = json.loads(json_content)
                     
-                    # Garantir que temos os campos necessários
-                    if "idioma_descricao" not in analysis_data:
-                        analysis_data["idioma_descricao"] = "portugues"
+                    # Mapeamento dos novos nomes de campos
+                    if "pontuacao_requisitos" in analysis_data:
+                        analysis_data["nota_requisitos"] = analysis_data["pontuacao_requisitos"]
+                    
+                    if "pontuacao_responsabilidades" in analysis_data:
+                        analysis_data["nota_responsabilidades"] = analysis_data["pontuacao_responsabilidades"]
                     
                     # Adicionar informações de sistema às análises para exibição
                     analysis_data["system_instructions"] = self.system_prompt
@@ -411,10 +424,8 @@ def format_analysis_html(analysis):
         """
     
     # Obter valores das análises ou usar placeholder
-    nota_requisitos = analysis.get('nota_requisitos', 'N/A')
-    nota_responsabilidades = analysis.get('nota_responsabilidades', 'N/A')
-    idioma_descricao = analysis.get('idioma_descricao', 'Não informado')
-    tipo_vaga = analysis.get('tipo_vaga', 'Não classificada')
+    nota_requisitos = analysis.get('nota_requisitos', analysis.get('pontuacao_requisitos', 'N/A'))
+    nota_responsabilidades = analysis.get('nota_responsabilidades', analysis.get('pontuacao_responsabilidades', 'N/A'))
     pontos_fracos = format_text_with_breaks(analysis.get('pontos_fracos', 'Não informado'))
     
     # Definir classes para estilização de compatibilidade
@@ -432,24 +443,19 @@ def format_analysis_html(analysis):
     return f"""
     <div class="analysis-container">
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <h5>Compatibilidade</h5>
                 <div class="lead mb-2 {compat_class}">
                     <strong>{nota_requisitos}</strong>
                 </div>
-                <div class="small text-muted">Nota de Requisitos</div>
+                <div class="small text-muted">Pontuação de Requisitos</div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <h5>Responsabilidades</h5>
                 <div class="lead mb-2">
                     <strong>{nota_responsabilidades}</strong>
                 </div>
-                <div class="small text-muted">Nota de responsabilidades</div>
-            </div>
-            <div class="col-md-4">
-                <h5>Classificação</h5>
-                <div><span class="badge bg-info">{tipo_vaga}</span></div>
-                <div class="small text-muted">Tipo da vaga</div>
+                <div class="small text-muted">Pontuação de Responsabilidades</div>
             </div>
         </div>
         <hr>
@@ -458,13 +464,6 @@ def format_analysis_html(analysis):
                 <h5>Pontos de Atenção</h5>
                 <div class="analysis-detail">
                     {pontos_fracos}
-                </div>
-            </div>
-        </div>
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="small text-muted">
-                    <strong>Idioma da vaga:</strong> {idioma_descricao}
                 </div>
             </div>
         </div>
@@ -492,10 +491,10 @@ def format_jobs_table_html(job_analyses):
         
         # Dados da análise do Gemini (se disponível)
         analysis = job.get('analysis', {})
-        nota_requisitos = analysis.get('nota_requisitos', 'N/A')
-        nota_responsabilidades = analysis.get('nota_responsabilidades', 'N/A')
-        idioma_descricao = analysis.get('idioma_descricao', 'N/A')
-        tipo_vaga = analysis.get('tipo_vaga', 'N/A')
+        
+        # Obter valores usando qualquer um dos nomes de campo (antigo ou novo)
+        nota_requisitos = analysis.get('nota_requisitos', analysis.get('pontuacao_requisitos', 'N/A'))
+        nota_responsabilidades = analysis.get('nota_responsabilidades', analysis.get('pontuacao_responsabilidades', 'N/A'))
         pontos_fracos = format_text_with_breaks(analysis.get('pontos_fracos', 'N/A'))
         
         # Definir classe de compatibilidade com base na nota
@@ -522,8 +521,6 @@ def format_jobs_table_html(job_analyses):
             <td class="{compat_class}">{nota_requisitos}</td>
             <td>{nota_responsabilidades}</td>
             <td>{pontos_fracos}</td>
-            <td>{idioma_descricao}</td>
-            <td>{tipo_vaga}</td>
         </tr>
         """
         
@@ -535,11 +532,9 @@ def format_jobs_table_html(job_analyses):
         <thead>
             <tr>
                 <th>Vaga / Empresa</th>
-                <th>Nota Requisitos</th>
-                <th>Nota Responsabilidades</th>
+                <th>Pontuação Requisitos</th>
+                <th>Pontuação Responsabilidades</th>
                 <th>Pontos Fracos</th>
-                <th>Idioma</th>
-                <th>Tipo de Vaga</th>
             </tr>
         </thead>
         <tbody>
