@@ -36,7 +36,7 @@ class JobAnalyzer:
             
             # Configuração de geração
             self.generation_config = types.GenerateContentConfig(
-                temperature=0.95,
+                temperature=0,
                 top_p=0.6,
                 response_mime_type="application/json",
                 response_schema=types.Schema(
@@ -239,8 +239,10 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     ),
                 ]
                 
-                # System prompt para o Gemini
-                system_instruction = [types.Part.from_text(text=self.system_prompt)]
+                # Adicionar system_instruction ao config
+                self.generation_config.system_instruction = [
+                    types.Part.from_text(text=self.system_prompt)
+                ]
                 
                 # Gerar conteúdo - seguindo exatamente o exemplo fornecido
                 response_stream = self.client.models.generate_content_stream(
@@ -282,7 +284,7 @@ Analisar a compatibilidade entre o currículo do candidato modelo (fornecido no 
                     # Processar o resultado como JSON
                     analysis_data = json.loads(json_content)
                     
-                    # Mapeamento dos novos nomes de campos
+                    # Mapear campos para manter compatibilidade com o código existente
                     if "pontuacao_requisitos" in analysis_data:
                         analysis_data["nota_requisitos"] = analysis_data["pontuacao_requisitos"]
                     
