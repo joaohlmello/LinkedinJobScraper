@@ -544,14 +544,18 @@ def process_async():
         ignore_urls_text = request.form.get('ignore_urls', '')
         batch_size_text = request.form.get('batch_size', '10')
         
-        # Converter o tamanho do lote para inteiro
-        try:
-            batch_size = int(batch_size_text)
-            processing_progress['batch_size'] = batch_size
-        except ValueError:
-            logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 10")
-            batch_size = 10
-            processing_progress['batch_size'] = batch_size
+        # Converter o tamanho do lote para inteiro ou usar "all" para lote completo
+        if batch_size_text == 'all':
+            # Lote completo será definido após processar as URLs
+            batch_size = None
+        else:
+            try:
+                batch_size = int(batch_size_text)
+                processing_progress['batch_size'] = batch_size
+            except ValueError:
+                logger.warning(f"Valor inválido para batch_size: {batch_size_text}, usando padrão 10")
+                batch_size = 10
+                processing_progress['batch_size'] = batch_size
         
         # Processar URLs a serem ignoradas e salvá-las no banco de dados
         ignore_urls = [url.strip() for url in ignore_urls_text.split('\n') if url.strip()]
@@ -598,9 +602,15 @@ def process_async():
             analyze_jobs = False
         
         # Dividir URLs em lotes conforme o tamanho configurado
-        batches = [linkedin_urls[i:i+batch_size] for i in range(0, len(linkedin_urls), batch_size)]
-        
-        logger.debug(f"URLs divididos em {len(batches)} lotes de até {batch_size} cada")
+        if batch_size is None:
+            # Lote completo - todas as URLs em um único lote
+            batch_size = len(linkedin_urls)
+            processing_progress['batch_size'] = batch_size
+            batches = [linkedin_urls]
+            logger.debug(f"Modo lote completo: {batch_size} URLs em um único lote")
+        else:
+            batches = [linkedin_urls[i:i+batch_size] for i in range(0, len(linkedin_urls), batch_size)]
+            logger.debug(f"URLs divididos em {len(batches)} lotes de até {batch_size} cada")
         
         # Verificar se já existe um processamento em andamento
         if processing_progress['status'] == 'processing':

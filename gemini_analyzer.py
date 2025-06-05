@@ -180,6 +180,7 @@ Análise de Dados e Business Intelligence: Power BI, Metabase, Google Data Studi
 Automação e Transformação Digital: Python (scripts), Airflow, Inteligência Artificial Generativa - GenAI (APIs OpenAI e Gemini), Power Apps, Power Automate. RPA - Robotic Process Automation, Low-code, No-code.
 CRM: Pipefy, Pipedrive.
 ERP e Gestão de Serviços: TOTVS, SAP, Fluig, ServiceNow.
+Pacote Office: Excel avançado (procv, tabelas dinâmicas, VBA, etc.), Powerpoint, etc.
 Soft Skills: Excelente comunicação oral e escrita, Negociação, Relacionamento interpersonal com stakeholders, Visão estratégica e de negócios, Liderança de equipes, Pró-atividade, Autonomia, Organização, Disciplina, Capacidade de execução, Pensamento crítico."""
 
     def analyze_job(self, job_data):
