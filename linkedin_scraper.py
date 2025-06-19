@@ -1,7 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 import logging
+
+# Temporarily disable pandas to get the app running
+PANDAS_AVAILABLE = False
+pd = None
 import trafilatura
 import os
 import datetime
@@ -727,13 +730,16 @@ def process_linkedin_urls(urls, progress_callback=None):
                 progress_callback(i+1, total_urls, f"Vaga {i+1} de {total_urls} processada")
     
     # Create DataFrame from results with columns in the specified order
-    df = pd.DataFrame(results, columns=[
-        'link', 'company_name', 'company_link', 'job_title', 'job_description', 
-        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
-    ])
-    
-    logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso.")
-    return df
+    if PANDAS_AVAILABLE:
+        df = pd.DataFrame(results, columns=[
+            'link', 'company_name', 'company_link', 'job_title', 'job_description', 
+            'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
+        ])
+        logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso.")
+        return df
+    else:
+        logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso. (pandas não disponível)")
+        return results
 
 def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     """
@@ -1136,7 +1142,7 @@ def export_to_csv(urls, df_json=None, analyze_jobs=False):
         return None
     
     # Se temos um DataFrame em JSON, usar para evitar reprocessamento
-    if df_json:
+    if df_json and PANDAS_AVAILABLE:
         logger.debug("Usando DataFrame pré-processado do JSON para exportação CSV")
         try:
             import json
@@ -1144,6 +1150,9 @@ def export_to_csv(urls, df_json=None, analyze_jobs=False):
         except Exception as e:
             logger.error(f"Erro ao converter JSON para DataFrame: {str(e)}")
             df = None
+    elif df_json and not PANDAS_AVAILABLE:
+        logger.warning("pandas não disponível - não é possível processar DataFrame JSON")
+        df = None
     
     # Se não temos um DataFrame do JSON, processar novamente
     if df_json is None or df is None:
