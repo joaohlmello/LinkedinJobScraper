@@ -157,7 +157,7 @@ def extract_company_info(url):
         url (str): LinkedIn job listing URL
         
     Returns:
-        dict: Dictionary containing original link, job title, company name, company link, job description, city, announced_at, candidates, and searched_at timestamp
+        dict: Dictionary containing original link, job title, company name, job description, city, announced_at, candidates
     """
     # Removed searched_at field as requested
     
@@ -702,9 +702,10 @@ def process_linkedin_urls(urls, progress_callback=None):
             # Substituir o link original pelo normalizado
             result['link'] = normalized_url
             
-            # Calcular a data de anúncio com base nas informações disponíveis
+            # Calcular a data de anúncio com base na data atual e announced_at
+            current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             result['announced_calc'] = calculate_announced_date(
-                result['searched_at'], 
+                current_datetime, 
                 result['announced_at']
             )
             
@@ -715,10 +716,10 @@ def process_linkedin_urls(urls, progress_callback=None):
             if progress_callback:
                 progress_callback(i+1, total_urls, f"Vaga {i+1} de {total_urls} processada")
     
-    # Create DataFrame from results with columns in the specified order
+    # Create DataFrame from results with columns in the specified order (removed company_link and searched_at)
     df = pd.DataFrame(results, columns=[
-        'link', 'company_name', 'company_link', 'job_title', 'job_description', 
-        'searched_at', 'announced_at', 'announced_calc', 'city', 'candidates'
+        'link', 'company_name', 'job_title', 'job_description', 
+        'announced_at', 'announced_calc', 'city', 'candidates'
     ])
     logger.debug(f"Processamento finalizado. {len(results)} URLs processadas com sucesso.")
     return df
