@@ -101,7 +101,12 @@ The application is configured for deployment on Replit with:
 
 ## Changelog
 
-Changelog:
+- June 22, 2025. Fixed critical pandas dependency issues and export functionality
+  - Resolved numpy/pandas import failures that prevented application startup
+  - Simplified code by removing unnecessary fallback logic for pandas
+  - Fixed CSV/Excel export functionality that was failing due to data access issues
+  - Corrected batch data retrieval to use database instead of memory structures
+  - All export features now working correctly with Gemini AI analysis
 - June 19, 2025. Initial setup
 
 ## User Preferences

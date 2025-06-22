@@ -4,7 +4,7 @@ import logging
 import threading
 import json
 from datetime import datetime
-from linkedin_scraper import get_results_html, export_to_csv
+from linkedin_scraper import get_results_html, export_to_csv, export_to_excel
 from models import db, ProcessedBatch, IgnoredURL
 
 # Set up logging
@@ -334,6 +334,113 @@ def export_all_csv():
         logger.error(f"Erro ao exportar para CSV: {str(e)}")
         flash(f'Falha ao exportar para CSV: {str(e)}', 'danger')
         return redirect('/')
+
+@app.route('/export/excel', methods=['GET'])
+def export_excel():
+    """
+    Exporta os dados de vagas do LinkedIn para Excel.
+    Se o parâmetro batch_index for fornecido, exporta apenas os dados do lote específico.
+    Se batch_indices for fornecido, exporta múltiplos lotes especificados.
+    Caso contrário, exporta todos os dados disponíveis.
+    """
+    batch_index = request.args.get('batch_index')
+    batch_indices = request.args.get('batch_indices')
+    
+    try:
+        if batch_indices is not None:
+            # Exportar múltiplos lotes específicos para Excel
+            try:
+                indices = [int(idx.strip()) for idx in batch_indices.split(',') if idx.strip()]
+                if indices:
+                    return export_multiple_batches_excel(indices)
+                else:
+                    flash('Nenhum índice de lote válido fornecido.', 'warning')
+                    return redirect('/')
+            except ValueError:
+                flash('Formato de índices de lotes inválido. Use formato: "0,1,2,3"', 'danger')
+                return redirect('/')
+        elif batch_index is not None:
+            # Exportar um lote específico para Excel
+            batch_index = int(batch_index)
+            return export_batch_excel(batch_index)
+        else:
+            # Exportar todos os dados disponíveis para Excel
+            return export_all_excel()
+    except ValueError:
+        flash('Índice de lote inválido.', 'danger')
+        return redirect('/')
+    except Exception as e:
+        logger.error(f"Erro ao exportar para Excel: {str(e)}")
+        flash(f'Falha ao exportar para Excel: {str(e)}', 'danger')
+        return redirect('/')
+
+def export_batch_excel(batch_index):
+    """
+    Exporta os dados de um lote específico para Excel.
+    
+    Args:
+        batch_index (int): Índice do lote a ser exportado
+    
+    Returns:
+        Response: Arquivo Excel para download
+    """
+    # Buscar os dados do lote diretamente do banco de dados
+    batch_data = ProcessedBatch.query.filter_by(batch_index=batch_index).first()
+    
+    if not batch_data:
+        flash(f'Lote {batch_index} não encontrado.', 'danger')
+        return redirect('/')
+    
+    # Obter os dados do lote
+    urls = json.loads(batch_data.urls) if batch_data.urls else []
+    df_json = batch_data.df_json
+    analyze_jobs = True  # Assumir que há análise se foi salvo no banco
+    
+    # Verificar se temos os dados necessários
+    if not urls or not df_json:
+        flash(f'Dados do lote {batch_index} indisponíveis ou incompletos.', 'warning')
+        return redirect('/')
+    
+    logger.debug(f"Exportando lote {batch_index} com {len(urls)} URLs para Excel")
+    
+    try:
+        # Gerar arquivo Excel apenas para este lote
+        excel_buffer = export_to_excel(urls, df_json, analyze_jobs)
+        if not excel_buffer:
+            flash(f'Falha ao gerar arquivo Excel para o lote {batch_index}.', 'danger')
+            return redirect('/')
+        
+        # Gerar nome do arquivo com timestamp e índice do lote
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'linkedin_jobs_batch_{batch_index}_{timestamp}.xlsx'
+        
+        # Enviar o arquivo para o usuário
+        return send_file(
+            excel_buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        logger.error(f"Erro ao exportar lote {batch_index} para Excel: {str(e)}")
+        flash(f'Falha ao exportar lote {batch_index} para Excel: {str(e)}', 'danger')
+        return redirect('/')
+
+def export_all_excel():
+    """
+    Exporta todos os dados de vagas do LinkedIn para Excel.
+    """
+    # Implementação similar ao CSV, mas para Excel
+    flash('Exportação de todos os dados para Excel não implementada ainda.', 'info')
+    return redirect('/')
+
+def export_multiple_batches_excel(batch_indices):
+    """
+    Exporta os dados de múltiplos lotes específicos para um único arquivo Excel.
+    """
+    # Implementação similar ao CSV, mas para Excel
+    flash('Exportação de múltiplos lotes para Excel não implementada ainda.', 'info')
+    return redirect('/')
 
 def export_batch_csv(batch_index):
     """
