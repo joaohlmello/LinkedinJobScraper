@@ -159,8 +159,7 @@ def extract_company_info(url):
     Returns:
         dict: Dictionary containing original link, job title, company name, company link, job description, city, announced_at, candidates, and searched_at timestamp
     """
-    # Obter data e hora atual para a coluna "searched_at" no formato compatível com Excel
-    current_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # Removed searched_at field as requested
     
     # Headers padrão para simular um navegador
     headers = {
@@ -345,15 +344,9 @@ def extract_company_info(url):
         if not company_element:
             logger.warning(f"Company element not found for URL: {url}")
             company_name = 'Not found'
-            company_link = 'Not found'
         else:
-            # Extract company name and link
+            # Extract company name only (company_link removed as requested)
             company_name = company_element.get_text(strip=True)
-            company_link = company_element.get('href', 'Not found')
-            
-            # Format the company link if it's a relative path
-            if company_link != 'Not found' and isinstance(company_link, str) and not company_link.startswith('http'):
-                company_link = f"https://www.linkedin.com{company_link}"
         
         # Extract job title
         job_title = 'Not found'
@@ -516,19 +509,17 @@ def extract_company_info(url):
         except Exception as e:
             logger.warning(f"Erro ao extrair informações adicionais: {str(e)}")
         
-        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}, company link: {company_link}")
+        logger.debug(f"Extracted job title: {job_title}, company name: {company_name}")
         logger.debug(f"Additional info - city: {city}, announced_at: {announced_at}, candidates: {candidates}")
         
         return {
             'link': url,
             'company_name': company_name,
-            'company_link': company_link,
             'job_title': job_title,
             'job_description': job_description,
             'city': city,
             'announced_at': announced_at,
-            'candidates': candidates,
-            'searched_at': current_datetime
+            'candidates': candidates
         }
     
     except requests.exceptions.RequestException as e:
@@ -536,26 +527,22 @@ def extract_company_info(url):
         return {
             'link': url,
             'company_name': f'Error: {str(e)}',
-            'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
             'city': 'Not found',
             'announced_at': 'Not found',
-            'candidates': 'Not found',
-            'searched_at': current_datetime
+            'candidates': 'Not found'
         }
     except Exception as e:
         logger.error(f"Error processing URL {url}: {str(e)}")
         return {
             'link': url,
             'company_name': f'Error: {str(e)}',
-            'company_link': 'Not found',
             'job_title': 'Not found',
             'job_description': 'Not found',
             'city': 'Not found',
             'announced_at': 'Not found',
-            'candidates': 'Not found',
-            'searched_at': current_datetime
+            'candidates': 'Not found'
         }
 
 def normalize_linkedin_url(url):
