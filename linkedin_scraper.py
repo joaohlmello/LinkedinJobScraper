@@ -2,9 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 
-# Temporarily disable pandas to get the app running
-PANDAS_AVAILABLE = False
-pd = None
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+    print("pandas carregado com sucesso")
+except ImportError as e:
+    print(f"Erro ao importar pandas: {e}")
+    PANDAS_AVAILABLE = False
+    pd = None
 import trafilatura
 import os
 import datetime
@@ -762,9 +767,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     if progress_callback:
         progress_callback(0, 100, "Iniciando extração de dados do LinkedIn...")
     
-    # Obter um DataFrame com os dados brutos
-    # Nota: analyze_jobs não deve ser passado para process_linkedin_urls, pois é tratado separadamente
-    # no get_results_html
+    # Obter DataFrame com os dados brutos
     df = process_linkedin_urls(urls, progress_callback=progress_callback)
     
     # Criar uma cópia para exportação antes de modificar com HTML
@@ -783,18 +786,35 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
     # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
-    df['idioma_descricao'] = "N/A"
-    df['tipo_vaga'] = "N/A"
-    df['nota_requisitos'] = ""
-    df['nota_responsabilidades'] = ""
-    df['pontos_fracos'] = ""
-    
-    # Adicionar as mesmas colunas ao DataFrame de exportação
-    df_export['idioma_descricao'] = "N/A"
-    df_export['tipo_vaga'] = "N/A"
-    df_export['nota_requisitos'] = ""
-    df_export['nota_responsabilidades'] = ""
-    df_export['pontos_fracos'] = ""
+    if PANDAS_AVAILABLE:
+        df['idioma_descricao'] = "N/A"
+        df['tipo_vaga'] = "N/A"
+        df['nota_requisitos'] = ""
+        df['nota_responsabilidades'] = ""
+        df['pontos_fracos'] = ""
+        
+        # Adicionar as mesmas colunas ao DataFrame de exportação
+        df_export['idioma_descricao'] = "N/A"
+        df_export['tipo_vaga'] = "N/A"
+        df_export['nota_requisitos'] = ""
+        df_export['nota_responsabilidades'] = ""
+        df_export['pontos_fracos'] = ""
+    else:
+        # Add analysis columns to list of dictionaries
+        for row in results_list:
+            row['idioma_descricao'] = "N/A"
+            row['tipo_vaga'] = "N/A"
+            row['nota_requisitos'] = ""
+            row['nota_responsabilidades'] = ""
+            row['pontos_fracos'] = ""
+        
+        # Add the same columns to export data
+        for row in df_export:
+            row['idioma_descricao'] = "N/A"
+            row['tipo_vaga'] = "N/A"
+            row['nota_requisitos'] = ""
+            row['nota_responsabilidades'] = ""
+            row['pontos_fracos'] = ""
     
     # Analisar vagas com Gemini API se solicitado
     gemini_analyses = []
@@ -807,30 +827,50 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
             logger.debug("Importação do analisador Gemini bem-sucedida")
             
             # Atualizar progresso - iniciando análise de vagas
+            data_length = len(data) if not PANDAS_AVAILABLE else len(df)
             if progress_callback:
-                progress_callback(len(urls), 100 + len(df), "Iniciando análise de compatibilidade com Gemini AI...")
+                progress_callback(len(urls), 100 + data_length, "Iniciando análise de compatibilidade com Gemini AI...")
             
             # Preparar os dados para análise
             jobs_for_analysis = []
-            url_to_index = {}  # Mapear URLs para seus índices no DataFrame
+            url_to_index = {}  # Mapear URLs para seus índices
             
-            for i, (idx, row) in enumerate(df.iterrows()):
-                # Extrair URL sem tags HTML
-                link = row['link']
-                if '<a href=' in link:
-                    import re
-                    url_match = re.search(r'href="([^"]+)"', link)
-                    link = url_match.group(1) if url_match else link
-                
-                job_data = {
-                    'job_title': row['job_title'],
-                    'company_name': row['company_name'],
-                    'job_description': row['job_description'],
-                    'link': link,
-                    'original_index': idx  # Guardar o índice original
-                }
-                jobs_for_analysis.append(job_data)
-                url_to_index[link] = idx
+            if PANDAS_AVAILABLE:
+                for i, (idx, row) in enumerate(df.iterrows()):
+                    # Extrair URL sem tags HTML
+                    link = row['link']
+                    if '<a href=' in link:
+                        import re
+                        url_match = re.search(r'href="([^"]+)"', link)
+                        link = url_match.group(1) if url_match else link
+                    
+                    job_data = {
+                        'job_title': row['job_title'],
+                        'company_name': row['company_name'],
+                        'job_description': row['job_description'],
+                        'link': link,
+                        'original_index': idx  # Guardar o índice original
+                    }
+                    jobs_for_analysis.append(job_data)
+                    url_to_index[link] = idx
+            else:
+                for i, row in enumerate(results_list):
+                    # Extrair URL sem tags HTML
+                    link = row['link']
+                    if '<a href=' in link:
+                        import re
+                        url_match = re.search(r'href="([^"]+)"', link)
+                        link = url_match.group(1) if url_match else link
+                    
+                    job_data = {
+                        'job_title': row['job_title'],
+                        'company_name': row['company_name'],
+                        'job_description': row['job_description'],
+                        'link': link,
+                        'original_index': i  # Use list index
+                    }
+                    jobs_for_analysis.append(job_data)
+                    url_to_index[link] = i
                 
                 # Atualizar progresso de preparo para análise
                 if progress_callback and i % 2 == 0:
@@ -861,7 +901,7 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                 progress_callback=gemini_progress_callback
             )
             
-            # Armazenar resultados no DataFrame
+            # Armazenar resultados na estrutura de dados
             for analysis in analyses_results:
                 job_link = analysis.get('job_link', '')
                 if job_link in url_to_index:
@@ -874,15 +914,26 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                     nota_responsabilidades = analysis.get('nota_responsabilidades', 0)
                     pontos_fracos = analysis.get('pontos_fracos', '')
                     
-                    # Atualizar o DataFrame de visualização com os resultados da análise
-                    df.at[idx, 'idioma_descricao'] = idioma_descricao
-                    df.at[idx, 'tipo_vaga'] = tipo_vaga
-                    df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
-                    df.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
-                    df.at[idx, 'pontos_fracos'] = pontos_fracos
-                    
-                    # Atualizar o DataFrame de exportação
-                    df_export.at[idx, 'idioma_descricao'] = idioma_descricao
+                    if PANDAS_AVAILABLE:
+                        # Atualizar o DataFrame de visualização com os resultados da análise
+                        df.at[idx, 'idioma_descricao'] = idioma_descricao
+                        df.at[idx, 'tipo_vaga'] = tipo_vaga
+                        df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
+                        df.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
+                        df.at[idx, 'pontos_fracos'] = pontos_fracos
+                        
+                        # Atualizar o DataFrame de exportação
+                        df_export.at[idx, 'idioma_descricao'] = idioma_descricao
+                    else:
+                        # Atualizar a lista de dicionários
+                        results_list[idx]['idioma_descricao'] = idioma_descricao
+                        results_list[idx]['tipo_vaga'] = tipo_vaga
+                        results_list[idx]['nota_requisitos'] = f"{nota_requisitos}%"
+                        results_list[idx]['nota_responsabilidades'] = f"{nota_responsabilidades}%"
+                        results_list[idx]['pontos_fracos'] = pontos_fracos
+                        
+                        # Atualizar os dados de exportação
+                        df_export[idx]['idioma_descricao'] = idioma_descricao
                     df_export.at[idx, 'tipo_vaga'] = tipo_vaga
                     df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df_export.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
