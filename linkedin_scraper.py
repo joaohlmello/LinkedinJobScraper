@@ -756,22 +756,17 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
     
     # Format links as HTML anchor tags before converting to HTML
     df['link'] = df['link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
-    df['company_link'] = df['company_link'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>' if x != 'Not found' else 'Not found')
     
     # Atualizar progresso após extração do LinkedIn
     if progress_callback:
         progress_callback(len(urls), 100, "Extração de dados do LinkedIn concluída")
     
-    # Adicionar colunas para análise Gemini com o novo esquema (inicialmente vazias)
-    df['idioma_descricao'] = "N/A"
-    df['tipo_vaga'] = "N/A"
+    # Adicionar colunas para análise Gemini (sem idioma_descricao e tipo_vaga conforme solicitado)
     df['nota_requisitos'] = ""
     df['nota_responsabilidades'] = ""
     df['pontos_fracos'] = ""
     
     # Adicionar as mesmas colunas ao DataFrame de exportação
-    df_export['idioma_descricao'] = "N/A"
-    df_export['tipo_vaga'] = "N/A"
     df_export['nota_requisitos'] = ""
     df_export['nota_responsabilidades'] = ""
     df_export['pontos_fracos'] = ""
@@ -847,23 +842,17 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
                 if job_link in url_to_index:
                     idx = url_to_index[job_link]
                     
-                    # Obter valores da análise ou usar valores padrão com nova estrutura
-                    idioma_descricao = analysis.get('idioma_descricao', 'Não informado')
-                    tipo_vaga = analysis.get('tipo_vaga', 'Não informado')
+                    # Obter valores da análise (removidos idioma_descricao e tipo_vaga conforme solicitado)
                     nota_requisitos = analysis.get('nota_requisitos', 0)
                     nota_responsabilidades = analysis.get('nota_responsabilidades', 0)
                     pontos_fracos = analysis.get('pontos_fracos', '')
                     
                     # Atualizar o DataFrame de visualização com os resultados da análise
-                    df.at[idx, 'idioma_descricao'] = idioma_descricao
-                    df.at[idx, 'tipo_vaga'] = tipo_vaga
                     df.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
                     df.at[idx, 'pontos_fracos'] = pontos_fracos
                     
                     # Atualizar o DataFrame de exportação
-                    df_export.at[idx, 'idioma_descricao'] = idioma_descricao
-                    df_export.at[idx, 'tipo_vaga'] = tipo_vaga
                     df_export.at[idx, 'nota_requisitos'] = f"{nota_requisitos}%"
                     df_export.at[idx, 'nota_responsabilidades'] = f"{nota_responsabilidades}%"
                     df_export.at[idx, 'pontos_fracos'] = pontos_fracos
@@ -1037,16 +1026,12 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
           <tr>
             <th>Link</th>
             <th>Company Name</th>
-            <th>Company Link</th>
             <th>Job Title</th>
             <th>Job Description</th>
-            <th>Searched At</th>
             <th>Announced At</th>
             <th>Announced Calc</th>
             <th>City</th>
             <th>Candidates</th>
-            <th class="compatibility-header">Idioma</th>
-            <th class="compatibility-header">Tipo Vaga</th>
             <th class="compatibility-header">Nota Req.</th>
             <th class="compatibility-header">Nota Resp.</th>
             <th class="compatibility-header">Detalhes</th>
@@ -1074,16 +1059,12 @@ def get_results_html(urls, analyze_jobs=False, progress_callback=None):
         <tr>
           <td>{row['link']}</td>
           <td>{row['company_name']}</td>
-          <td>{row['company_link']}</td>
           <td>{row['job_title']}</td>
           <td class="full-text">{row['job_description']}</td>
-          <td>{row['searched_at']}</td>
           <td>{row['announced_at']}</td>
           <td>{row['announced_calc']}</td>
           <td>{row['city']}</td>
           <td>{row['candidates']}</td>
-          <td class="compatibility-column">{row.get('idioma_descricao', 'N/A')}</td>
-          <td class="compatibility-column">{row.get('tipo_vaga', 'N/A')}</td>
           <td class="compatibility-column">{row.get('nota_requisitos', '')}</td>
           <td class="compatibility-column">{row.get('nota_responsabilidades', '')}</td>
           <td class="compatibility-column">
