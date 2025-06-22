@@ -345,18 +345,17 @@ def export_batch_csv(batch_index):
     Returns:
         Response: Arquivo CSV para download
     """
-    global processing_progress
+    # Buscar os dados do lote diretamente do banco de dados
+    batch_data = ProcessedBatch.query.filter_by(batch_index=batch_index).first()
     
-    # Verificar se o batch_index é válido
-    if batch_index < 0 or batch_index >= len(processing_progress['processed_batches']):
+    if not batch_data:
         flash(f'Lote {batch_index} não encontrado.', 'danger')
         return redirect('/')
     
-    # Obter os dados do lote específico
-    batch_data = processing_progress['processed_batches'][batch_index]
-    urls = batch_data.get('urls', [])
-    df_json = batch_data.get('df_json')
-    analyze_jobs = processing_progress.get('analyze_jobs', False)
+    # Obter os dados do lote
+    urls = json.loads(batch_data.urls) if batch_data.urls else []
+    df_json = batch_data.df_json
+    analyze_jobs = True  # Assumir que há análise se foi salvo no banco
     
     # Verificar se temos os dados necessários
     if not urls or not df_json:
