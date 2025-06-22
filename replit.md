@@ -101,6 +101,12 @@ The application is configured for deployment on Replit with:
 
 ## Changelog
 
+- June 22, 2025. Removed unwanted data fields per user request
+  - Removed collection and export of company_link field from LinkedIn scraper
+  - Removed collection and export of searched_at timestamp field
+  - Removed idioma_descricao and tipo_vaga fields from Gemini AI analysis
+  - Updated HTML templates and export functions to exclude removed fields
+  - Simplified data structure by focusing on essential job information only
 - June 22, 2025. Fixed critical pandas dependency issues and export functionality
   - Resolved numpy/pandas import failures that prevented application startup
   - Simplified code by removing unnecessary fallback logic for pandas

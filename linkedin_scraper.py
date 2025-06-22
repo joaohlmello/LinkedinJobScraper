@@ -1129,10 +1129,6 @@ def export_to_csv(urls, df_json=None, analyze_jobs=False):
         import re
         df['link'] = df['link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
     
-    if 'company_link' in df.columns and '<a href=' in str(df['company_link'].iloc[0]):
-        import re
-        df['company_link'] = df['company_link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
-    
     # Remover formatação HTML da descrição
     df['job_description'] = df['job_description'].apply(lambda x: x.replace('<br><br>', '\n\n').replace('<br>', '\n') if isinstance(x, str) else x)
     
@@ -1188,10 +1184,6 @@ def export_to_excel(urls, df_json=None, analyze_jobs=False):
     if 'link' in df.columns and '<a href=' in str(df['link'].iloc[0]):
         import re
         df['link'] = df['link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
-    
-    if 'company_link' in df.columns and '<a href=' in str(df['company_link'].iloc[0]):
-        import re
-        df['company_link'] = df['company_link'].apply(lambda x: re.search(r'href="([^"]+)"', x).group(1) if isinstance(x, str) and '<a href=' in x else x)
     
     # Create a BytesIO object to store the Excel file
     excel_buffer = BytesIO()
