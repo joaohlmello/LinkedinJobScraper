@@ -1,0 +1,65 @@
+#CV
+Sumário 
+5 anos de experiência em todo o ciclo de vida de produtos, com foco em sistemas de gestão, plataformas de dados e integração via API. Liderança de equipes multidisciplinares (até 17 diretos) e gestão de stakeholders estratégicos. 
+Perfil hands-on, data-driven e analítico, com forte utilização de low-code, dados e IA. 
+Experiência Profissional 
+ONCOCLINICAS (project based) 
+Product Manager, Consultor Contratado | 01/2025 – 06/2025 
+Gestão de Programas e Produtos: Liderança e entrega de um Sistema Integrado de Gestão de Programas personalizado para gerenciar 46 projetos de expansão e manutenção (BRL 180MM).
+Reporte e Governança: Fornecimento de relatórios de status em tempo real para a liderança sênior e automação de fluxos de trabalho de aprovação, melhorando a governança e reduzindo o ciclo de aprovação de custos de 7 para 2 dias. 
+VALE (via Synergia Consultoria) 
+Diretor de Produto e Tecnologia | 10/2022 – 12/2024 
+Liderança e Estratégia de Produto: Estruturei a diretoria de Planejamento e Tecnologia, definindo a visão, estratégia e roadmap de produto para um portfólio de projetos de alta complexidade (BRL 100MM), garantindo o alinhamento estratégico com os objetivos de negócio da VALE e do private equity (TPF – Bélgica). 
+Gestão do Ciclo de Vida do Produto: Gerenciei o ciclo de vida completo de produtos e projetos, desde a concepção (discovery) até a entrega (delivery), atuando como ponto focal na comunicação com clientes e stakeholders estratégicos, negociando trade-offs e alinhando expectativas para maximizar o valor entregue. 
+Liderança e Desenvolvimento de Equipes: Liderei uma equipe multidisciplinar de 10 colaboradores diretos (incluindo Desenvolvedores e Analistas de Dados), promovendo o desenvolvimento técnico e comportamental do time, e influenciando indiretamente uma equipe de mais de 300 pessoas. 
+Metodologias Ágeis e Data-Driven: Defini e gerenciei escopo, cronograma e qualidade dos produtos, utilizando metodologias ágeis (Scrum, Kanban) e tradicionais. Implementei uma metodologia de mapeamento e mitigação de riscos, e priorizei o portfólio com base em critérios data-driven, utilizando KPIs e métricas de desempenho. 
+Transformação Digital e Inovação: Implantei um PMO Data-driven com IA, RPA e BI para monitoramento em tempo real de milhões de produtos em centenas de etapas, com regras de negócio complexas e entregas via API, reduzindo o tempo 
+de reporte de 1 semana para tempo real e automatizando tarefas com GenAI e Power BI. 
+Definição de Requisitos de Produto e Histórias de Usuário
+Resultados Chave: 
+Recuperação de Contrato Estratégico: Liderança do turnaround de um contrato de BRL 100MM, reestruturando escopo, prazo e orçamento,
+resultando na recuperação da confiança do cliente e adequação à nova meta em 6 meses. 
+Otimização de Processos e Produtividade: Reestruturação da fábrica de software para squads com práticas e ferramentas ágeis (discovery, sprints, JIRA), melhorando o alinhamento das entregas com as necessidades do negócio e a previsibilidade dos projetos. 
+Alinhamento Estratégico: Implementação de OKRs, integrando 90 projetos corporativos a 15 objetivos estratégicos, monitorando KPIs e engajando a alta gestão, resultando no aumento do atingimento de 50% para 85% em 1 ano. 
+Sistema de Gestão de Portfólio: Desenvolvimento de ferramenta copiloto para apoio aos Gerentes de Projetos, agregando dados para geração de BIs e dashboards, resultando em zero não conformidades em auditoria. 
+Reconstrução de Sistema Legado: Desenvolvimento de sistema de coleta e análise de dados com integração O2O, corrigindo problemas de UI/UX e bugs, e viabilizando extração de dados e integrações, resultando em redução de 80% das ocorrências e melhoria da percepção de UI/UX pelos usuários. 
+ONCOCLÍNICAS 
+Gerente de Projetos | 07/2021 – 10/2022 
+Gestão de Projetos de Tecnologia e Transformação Digital: Gerenciei projetos corporativos e de tecnologia, com foco em transformação digital, coordenando equipes internas e externas ao longo de todo o ciclo de vida do projeto. Assegurei escopo, prazo, orçamento e qualidade, aplicando as melhores práticas de gestão. 
+Comunicação e Gestão de Stakeholders: Facilitei a comunicação e conduzi reuniões de status com stakeholders, garantindo alinhamento e gerenciando conflitos. Elaborei e apresentei relatórios gerenciais e executivos (BI, dashboards, status reports) para subsidiar a tomada de decisão. 
+Controle e Mitigação de Riscos: Desenvolvi e acompanhei cronogramas, monitorei e controlei custos, e mapeei e gerenciei riscos e não conformidades dos projetos, executando ações corretivas e preventivas para garantir a entrega de valor. 
+Resultados Chave:
+Gestão Eficaz de Portfólio: Gerenciei um portfólio de 4 projetos de CAPEX (BRL 18MM) com controle eficaz de custos e cronograma, resultando em nota máxima na avaliação de resultados, entregas no prazo, BRL 700K em savings e 90% de assertividade no fluxo de caixa. 
+Otimização de Processos Financeiros: Desenvolvi um sistema de gestão financeira com BI e integração com ERP, reduzindo o tempo de aprovação de 7 para 3 dias e proporcionando melhor visibilidade para tomada de decisão. 
+Melhoria da Qualidade Operacional: Implementei um sistema de checklist de transição para a operação, reduzindo não conformidades em 95%, aumentando a satisfação do cliente e garantindo a qualidade das entregas. 
+Governança e Controle: Implementei a gestão de mudanças de escopo com fluxo de aprovação, mitigando riscos e resolvendo problemas históricos de falta de controle. 
+EQSEED (Top 100 Startups to Watch) 
+Product Manager, Especialista | 02/2020 – 07/2021 
+Transformação Digital e Gestão de Produto: Lidei a transformação digital em uma startup do mercado financeiro, atuando como Product Manager e liderando a equipe de operações. Reporte direto ao CEO estrangeiro, utilizando inglês como primeira língua. 
+Metodologias Ágeis e Priorização de Backlog: Implementei metodologias ágeis (Kanban) e OKRs em toda a empresa (Tecnologia, Negócios, Marketing e Vendas), conectando estratégia e tática, e viabilizando a priorização de demandas do backlog de produto. 
+Discovery e Análise de Dados: Mapeei oportunidades de melhoria através de discovery com clientes e áreas de negócio. Analisei dados e construí dashboards e BIs para guiar a tomada de decisão baseada em dados. Otimizei processos operacionais e de gestão com foco em eficiência. 
+Resultados Chave: 
+Otimização de CRM: Redesenho de processos e automações no CRM, resultando em um aumento de 15% na conversão de leads. 
+Melhoria da Experiência do Usuário: Automação de processos e melhorias de UI/UX no pós-vendas, reduzindo o tempo de assinatura de contratos e
+melhorando a comunicação com os clientes, elevando o NPS para a zona de excelência (acima de 75). 
+Eficiência Operacional: Automação da reconciliação financeira, reduzindo em 80% o lead time e eliminando erros operacionais. 
+Sistematização de Análise: Sistematização da análise de investimentos e do valuation do portfólio, aumentando a eficiência operacional. 
+Educação 
+MBA – Master in Business Administration | FGV – Fundação Getúlio Vargas | Concluído em 10/2022 
+Bacharelado em Engenharia | Estácio | Concluído em 07/2012 
+Certificações 
+PMP – Project Management Professional, Project Management Institute (PMI): 12/2020 
+SFPC – Scrum Professional Certificate, Certiprof: 06/2020 
+Competências 
+Idiomas: Inglês avançado. Experiência na condução de reuniões e comunicação internacional. 
+Metodologias e Frameworks: Metodologias Ágeis (Scrum, Kanban), OKR, Design Thinking, PMO (Implantação e Operação), Gestão de Projetos Tradicional (PMBOK, PRINCE2, Waterfall, Preditiva), BPM/BPMN, Lean Six Sigma, ITIL. 
+Ferramentas de Gestão e Colaboração: JIRA, Confluence, Miro, Mural, Notion, MS Project, Azure DevOps, Asana, Trello, Pipefy. 
+Análise de Dados e Business Intelligence: Power BI, Metabase, Google Data Studio – GDS, SQL. 
+Automação e Transformação Digital: Inteligência Artificial Generativa – GenAI (APIs OpenAI e Gemini), RPA – Robotic Process Automation, Low-code, No-code.
+ERP e Gestão de Serviços: TOTVS, SAP, Fluig, ServiceNow. 
+Pacote Office: Excel avançado (procv, tabelas dinâmicas, VBA, etc.), Powerpoint, Visio, etc. 
+Cargos Anteriores 
+03/2018 – 08/2019 | BRMALLS (via N&A Consultores) | Coordenador de Planejamento e Controle de Projetos 
+08/2017 – 03/2018 | BRMALLS (via N&A Consultores) | Analista de Planejamento e Controle de Projetos 
+11/2016 – 08/2017 | ONCOCLÍNICAS | Estagiário de PMO 
+07/2015 – 06/2016 | BRMALLS (via N&A Consultores) | Estagiário de Planejamento e Controle de Projetos
